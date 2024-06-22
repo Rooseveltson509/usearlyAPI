@@ -1,0 +1,741 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "title": "api-rest-full documentation",
+      "version": "1.0.0",
+      "license": {
+        "name": "ISC"
+      },
+      "description": "API-REST-FULL pour la gestion des utilisateurs et du jeu consours"
+    },
+    "basePath": "/api/v1",
+    "host": "localhost:3000",
+    "tags": [
+        {
+          "name": "ticket",
+          "description": "Everything about Ticket"
+        },
+        {
+          "name": "employee",
+          "description": "Everything about Employee"
+        },
+        {
+          "name": "users",
+          "description": "Operations about user",
+          "externalDocs": {
+            "description": "Find out more about our store",
+            "url": "http://swagger.io"
+          }
+        }
+      ],
+      "securityDefinitions": {
+ 
+      },
+      "definitions": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "password_confirm": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "zipCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          }
+        },
+        "xml": {
+          "name": "User"
+        }
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "xml": {
+          "name": "Login"
+        }
+      },
+      "Me": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "zipCodeword": {
+            "type": "string"
+          }
+        },
+        "xml": {
+          "name": "Me"
+        }
+      },
+      "Employe": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "magasin": {
+            "type": "string"
+          }
+        },
+        "xml": {
+          "name": "Employe"
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer"
+          },
+          "gain": {
+            "type": "string"
+          },
+          "etat": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "xml": {
+          "name": "Ticket"
+        }
+      }
+    },
+    "paths": {
+      "/": {
+        "get": {
+          "summary": "Home API page",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [],
+          "responses": {},
+          "tags": ["users"]
+        }
+      },
+      "/user/register": {
+        "post": {
+          "summary": "Create user",
+          "consumes": [
+            "application/json",
+            "application/xml"
+          ],
+          "parameters": [
+            {
+                "in": "body",
+                "name": "body",
+                "description": "Created user object",
+                "required": true,
+                "schema": {
+                  "$ref": "#/definitions/User"
+                }
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/login": {
+        "post": {
+          "summary": "logged user",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [
+              {
+                "name": "body",
+                "in": "body",
+                "description": "The user name for login",
+                "required": true,
+                "type": "string",
+                "schema": {
+                  "$ref": "#/definitions/Login"
+                }
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/employe/login": {
+        "post": {
+          "summary": "logged user",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [
+            {
+              "name": "body",
+              "in": "body",
+              "description": "The user name for login",
+              "required": true,
+              "type": "string",
+              "schema": {
+                "$ref": "#/definitions/Login"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "successful operation",
+              "schema": {
+                "type": "string"
+              },
+              "headers": {
+                "X-Rate-Limit": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "calls per hour allowed by the user"
+                },
+                "X-Expires-After": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "date in UTC when token expires"
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid email/password."
+            }
+          },
+          "tags": ["employee"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:employee",
+                "read:employee"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/me": {
+        "get": {
+          "summary": "user profile",
+          "consumes": [
+            "application/xml",
+            "application/json"
+          ],
+          "parameters": [
+            {
+                "name": "token",
+                "in": "header",
+                "required": false,
+                "type": "string"
+              },
+              {
+                "name": "me",
+                "in": "path",
+                "description": "The name that needs to be fetched. Use user1 for testing. ",
+                "required": true,
+                "type": "string"
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        },
+        "put": {
+          "summary": "/user/me",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [
+            {
+                "name": "me",
+                "in": "body",
+                "required": false,
+                "type": "string",
+                "schema": {
+                  "$ref": "#/definitions/Me"
+                }
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/admin/{email}": {
+        "put": {
+          "summary": "User profile modification by admin",
+          "parameters": [
+              {
+                  "name": "email",
+                  "in": "body",
+                  "required": true,
+                  "schema": {
+                      "type": "string"
+                  }
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+      },
+      "delete": {
+          "summary": "User account delete by admin",
+          "parameters": [
+              {
+                  "name": "email",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                      "type": "string"
+                  }
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+      },
+      "get": {
+          "summary": "Find user by email by admin",
+          "parameters": [
+              {
+                  "name": "email",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                      "type": "string"
+                  }
+              }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+      }
+
+      },
+      "/admin/users": {
+        "get": {
+          "summary": "get all users by admin",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/mailValidation/{userId}/": {
+        "post": {
+          "summary": "email confirmation",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "required": true
+            }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/forget": {
+        "post": {
+          "summary": "Forget password",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/restpwd/{userId}/{token}": {
+        "post": {
+          "summary": "Reset password",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "required": true
+            },
+            {
+              "name": "token",
+              "in": "path",
+              "required": true
+            }
+          ],
+          "responses": {},
+          "tags": ["users"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:users",
+                "read:users"
+              ]
+            }
+          ]
+        }
+      },
+      "/user/admin/employe/{email}": {
+        "put": {
+            "summary": "Employee profile update by admin",
+            "parameters": [
+                {
+                    "name": "email",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {},
+            "tags": ["employee"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:employee",
+                  "read:employee"
+                ]
+              }
+            ]
+        },
+        "get": {
+            "summary": "Find employee by email by admin",
+            "parameters": [
+                {
+                    "name": "email",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {},
+            "tags": ["employee"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:employee",
+                  "read:employee"
+                ]
+              }
+            ]
+        }
+    },
+    "/employe/admin/{email}": {
+      "delete": {
+          "summary": "Delete employee profile by admin",
+          "parameters": [
+              {
+                  "name": "email",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                      "type": "string"
+                  }
+              }
+          ],
+          "responses": {},
+          "tags": ["employee"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:employee",
+                "read:employee"
+              ]
+            }
+          ]
+      }
+      },
+    "/admin/employe/new": {
+        "post": {
+            "summary": "Create account employe by admin",
+            "responses": {},
+            "tags": ["employee"]
+        }
+    },
+    "/user/employe/{email}": {
+        "get": {
+            "summary": "Employee profile",
+            "parameters": [
+                {
+                    "name": "email",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {},
+            "tags": ["employee"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:employee",
+                  "read:employee"
+                ]
+              }
+            ]
+        }
+    },
+    "/ticket/new": {
+        "post": {
+          "summary": "Generate tickets",
+          "consumes": [
+            "application/json"
+          ],
+          "parameters": [],
+          "responses": {},
+          "tags": ["ticket"],
+          "security": [
+            {
+              "petstore_auth": [
+                "write:ticket",
+                "read:ticket"
+              ]
+            }
+          ]
+        }
+      },
+      "/ticket/create/": {
+        "post": {
+            "summary": "Create ticket for a user",
+            "parameters": [
+              {
+                  "in": "path",
+                  "name": "integer",
+                  "description": "Create greater than 49",
+                  "required": true
+                }
+            ],
+            "responses": {},
+            "tags": ["ticket"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:ticket",
+                  "read:ticket"
+                ]
+              }
+            ]
+        }
+    },
+    "/ticket/{code}": {
+        "get": {
+            "summary": "Find ticket by code for user",
+            "parameters": [
+                {
+                    "name": "code",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {},
+            "tags": ["ticket"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:ticket",
+                  "read:ticket"
+                ]
+              }
+            ]
+        }
+    },
+    "/user/tickets": {
+        "get": {
+            "summary": "Find all tickets of the user",
+            "responses": {},
+            "tags": ["ticket"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:ticket",
+                  "read:ticket"
+                ]
+              }
+            ]
+        }
+    },
+    "/employe/ticket/{code}": {
+        "get": {
+            "summary": "Assigned ticket to user",
+            "parameters": [
+                {
+                    "name": "code",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ],
+            "responses": {},
+            "tags": ["ticket"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:ticket",
+                  "read:ticket"
+                ]
+              }
+            ]
+        }
+    },
+    "/employe/tickets/": {
+        "get": {
+            "summary": "Find all tickets partition",
+            "responses": {},
+            "tags": ["ticket"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:ticket",
+                  "read:ticket"
+                ]
+              }
+            ]
+        }
+    },
+    "/employe/tickets/gains": {
+        "get": {
+            "summary": "FIND ALL WINNING TICKETS",
+            "responses": {},
+            "tags": ["ticket"],
+            "security": [
+              {
+                "petstore_auth": [
+                  "write:ticket",
+                  "read:ticket"
+                ]
+              }
+            ]
+        }
+    }
+    }
+  }
