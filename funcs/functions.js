@@ -6,6 +6,8 @@ const {
   updatePassword,
 } = require("./template-validate-mail");
 
+var nodemailer = require('nodemailer');
+
 // Constants
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
 const PHONE_NUMBER =
@@ -132,9 +134,8 @@ exports.sendResetPasswordEmail = function (
 };
 
 
-var nodemailer = require('nodemailer');
 
-var transporter = nodemailer.createTransport({
+/* var transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'youremail@gmail.com',
@@ -155,4 +156,4 @@ transporter.sendMail(mailOptions, function(error, info){
   } else {
     console.log('Email sent: ' + info.response);
   }
-}); 
+});  */
