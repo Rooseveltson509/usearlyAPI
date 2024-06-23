@@ -2,6 +2,7 @@
 require("dotenv").config();
 const sendmail = require("sendmail")();
 const Mailgen = require('mailgen');
+const sgMail = require('@sendgrid/mail');
 
 const {
   validateMailAccount,
@@ -136,19 +137,6 @@ exports.sendResetPasswordEmail = function (
 
 
 
-exports.sentEmail = function (toUserEmail, domain, newUserId, token){
-  
-sendmail({
-  from: 'rooseveltsoncebeat@yahoo.fr',
-  to: toUserEmail,
-  subject: 'test sendmail',
-  html: "<button style='#22BC66'>"+ `${token}`+ "</button> </br><p><a href="+`${domain}/api/v1/user/mailValidation/`+`${newUserId}`+">Veuillez cliquer sur par ici</a></p>",
-}, function(err, reply) {
-  console.log(err && err.stack);
-  console.dir(reply);
-});
-}
-
 exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
   let config = {
     service: "gmail",
@@ -174,3 +162,18 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
       }
     })
 };
+
+/* exports.sentEmail = function (toUserEmail, token, domain, userId){
+  
+  sgMail.setApiKey(process.env.MAIL_API_KEY);
+  const msg = {
+    to: toUserEmail,
+    from: process.env.EMAIL_LOCAL,
+    subject: 'Sending with Twilio SendGrid is Fun',
+    text: 'and easy to do anywhere, even with Node.js',
+    //html: updatePassword(toUserName, domain, newUserId, token)
+    html: "<h1>Hello Roose!</h1><br/><h2>"+token+"</h2><a href="+domain+"api/vi/user/mailValidation/"+userId+">Valider Mon compte</a>"
+  };
+  sgMail.send(msg).then(response => console.log("Email sent...")).catch(err => console.log(err.message));
+
+} */
