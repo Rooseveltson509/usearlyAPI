@@ -8,6 +8,7 @@ let cors = require("cors");
 const corsOptions = require("./funcs/functions");
 let config = require("./config/config");
 const promBundle = require("express-prom-bundle");
+require("./models/index")
 
 // Instanciate server
 var server = express();
@@ -38,5 +39,5 @@ server.use(config.rootAPI, apiRouter);
 
 // launch server
 server.listen(config.port, function () {
-  console.log("Server en écoute on port: " + config.port);
+  console.log("Server en écoute on port: " + config.port +  " - "+ process.env.NODE_ENV);
 });
