@@ -6,7 +6,7 @@ const {
   updatePassword,
 } = require("./template-validate-mail");
 
-var nodemailer = require('nodemailer');
+var nodemailer = require("nodemailer");
 
 // Constants
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
@@ -17,13 +17,13 @@ const FRENCH_ZIPCODE = /^[0-9]{5}$/;
 const CITY_STRING = /^[a-zA-Z',.\s-]{1,25}$/;
 const ADDRESS_STRING = /^[a-zA-Z0-9\s,.'-]{3,}$/;
 
-exports.randomDigit = function randomDigit(){
+exports.randomDigit = function randomDigit() {
   //^[0-9]{6,6}$
   var result = "";
   for (var i = length; i > 0; --i)
     result += chars[Math.round(Math.random() * (chars.length - 1))];
   return result;
-}
+};
 
 exports.randomCode = function (length, chars) {
   var result = "";
@@ -66,7 +66,6 @@ exports.getPagingData = (data, page, limit) => {
 
   return { totalItems, users, totalPages, currentPage };
 };
-
 
 let allowlist = [
   "http://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr",
@@ -133,27 +132,36 @@ exports.sendResetPasswordEmail = function (
   );
 };
 
+exports.sendEmail = function (
+  toUser,
+  toUserName,
+  domain,
+  newUserId,
+  resetToken
+) {
+  const transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false, // Use `true` for port 465, `false` for all other ports
+    auth: {
+      user: "deshaun.schmitt29@ethereal.email",
+      pass: "gG2QAZXrawFu1XkkZj",
+    },
+  });
 
-
-/* var transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'youremail@gmail.com',
-    pass: 'ubhc agsk ooux myea'
-  }
-});
-
-var mailOptions = {
-  from: 'youremail@gmail.com',
-  to: 'myfriend@yahoo.com',
-  subject: 'Sending Email using Node.js',
-  text: 'That was easy!'
+  const info = transporter.sendMail({
+      from: '"Usearly Application 😍" <usearly@gmail.com>', // sender address
+      to: toUser,
+      subject: "Email de vérification",
+      text: "Heureux de vous voir", // plain text body
+      html: updatePassword(toUserName, domain, newUserId, resetToken),
+    },
+    function (err, reply) {
+      console.log(err && err.stack);
+      console.dir(reply);
+    }
+  );
+  console.log("Message sent: %s", info.messageId);
+  // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
 };
 
-transporter.sendMail(mailOptions, function(error, info){
-  if (error) {
-    console.log(error);
-  } else {
-    console.log('Email sent: ' + info.response);
-  }
-});  */
