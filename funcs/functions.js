@@ -135,25 +135,35 @@ exports.sendResetPasswordEmail = function (
 
 
 
-/* var transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'youremail@gmail.com',
-    pass: 'ubhc agsk ooux myea'
-  }
-});
+exports.sendEmail = function (
+  toUser,
+  toUserName,
+  domain,
+  newUserId,
+  resetToken
+) {
+  const transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false, // Use `true` for port 465, `false` for all other ports
+    auth: {
+      user: "deshaun.schmitt29@ethereal.email",
+      pass: "gG2QAZXrawFu1XkkZj",
+    },
+  });
 
-var mailOptions = {
-  from: 'youremail@gmail.com',
-  to: 'myfriend@yahoo.com',
-  subject: 'Sending Email using Node.js',
-  text: 'That was easy!'
+  const info = transporter.sendMail({
+      from: '"Usearly Application 😍" <usearly@gmail.com>', // sender address
+      to: toUser,
+      subject: "Email de vérification",
+      text: "Heureux de vous voir", // plain text body
+      html: updatePassword(toUserName, domain, newUserId, resetToken),
+    },
+    function (err, reply) {
+      console.log(err && err.stack);
+      console.dir(reply);
+    }
+  );
+  console.log("Message sent: %s", info.messageId);
+  // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
 };
-
-transporter.sendMail(mailOptions, function(error, info){
-  if (error) {
-    console.log(error);
-  } else {
-    console.log('Email sent: ' + info.response);
-  }
-});  */
