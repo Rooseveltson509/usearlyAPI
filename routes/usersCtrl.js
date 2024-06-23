@@ -115,7 +115,7 @@ module.exports = {
             newUser.pseudo,
             newUser.id,
             process.env.NODE_ENV !== "development"
-              ? "https://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr"
+              ? "https://usearly-api.vercel.app"
               : "http://127.0.0.1:8000",
             token
           );
@@ -355,7 +355,7 @@ module.exports = {
                 sendResetPasswordEmail(
                   userFound.email,
                   userFound.username,
-                  "http://" + process.env.IP_SERVEUR + ":4200",
+                  "https://usearly-api.vercel.app",
                   userFound.id,
                   resetToken
                 );
