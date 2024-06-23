@@ -18,10 +18,10 @@
     "dialectModule": "require('mysql2')"
   },
   "production": {
-    "username": "root",
-    "password": "root",
-    "database": "database_production",
-    "host": "database",
+    "username": "usearly_dbname",
+    "password": "Mireille@509",
+    "database": "usearly_db",
+    "host": "db4free.net",
     "dialect": "mysql",
     "dialectModule": "require('mysql2')"
   }
