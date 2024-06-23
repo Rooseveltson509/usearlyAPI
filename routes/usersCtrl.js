@@ -10,7 +10,7 @@ const {
   checkPassword,
   checkPhoneNumber,
   checkString,
-  sendConfirmationEmail,
+  sendEmail,
   sendResetPasswordEmail,
   getPagination,
   getPagingData,
@@ -110,11 +110,11 @@ module.exports = {
       ],
       function (newUser) {
         if (newUser) {
-          sendConfirmationEmail(
+          sendEmail(
             newUser.email,
             newUser.pseudo,
-            newUser.id,
             "https://usearly-api.vercel.app",
+            newUser.id,
             token
           );
           return res.status(201).json({
