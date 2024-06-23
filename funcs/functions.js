@@ -6,24 +6,26 @@ const {
   updatePassword,
 } = require("./template-validate-mail");
 
-var nodemailer = require('nodemailer');
+var nodemailer = require("nodemailer");
 
 // Constants
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
 const PHONE_NUMBER =
   /^(?:(?:\+|00)33[\s.-]{0,3}(?:\(0\)[\s.-]{0,3})?|0)[1-9](?:(?:[\s.-]?\d{2}){4}|\d{2}(?:[\s.-]?\d{3}){2})$/;
 const ALPHANUMERIC_NUMBER = /^([a-zA-Z0-9_-]){2,50}$/;
+const DATE_FORMAT =
+  /^(0[1-9]|[12][0-9]|3[01])[- \/.,_](0[1-9]|1[012])[- \/.,_](19|20)\d\d/;
 const FRENCH_ZIPCODE = /^[0-9]{5}$/;
 const CITY_STRING = /^[a-zA-Z',.\s-]{1,25}$/;
 const ADDRESS_STRING = /^[a-zA-Z0-9\s,.'-]{3,}$/;
 
-exports.randomDigit = function randomDigit(){
+exports.randomDigit = function randomDigit() {
   //^[0-9]{6,6}$
   var result = "";
   for (var i = length; i > 0; --i)
     result += chars[Math.round(Math.random() * (chars.length - 1))];
   return result;
-}
+};
 
 exports.randomCode = function (length, chars) {
   var result = "";
@@ -53,6 +55,10 @@ exports.checkAddress = function (address) {
 exports.checkString = function (text) {
   return ALPHANUMERIC_NUMBER.test(text);
 };
+exports.checkDate = function (text) {
+  return DATE_FORMAT.test(text);
+};
+
 exports.getPagination = (page, size) => {
   const limit = size ? +size : 3;
   const offset = page ? page * limit : 0;
@@ -67,10 +73,9 @@ exports.getPagingData = (data, page, limit) => {
   return { totalItems, users, totalPages, currentPage };
 };
 
-
 let allowlist = [
   "http://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr",
-  "http://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr",
+  "https://rest-api-node-lbkg1bf9h-rooseveltson509s-projects.vercel.app/",
   "http://" + process.env.IP_SERVEUR + ":3003",
   "http://" + process.env.IP_SERVEUR + ":4200",
   "http://localhost:3000/",
@@ -132,8 +137,6 @@ exports.sendResetPasswordEmail = function (
     }
   );
 };
-
-
 
 /* var transporter = nodemailer.createTransport({
   service: 'gmail',

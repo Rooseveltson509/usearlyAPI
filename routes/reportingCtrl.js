@@ -134,7 +134,7 @@ module.exports = {
   },
 
   // Find User Ticket By store
-  getAllTicketsByStore: function (req, res) {
+  getAllReportings: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = jwtUtils.getUserId(headerAuth);
@@ -144,25 +144,21 @@ module.exports = {
       return res.status(400).json({ error: "missing parameters" });
     }
 
-    models.Employe.findOne({
-      where: { id: userId },
+    models.User.findOne({
+      where: { id: userId, role: "admin" },
     })
-      .then(function (employe) {
-        if (employe) {
-          models.Ticket.findAll({
-            attributes: ["userId", "gain", "etat", "magasin"],
-            where: { magasin: store },
+      .then(function (user) {
+        if (user) {
+          models.Reporting.findAll({
+            attributes: ["userId", "marque", "bugLocation", "description", "emojis", "blocking", "tips"],
+           // where: { magasin: store },
             include: [
               {
                 model: models.User,
                 attributes: [
                   "id",
-                  "first_name",
-                  "last_name",
+                  "pseudo",
                   "email",
-                  "city",
-                  "address",
-                  "zipCode",
                 ],
               },
             ],

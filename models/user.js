@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     pseudo: DataTypes.STRING,
     email: DataTypes.STRING,
     password: DataTypes.STRING,
-    born: DataTypes.DATE,
+    born: DataTypes.STRING,
     role: DataTypes.ENUM('user', 'admin'),
     confirmationToken: DataTypes.STRING,
     confirmedAt: DataTypes.DATE,
