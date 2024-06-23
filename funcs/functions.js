@@ -139,8 +139,8 @@ exports.sendResetPasswordEmail = function (
 exports.sentEmail = function (toUserEmail, domain, newUserId, token){
   
 sendmail({
-  from: 'rooseveltsonc@yahoo.com',
-  to: `${toUserEmail}`,
+  from: 'rooseveltsoncebeat@yahoo.fr',
+  to: toUserEmail,
   subject: 'test sendmail',
   html: "<button style='#22BC66'>"+ `${token}`+ "</button> </br><p><a href="+`${domain}/api/v1/user/mailValidation/`+`${newUserId}`+">Veuillez cliquer sur par ici</a></p>",
 }, function(err, reply) {
@@ -157,58 +157,20 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
       pass: "ppxuztwypmslvddp",
     },
   };
-  let transporter = nodemailer.createTransport(config);
 
-  let MailGenerator = new Mailgen({
-    theme: "default",
-    product: {
-      name: "USEARLY APP",
-      link: `${domain}/api/v1/user/mailValidation/` + `${newUserId}`,
-    },
-  });
-
-  let response = {
-    body: {
-      name: `${userName}`,
-      intro: "Toute l'équipe Usearly vous souhaite la bienvenue!",
-      action: {
-        instructions:
-          "Veuillez saisir le code d'action ci-dessous pour valider votre compte",
-        button: {
-          color: "#22BC66", // Optional action button color
-          text: `${token}`,
-          link: `${domain}/api/v1/user/mailValidation/` + `${newUserId}`,
-        },
-      },
-    },
-  };
-
-  let mail = MailGenerator.generate(response);
-
-  let message = {
-    from: "usearly@gmail.com",
+  var mailOptions = {
+    from: "rooseveltsonc@gmail.com",
     to: `${toUser}`,
     subject: "Toute l'équipe Usearly vous souhaite la bienvenue!",
-    html: mail,
-    /* attachments: [
-        {
-          filename: 'receipt_test.pdf',
-          path: 'receipt_test.pdf',
-          cid: 'uniqreceipt_test.pdf' 
-        }
-    ] */
-  };
+    text: "That was easy",
+  }
 
   transporter
-    .sendMail(message)
-    .then((info) => {
-      return res.status(201).json({
-        msg: "Email sent",
-        info: info.messageId,
-        preview: nodemailer.getTestMessageUrl(info),
-      });
+    .sendMail(mailOptions, function (err, result) {
+      if(err) {
+        console.log(err)
+      } else{
+        console.log('Email sent: ' + info.response)
+      }
     })
-    .catch((err) => {
-      return res.status(500).json({ msg: err });
-    });
 };
