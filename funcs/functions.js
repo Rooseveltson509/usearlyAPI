@@ -1,12 +1,14 @@
 // Imports
 require("dotenv").config();
 const sendmail = require("sendmail")();
+const Mailgen = require('mailgen');
+
 const {
   validateMailAccount,
   updatePassword,
 } = require("./template-validate-mail");
 
-var nodemailer = require('nodemailer');
+var nodemailer = require("nodemailer");
 
 // Constants
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
@@ -17,13 +19,13 @@ const FRENCH_ZIPCODE = /^[0-9]{5}$/;
 const CITY_STRING = /^[a-zA-Z',.\s-]{1,25}$/;
 const ADDRESS_STRING = /^[a-zA-Z0-9\s,.'-]{3,}$/;
 
-exports.randomDigit = function randomDigit(){
+exports.randomDigit = function randomDigit() {
   //^[0-9]{6,6}$
   var result = "";
   for (var i = length; i > 0; --i)
     result += chars[Math.round(Math.random() * (chars.length - 1))];
   return result;
-}
+};
 
 exports.randomCode = function (length, chars) {
   var result = "";
@@ -66,7 +68,6 @@ exports.getPagingData = (data, page, limit) => {
 
   return { totalItems, users, totalPages, currentPage };
 };
-
 
 let allowlist = [
   "http://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr",
@@ -135,35 +136,79 @@ exports.sendResetPasswordEmail = function (
 
 
 
-exports.sendEmail = function (
-  toUser,
-  toUserName,
-  domain,
-  newUserId,
-  resetToken
-) {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false, // Use `true` for port 465, `false` for all other ports
+exports.sentEmail = function (toUserEmail, domain, newUserId, token){
+  
+sendmail({
+  from: 'rooseveltsonc@yahoo.com',
+  to: `${toUserEmail}`,
+  subject: 'test sendmail',
+  html: "<button style='#22BC66'>"+ `${token}`+ "</button> </br><p><a href="+`${domain}/api/v1/user/mailValidation/`+`${newUserId}`+">Veuillez cliquer sur par ici</a></p>",
+}, function(err, reply) {
+  console.log(err && err.stack);
+  console.dir(reply);
+});
+}
+
+exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
+  let config = {
+    service: "gmail",
     auth: {
-      user: "deshaun.schmitt29@ethereal.email",
-      pass: "gG2QAZXrawFu1XkkZj",
+      user: "rooseveltsonc@gmail.com",
+      pass: "ppxuztwypmslvddp",
+    },
+  };
+  let transporter = nodemailer.createTransport(config);
+
+  let MailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "USEARLY APP",
+      link: `${domain}/api/v1/user/mailValidation/` + `${newUserId}`,
     },
   });
 
-  const info = transporter.sendMail({
-      from: '"Usearly Application 😍" <usearly@gmail.com>', // sender address
-      to: toUser,
-      subject: "Email de vérification",
-      text: "Heureux de vous voir", // plain text body
-      html: updatePassword(toUserName, domain, newUserId, resetToken),
+  let response = {
+    body: {
+      name: `${userName}`,
+      intro: "Toute l'équipe Usearly vous souhaite la bienvenue!",
+      action: {
+        instructions:
+          "Veuillez saisir le code d'action ci-dessous pour valider votre compte",
+        button: {
+          color: "#22BC66", // Optional action button color
+          text: `${token}`,
+          link: `${domain}/api/v1/user/mailValidation/` + `${newUserId}`,
+        },
+      },
     },
-    function (err, reply) {
-      console.log(err && err.stack);
-      console.dir(reply);
-    }
-  );
-  //console.log("Message sent: %s", info.messageId);
-  // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
+  };
+
+  let mail = MailGenerator.generate(response);
+
+  let message = {
+    from: "usearly@gmail.com",
+    to: `${toUser}`,
+    subject: "Toute l'équipe Usearly vous souhaite la bienvenue!",
+    html: mail,
+    /* attachments: [
+        {
+          filename: 'receipt_test.pdf',
+          path: 'receipt_test.pdf',
+          cid: 'uniqreceipt_test.pdf' 
+        }
+    ] */
+  };
+
+  transporter
+    .sendMail(message)
+    .then((info) => {
+      return res.status(201).json({
+        msg: "Email sent",
+        info: info.messageId,
+        preview: nodemailer.getTestMessageUrl(info),
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({ msg: err });
+    });
 };
