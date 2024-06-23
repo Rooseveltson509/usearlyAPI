@@ -10,7 +10,7 @@ const {
   checkPassword,
   checkPhoneNumber,
   checkString,
-  sendConfirmationEmail,
+  sentEmail,
   sendResetPasswordEmail,
   getPagination,
   getPagingData,
@@ -112,16 +112,14 @@ module.exports = {
         if (newUser) {
           sentEmail(
             newUser.email,
-            newUser.pseudo,
-            newUser.id,
             "https://usearly-api.vercel.app",
+            newUser.id,
             token
           );
           return res.status(201).json({
             msg: "un mail de confirmation vous a été envoyé afin de valider votre compte à l'adresse : ",
             email: newUser.email,
             token,
-            id
           });
         } else {
           return res
