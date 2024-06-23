@@ -16,7 +16,8 @@ let sequelize;
 } */
   sequelize = new Sequelize("usearly_db","usearly_dbname", "Mireille@509", {
     host: "db4free.net",
-    dialect: "mysql"
+    dialect: "mysql",
+    dialectModule: require('mysql2'),
   });
   
   sequelize.authenticate().then(() => {

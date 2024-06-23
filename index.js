@@ -39,5 +39,5 @@ server.use(config.rootAPI, apiRouter);
 
 // launch server
 server.listen(config.port, function () {
-  console.log("Server en écoute on port: " + config.port +  " - "+ process.env.NODE_ENV);
+  console.log("Server en écoute on port: " + config.port );
 });
