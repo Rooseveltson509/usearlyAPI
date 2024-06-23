@@ -114,9 +114,7 @@ module.exports = {
             newUser.email,
             newUser.pseudo,
             newUser.id,
-            process.env.NODE_ENV !== "development"
-              ? "https://usearly-api.vercel.app"
-              : "http://127.0.0.1:8000",
+            "https://usearly-api.vercel.app",
             token
           );
           return res.status(201).json({
