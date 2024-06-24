@@ -1,9 +1,6 @@
 // Imports
 require("dotenv").config();
 const sendmail = require("sendmail")();
-const Mailgen = require('mailgen');
-const sgMail = require('@sendgrid/mail');
-
 const {
   validateMailAccount,
   updatePassword,
