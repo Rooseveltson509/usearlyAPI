@@ -165,10 +165,10 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
 
 exports.sentEmail = function (toUserEmail, token, domain, userId){
   
-  sgMail.setApiKey(process.env.MAIL_API_KEY);
+  sgMail.setApiKey(rocess.env.MAIL_API_KpEY);
   const msg = {
     to: toUserEmail,
-    from: process.env.EMAIL_LOCAL,
+    from: process.env.PUBLIC_MAIL_API_KEY,
     subject: 'Sending with Twilio SendGrid is Fun',
     text: 'and easy to do anywhere, even with Node.js',
     //html: updatePassword(toUserName, domain, newUserId, token)
