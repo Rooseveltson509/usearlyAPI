@@ -165,7 +165,7 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
 
 exports.sentEmail = function (toUserEmail, token, domain, userId){
   
-  sgMail.setApiKey(process.env.PUBLIC_MAIL_API_KEY);
+  sgMail.setApiKey(process.env.MAIL_API_KEY);
   const msg = {
     to: toUserEmail,
     from: "rooseveltsoncebeat@yahoo.fr",
