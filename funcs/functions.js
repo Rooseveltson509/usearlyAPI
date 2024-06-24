@@ -160,7 +160,7 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
     })
 };
 
-exports.sentEmail = function (userName, token, domain, userId){
+exports.sentEmail = function (userEmail, token, domain, userId){
 
   const transporter = nodemailer.createTransport({
     service: 'Gmail',
@@ -174,9 +174,9 @@ exports.sentEmail = function (userName, token, domain, userId){
   });
   const mail_option = {
     from : 'rooseveltsonc@gmail.com',
-    to : toUserEmail,
+    to : userEmail,
     subject: 'Confirmation de votre compte',
-    html: validateMailAccount(userName, token, domain, userId),
+    html: validateMailAccount(token, domain, userId),
    }
    transporter.sendMail(mail_option, (error, info) => {
     if(error) {
