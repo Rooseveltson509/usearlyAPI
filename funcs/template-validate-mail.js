@@ -1,4 +1,4 @@
-exports.validateMailAccount = (userName, token, domain, userId) => {
+exports.validateMailAccount = (token, domain, userId) => {
   return `<!DOCTYPE html>
 <html>
 
@@ -157,7 +157,7 @@ exports.validateMailAccount = (userName, token, domain, userId) => {
           </tr> <!-- COPY -->
           <tr>
             <td bgcolor="#ffffff" align="left" style="padding: 20px 30px 20px 30px; color: #666666; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
-              <p style="margin: 0;"><a href="${domain}api/vi/user/mailValidation/${userId}" target="_blank" style="color: #FA8C16;">Valider mon compte</a></p>
+              <p style="margin: 0;"><a href="${domain}/api/v1/user/mailValidation/${userId}" target="_blank" style="color: #FA8C16;">Valider mon compte</a></p>
             </td>
           </tr>
           <tr>
