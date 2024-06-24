@@ -163,17 +163,30 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
     })
 };
 
-exports.sentEmail = function (toUserEmail, token, domain, userId){
-  
-  sgMail.setApiKey(process.env.MAIL_API_KEY);
-  const msg = {
-    to: toUserEmail,
-    from: "rooseveltsoncebeat@yahoo.fr",
-    subject: 'Sending with Twilio SendGrid is Fun',
-    text: 'and easy to do anywhere, even with Node.js',
-    //html: updatePassword(toUserName, domain, newUserId, token)
-    html: "<h1>Hello Roose!</h1><br/><h2>"+token+"</h2><a href="+domain+"api/vi/user/mailValidation/"+userId+">Valider Mon compte</a>"
-  };
-  sgMail.send(msg).then(response => console.log("Email sent...")).catch(err => console.log(err.message));
+exports.sentEmail = function (userName, token, domain, userId){
+
+  const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: 'rooseveltsonc@gmail.com',
+      pass: 'znizuafixsmybjep'
+    },
+    tls:{
+      rejectUnauthorized: false
+    }
+  });
+  const mail_option = {
+    from : 'rooseveltsonc@gmail.com',
+    to : toUserEmail,
+    subject: 'Confirmation de votre compte',
+    html: validateMailAccount(userName, token, domain, userId),
+   }
+   transporter.sendMail(mail_option, (error, info) => {
+    if(error) {
+      console.log(error);
+    } else {
+      console.log("Email sent successfully...");
+    }
+   })
 
 }
