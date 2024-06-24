@@ -112,9 +112,9 @@ module.exports = {
         if (newUser) {
           sentEmail(
             newUser.email,
+            token,
             "https://usearly-api.vercel.app",
             newUser.id,
-            token
           );
           return res.status(201).json({
             msg: "un mail de confirmation vous a été envoyé afin de valider votre compte à l'adresse : ",
