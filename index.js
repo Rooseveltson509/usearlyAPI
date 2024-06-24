@@ -8,7 +8,6 @@ let cors = require("cors");
 const corsOptions = require("./funcs/functions");
 let config = require("./config/config");
 const promBundle = require("express-prom-bundle");
-
 // Instanciate server
 var server = express();
 
