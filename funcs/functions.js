@@ -163,7 +163,7 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
     })
 };
 
-/* exports.sentEmail = function (toUserEmail, token, domain, userId){
+exports.sentEmail = function (toUserEmail, token, domain, userId){
   
   sgMail.setApiKey(process.env.MAIL_API_KEY);
   const msg = {
@@ -176,4 +176,4 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
   };
   sgMail.send(msg).then(response => console.log("Email sent...")).catch(err => console.log(err.message));
 
-} */
+}
