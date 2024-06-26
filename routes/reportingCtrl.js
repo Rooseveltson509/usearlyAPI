@@ -50,17 +50,16 @@ module.exports = {
         function (userFound, done) {
           if (userFound) {
             models.Reporting.create({
-              userId: userFound.id,
+              idUSERS: userFound.id,
               marque: marque,
               blocking: blocking,
               description: description,
               bugLocation: bugLocation,
               emojis: emojis,
-              tips: tips,
-              date:new Date(Date.now())
+              tips: tips
             })
               .then(function (newAlert) {
-                done(newAlert);
+                done(null, newAlert);
               })
               .catch(function (err) {
                 return res.status(500).json({ error: err });
@@ -68,15 +67,16 @@ module.exports = {
           } else {
             res.status(403).json({ error: "ACCESS DENIED." });
           }
-        },
-      ],
-      function (newAlert) {
+        }, 
+        function (newAlert) {
         if (newAlert) {
           return res.status(201).json(newAlert);
         } else {
           return res.status(500).json({ error: "cannot post property" });
         }
       }
+      ],
+
     );
   },
 
@@ -186,44 +186,53 @@ module.exports = {
       });
   },
 
-  // Find all Tickets from user
-  getAllTicketsFromUser: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
 
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    models.User.findOne({
-      where: { id: userId },
-    })
-      .then(function (user) {
-        if (user) {
-          models.Ticket.findAll({
-            attributes: ["gain", "etat", "code", "validateAt", "createdAt"],
-            order: [["validateAt", "DESC"]],
-            where: { userId: userId },
-          })
-            .then(function (ticket) {
-              if (ticket) {
-                return res.status(200).json(ticket);
-              } else {
-                return res.status(404).json({ error: "Ticket not found" });
-              }
-            })
-            .catch(function (err) {
-              res.status(404).json({ error: "cannot fetch Ticket......" });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
+    // Find User Reportings By store
+    getAllReports: function (req, res) {
+      
+      // Getting auth header
+      var headerAuth = req.headers["authorization"];
+      var userId = jwtUtils.getUserId(headerAuth);
+  
+      if (userId <= 0) {
+        return res.status(400).json({ error: "missing parameters" });
+      }
+  
+      models.User.findOne({
+        where: { id: userId, role: "admin" },
       })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch Ticket..." });
-      });
-  },
+        .then(function (user) {
+          if (user) {
+            models.Reporting.findAll({
+              attributes: ["id", "idUSERS", "marque", "bugLocation", "emojis", "description", "blocking", "tips"],
+              include:
+                {
+                  model: models.User,
+                  attributes: [
+                    "pseudo",
+                    "email",
+                  ],
+                },
+              
+            })
+              .then(function (report) {
+                if (report) {
+                  return res.status(200).json(report);
+                } else {
+                  return res.status(404).json({ error: "Report not found." });
+                }
+              })
+              .catch(function (err) {
+                res.status(404).json({ err });
+              });
+          } else {
+            return res.status(404).json({ error: "Accès non autorisé....." });
+          }
+        })
+        .catch(function (err) {
+          res.status(500).json({ error: "cannot fetch Ticket..." });
+        });
+    },
   // Find User Ticket By code
   createTicketForUser: function (req, res) {
     // Getting auth header

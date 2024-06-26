@@ -111,29 +111,6 @@ exports.sendConfirmationEmail = function (
   );
 };
 
-exports.sendResetPasswordEmail = function (
-  toUser,
-  toUserName,
-  domain,
-  newUserId,
-  resetToken
-) {
-  sendmail(
-    {
-      from: "furiousducksf2i@gmail.com",
-      to: toUser,
-      subject: "Email de vérification",
-      html: updatePassword(toUserName, domain, newUserId, resetToken),
-    },
-    function (err, reply) {
-      console.log(err && err.stack);
-      console.dir(reply);
-    }
-  );
-};
-
-
-
 exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
   let config = {
     service: "gmail",
@@ -148,42 +125,80 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
     to: `${toUser}`,
     subject: "Toute l'équipe Usearly vous souhaite la bienvenue!",
     text: "That was easy",
-  }
+  };
 
-  transporter
-    .sendMail(mailOptions, function (err, result) {
-      if(err) {
-        console.log(err)
-      } else{
-        console.log('Email sent: ' + info.response)
-      }
-    })
-};
-
-exports.sentEmail = function (userEmail, token, domain, userId){
-
-  const transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-      user: 'rooseveltsonc@gmail.com',
-      pass: 'znizuafixsmybjep'
-    },
-    tls:{
-      rejectUnauthorized: false
+  transporter.sendMail(mailOptions, function (err, result) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("Email sent: " + info.response);
     }
   });
+};
+
+exports.sentEmail = function (userEmail, token, domain, userId) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: "rooseveltsonc@gmail.com",
+      pass: "znizuafixsmybjep",
+    },
+    port: 587,
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: "TLSv1.2",
+    },
+  });
   const mail_option = {
-    from : 'rooseveltsonc@gmail.com',
-    to : userEmail,
-    subject: 'Confirmation de votre compte',
+    from: "rooseveltsonc@gmail.com",
+    to: userEmail,
+    subject: "Confirmation de votre compte",
     html: validateMailAccount(token, domain, userId),
-   }
-   transporter.sendMail(mail_option, (error, info) => {
-    if(error) {
+  };
+  transporter.sendMail(mail_option, (error, info) => {
+    if (error) {
       console.log(error);
     } else {
-      console.log("Email sent successfully...");
+      console.log("Email sent successfully..." + info.messageId);
     }
-   })
+  });
+};
 
-}
+exports.checkDate = function(date){
+  const exactlyNYearsAgoDate = (yearsAgo) => new Date(
+    new Date().setFullYear(new Date().getFullYear() - yearsAgo)
+  )
+  const mockBirthday = new Date(date)
+  const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(18).getTime()
+  
+  console.log('isAdult:', isAdult)
+
+};
+
+exports.sendResetPasswordEmail = function (toUser, toUserName, domain, userId, token) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: "rooseveltsonc@gmail.com",
+      pass: "znizuafixsmybjep",
+    },
+    port: 587,
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: "TLSv1.2",
+    },
+  });
+  const mail_option = {
+    from: "rooseveltsonc@gmail.com",
+    to: toUser,
+    subject: "Modifier mon mot de passe.",
+    html: updatePassword(toUserName, domain, userId, token),
+  };
+  transporter.sendMail(mail_option, (error, info) => {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Email sent successfully..." + info.messageId);
+    }
+  });
+};

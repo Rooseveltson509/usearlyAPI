@@ -22,9 +22,10 @@ module.exports = {
     let bugLocation = req.body.bugLocation;
     let emojis = req.body.emojis;
     let tips = req.body.tips;
+    let idREPORTINGS = req.params.idReporting;
 
     if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters... " + userId });
+      return res.status(400).json({ error: "missing parameters... "});
     }
 
     if (
@@ -54,41 +55,52 @@ module.exports = {
         },
         function (userFound, done) {
           if (userFound) {
-              models.Tickets.create({
-                userId: userFound.id,
-                adminId: userFound.id,
-                //reporting:userFound.id,
-                marque: marque,
-                title: title,
-                category: category,
-                criticality: criticality,
-                blocking: blocking,
-                bugLocation: bugLocation,
-                emojis: emojis,
-                configuration: Os.platform(),
-                tips: tips,
-                date:new Date(Date.now())
-                
+            console.log("userfound: " + userFound.pseudo);
+
+            models.Reporting.findOne({
+              where: { id: idREPORTINGS}
+            })
+              .then(function (report) {
+                done(null, userFound, report);
               })
-                .then(function (newTicket) {
-                  done(newTicket);
-                })
-                .catch(function (err) {
-                  return res.status(500).json({ error: err });
-                });
+              .catch(function (err) {
+                return res.status(500).json({ error: "Can Not create ticket..." });
+              });
           } else {
             res.status(403).json({ error: "ACCESS DENIED." });
           }
         },
+        function (userFound, report, done){
+          models.Ticket.create({
+            idREPORTINGS: report.id,
+            adminId: userFound.id,
+            marque: marque,
+            title: title,
+            category: category,
+            blocking: blocking,
+            emojis: emojis,
+            bugLocation: bugLocation,
+            tips: tips,
+            criticality: criticality,
+            configuration: Os.platform(),
+          })
+            .then(function (newTicket) {
+              done(newTicket);
+            })
+            .catch(function (err) {
+              return res.status(500).json({ error: err });
+            });
+        }
       ],
       function (newTicket) {
         if (newTicket) {
           return res.status(201).json(newTicket);
         } else {
-          return res.status(500).json({ error: "cannot post property" });
+          return res.status(500).json({ error: "can not post property" });
         }
       }
     );
+
   },
 
   // Find User Ticket By code
@@ -144,58 +156,58 @@ module.exports = {
       });
   },
 
-    // Find User Ticket By store
-    getAllTicketsByStore: function (req, res) {
-      // Getting auth header
-      var headerAuth = req.headers["authorization"];
-      var userId = jwtUtils.getUserId(headerAuth);
-      var store = req.params.store;
-  
-      if (userId <= 0) {
-        return res.status(400).json({ error: "missing parameters" });
-      }
-  
-      models.Employe.findOne({
-        where: { id: userId },
-      })
-        .then(function (employe) {
-          if (employe) {
-            models.Ticket.findAll({
-              attributes: ["userId", "gain", "etat", "magasin"],
-              where: { magasin: store },
-              include: [
-                {
-                  model: models.User,
-                  attributes: [
-                    "id",
-                    "first_name",
-                    "last_name",
-                    "email",
-                    "city",
-                    "address",
-                    "zipCode",
-                  ],
-                },
-              ],
+  // Find User Ticket By store
+  getAllTicketsByStore: function (req, res) {
+    // Getting auth header
+    var headerAuth = req.headers["authorization"];
+    var userId = jwtUtils.getUserId(headerAuth);
+    var store = req.params.store;
+
+    if (userId <= 0) {
+      return res.status(400).json({ error: "missing parameters" });
+    }
+
+    models.Employe.findOne({
+      where: { id: userId },
+    })
+      .then(function (employe) {
+        if (employe) {
+          models.Ticket.findAll({
+            attributes: ["userId", "gain", "etat", "magasin"],
+            where: { magasin: store },
+            include: [
+              {
+                model: models.User,
+                attributes: [
+                  "id",
+                  "first_name",
+                  "last_name",
+                  "email",
+                  "city",
+                  "address",
+                  "zipCode",
+                ],
+              },
+            ],
+          })
+            .then(function (ticket) {
+              if (ticket) {
+                return res.status(200).json(ticket);
+              } else {
+                return res.status(404).json({ error: "Store not found." });
+              }
             })
-              .then(function (ticket) {
-                if (ticket) {
-                  return res.status(200).json(ticket);
-                } else {
-                  return res.status(404).json({ error: "Store not found." });
-                }
-              })
-              .catch(function (err) {
-                res.status(404).json({ error: "cannot fetch Ticket." });
-              });
-          } else {
-            return res.status(404).json({ error: "Accès non autorisé....." });
-          }
-        })
-        .catch(function (err) {
-          res.status(500).json({ error: "cannot fetch Ticket..." });
-        });
-    },
+            .catch(function (err) {
+              res.status(404).json({ error: "cannot fetch Ticket." });
+            });
+        } else {
+          return res.status(404).json({ error: "Accès non autorisé....." });
+        }
+      })
+      .catch(function (err) {
+        res.status(500).json({ error: "cannot fetch Ticket..." });
+      });
+  },
 
   // Find all Tickets from user
   getAllTicketsFromUser: function (req, res) {
@@ -208,7 +220,7 @@ module.exports = {
     }
 
     models.User.findOne({
-      where: { id: userId},
+      where: { id: userId },
     })
       .then(function (user) {
         if (user) {
