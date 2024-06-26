@@ -8,16 +8,16 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      userId: {
+      idREPORTINGS: {
         allowNull: true,
         type: Sequelize.INTEGER
+        /* references: {
+          model: 'Reportings',
+          key: 'id'
+        } */
       },
       adminId: {
         allowNull: false,
-        type: Sequelize.INTEGER
-      },
-      reporting: {
-        allowNull: true,
         type: Sequelize.INTEGER
       },
       marque: {
@@ -52,6 +52,14 @@ module.exports = {
         allowNull: true,
         type: Sequelize.STRING
       },
+      response: {
+        allowNull: true,
+        type: Sequelize.STRING
+      },
+      ticketStatus: {
+        allowNull: true,
+        type: Sequelize.STRING
+      },
       configuration: {
         allowNull: false,
         type: Sequelize.STRING
@@ -64,10 +72,6 @@ module.exports = {
           'critique'
         ],
         defaultValue: 'mineur'
-      },
-      date: {
-        allowNull: true,
-        type: Sequelize.DATE
       },
       validateAt: {
         allowNull: true,

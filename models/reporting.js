@@ -1,4 +1,5 @@
 'use strict';
+const { foreign_key } = require('i/lib/methods');
 const {
   Model
 } = require('sequelize');
@@ -12,22 +13,19 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       models.Reporting.belongsTo(models.User, {
-        foreignKey: {
-            allowNull: true
-        },
+        foreignKey: "idUSERS",
         onDelete: 'CASCADE',
     })
     }
   };
   Reporting.init({
-    userId: DataTypes.STRING,
+    idUSERS: DataTypes.INTEGER,
     marque: DataTypes.STRING,
     bugLocation: DataTypes.STRING,
     emojis: DataTypes.STRING,
     description: DataTypes.STRING,
     blocking: DataTypes.BOOLEAN,
-    tips: DataTypes.STRING,
-    date: DataTypes.DATE
+    tips: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Reporting',

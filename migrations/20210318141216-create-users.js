@@ -36,6 +36,7 @@ module.exports = {
         defaultValue: 'user'
       },
       born: {
+        allowNull: true,
         type: Sequelize.DATE
       },
       createdAt: {

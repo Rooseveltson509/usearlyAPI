@@ -11,6 +11,7 @@ const {
   checkPhoneNumber,
   checkString,
   sentEmail,
+  checkDate,
   sendResetPasswordEmail,
   getPagination,
   getPagingData,
@@ -91,7 +92,7 @@ module.exports = {
           }
         },
         function (userFound, bcryptedPassword, done) {
-          let newUser = models.User.create({
+          models.User.create({
             gender: gender,
             pseudo: pseudo,
             email: email,
@@ -345,7 +346,7 @@ module.exports = {
               .then(function (userFound) {
                 sendResetPasswordEmail(
                   userFound.email,
-                  userFound.username,
+                  userFound.pseudo,
                   "https://usearly-api.vercel.app",
                   userFound.id,
                   resetToken
@@ -665,7 +666,7 @@ module.exports = {
     if (userId < 0) return res.status(400).json({ error: "wrong token" });
 
     models.User.findOne({
-      attributes: ["gender", "last_name", "first_name", "email"],
+      attributes: ["gender", "pseudo", "born", "email"],
       where: { id: userId },
     })
       .then(function (user) {
@@ -676,7 +677,7 @@ module.exports = {
         }
       })
       .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch this user" });
+        res.status(500).json({ err });
       });
   },
 
@@ -685,45 +686,32 @@ module.exports = {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = jwtUtils.getUserId(headerAuth);
+    
+  
 
     // Params
-    let nom = req.body.nom;
-    let prenom = req.body.prenom;
-    var address = req.body.address;
-    var city = req.body.city;
-    var zipCode = req.body.zipCode;
-    let phoneNumber = req.body.phoneNumber;
+    let pseudo = req.body.pseudo;
+    let born = req.body.born;
 
-    if (!checkString(nom)) {
+    
+    const exactlyNYearsAgoDate = (yearsAgo) => new Date(
+      new Date().setFullYear(new Date().getFullYear() - yearsAgo)
+    )
+    const mockBirthday = new Date(born)
+    const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(18).getTime();
+
+
+    if (!checkString(pseudo)) {
       return res.status(400).json({
         error:
           "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
       });
     }
 
-    if (!checkString(prenom)) {
+    if (!isAdult) {
       return res.status(400).json({
         error:
-          "firstname invalid (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-    if (!checkZipcode(zipCode)) {
-      return res.status(400).json({
-        error: "Invalid ZipCode (Must be Numerate with 5 characters)",
-      });
-    }
-    if (!checkCity(city)) {
-      return res.status(400).json({ error: "Invalid City (Only alphabetic)" });
-    }
-    if (!checkAddress(address)) {
-      return res.status(400).json({
-        error: "Invalid Address (Must be alphaNumerate with (space))",
-      });
-    }
-    if (!checkPhoneNumber(phoneNumber)) {
-      return res.status(400).json({
-        error:
-          "Phone Number invalid (example : 06 01 02 03 04 | 06-01-02-03-04 | +33 6 01 02 03 04 |  0033 6 01 02 03 04)",
+          "born (You should be 18 years of age or older)",
       });
     }
 
@@ -744,12 +732,8 @@ module.exports = {
           if (userFound) {
             userFound
               .update({
-                last_name: nom ? nom : userFound.nom,
-                first_name: prenom ? prenom : userFound.prenom,
-                address: address ? address : userFound.address,
-                city: city ? city : userFound.city,
-                zipCode: zipCode ? zipCode : userFound.zipCode,
-                phoneNumber: phoneNumber ? phoneNumber : userFound.phoneNumber,
+                pseudo: pseudo ? pseudo : userFound.pseudo,
+                born: born ? born : userFound.born,
               })
               .then(function () {
                 done(userFound);

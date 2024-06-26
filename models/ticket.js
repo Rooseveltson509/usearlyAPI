@@ -11,28 +11,29 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      models.Ticket.belongsTo(models.User, {
+     /*  models.Ticket.belongsTo(models.User, {
         foreignKey: {
-            allowNull: true
+            allowNull: false,
+            name: 'userId'
         },
         onDelete: 'CASCADE',
-    })
+    }) */
     }
   };
-  Ticket.init({  
-    date: DataTypes.DATE,
-    reporting: DataTypes.INTEGER,
+  Ticket.init({
+    idREPORTINGS: DataTypes.INTEGER,
     adminId: DataTypes.INTEGER,
-    userId: DataTypes.INTEGER,
     marque: DataTypes.STRING,
     title: DataTypes.STRING,
     category: DataTypes.STRING,
     blocking: DataTypes.BOOLEAN,
-    criticality: DataTypes.ENUM('mineur', 'majeur', 'critique'),
-    bugLocation: DataTypes.STRING,
     emojis: DataTypes.STRING,
+    bugLocation: DataTypes.STRING,
+    tips: DataTypes.STRING,
+    response: DataTypes.STRING,
+    ticketStatus: DataTypes.STRING,
     configuration: DataTypes.STRING,
-    tips: DataTypes.STRING
+    criticality: DataTypes.ENUM('mineur', 'majeur', 'critique')
   }, {
     sequelize,
     modelName: 'Ticket',

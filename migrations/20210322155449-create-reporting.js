@@ -8,9 +8,14 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      userId: {
-        allowNull: true,
-        type: Sequelize.INTEGER
+      idUSERS: {
+        allowNull: false,
+        type: Sequelize.INTEGER,
+        onDelete: "CASCADE",
+        references: {
+          model: 'Users',
+          key: 'id'
+        }
       },
       marque: {
         allowNull: false,
@@ -39,10 +44,6 @@ module.exports = {
       tips: {
         allowNull: false,
         type: Sequelize.STRING
-      },
-      date: {
-        allowNull: false,
-        type: Sequelize.DATE
       },
       createdAt: {
         allowNull: false,
