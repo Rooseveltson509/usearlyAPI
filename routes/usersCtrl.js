@@ -671,7 +671,7 @@ module.exports = {
     })
       .then(function (user) {
         if (user) {
-          res.status(201).json(user);
+          res.status(200).json(user);
         } else {
           res.status(404).json({ error: "user not found" });
         }
