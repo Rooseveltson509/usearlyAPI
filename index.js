@@ -8,6 +8,9 @@ let cors = require("cors");
 const corsOptions = require("./funcs/functions");
 let config = require("./config/config");
 const promBundle = require("express-prom-bundle");
+const swaggerJSDoc = require("swagger-jsdoc");
+
+
 // Instanciate server
 var server = express();
 
@@ -27,6 +30,16 @@ const metricsMiddleware = promBundle({includeMethod: true, includePath: true});
 server.use(metricsMiddleware);
 
 // Configure routes
+
+/**
+ * @swagger
+ * /customers:
+ * get:
+ *    description: Use to request all customers
+ *    responses:
+ *      '200':
+ *        description: A successful response
+ */
 server.get(config.rootAPI, function (req, res) {
   res.setHeader("Content-Type", "text/html");
   res.status(200).send("<h1>Welcom to the ApiRestFull server</h1>");
