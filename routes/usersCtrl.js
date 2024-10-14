@@ -24,15 +24,13 @@ const { randomCode } = require("../funcs/functions");
 // Routers
 module.exports = {
   register: function (req, res) {
-    let gender = req.body.gender;
+    //let gender = req.body.gender;
     let pseudo = req.body.pseudo;
+    let born = req.body.born;
     let email = req.body.email;
     let password = req.body.password;
     let password_confirm = req.body.password_confirm;
-    let token = randomCode(
-      6,
-      "0123456789"
-    );
+    let token = randomCode(6, "0123456789");
 
     if (pseudo == null || email == null || password == null) {
       return res.status(400).json({ error: "all fields must be filled in." });
@@ -45,10 +43,20 @@ module.exports = {
       });
     }
 
-    if (gender == null) {
+    /* if (gender == null) {
       return res
         .status(400)
-        .json({ error: "Gender INVALID (must be (monsieur) - (madame))" });
+        .json({ error: "Gender INVALID (must be (monsieur) - (madame))...." });
+    } */
+    const exactlyNYearsAgoDate = (yearsAgo) =>
+      new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));
+    const mockBirthday = new Date(born);
+    const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(16).getTime();
+
+    if (!isAdult) {
+      return res.status(400).json({
+        error: "born (You should be 16 years of age or older)",
+      });
     }
 
     if (!validator.validate(email)) {
@@ -93,8 +101,8 @@ module.exports = {
         },
         function (userFound, bcryptedPassword, done) {
           models.User.create({
-            gender: gender,
             pseudo: pseudo,
+            born: born,
             email: email,
             password: bcryptedPassword,
             confirmationToken: token,
@@ -111,10 +119,15 @@ module.exports = {
       ],
       function (newUser) {
         if (newUser) {
-          sentEmail(newUser.email, token,"https://usearly-api.vercel.app", newUser.id);
+          sentEmail(
+            newUser.email,
+            token,
+            "https://usearly-api.vercel.app",
+            newUser.id
+          );
           return res.status(201).json({
             msg: "un mail de confirmation vous a été envoyé afin de valider votre compte à l'adresse : ",
-            email: newUser.email
+            email: newUser.email,
           });
         } else {
           return res
@@ -128,8 +141,8 @@ module.exports = {
   // Email sending to confirm account
   confirmEmail: function (req, res) {
     // Params
-     var userId = parseInt(req.params.userId);
-     var token = req.body.token;
+    var userId = parseInt(req.params.userId);
+    var token = req.body.token;
 
     //const { userId, token } = req.query;
 
@@ -168,10 +181,9 @@ module.exports = {
       ],
       function (userFound) {
         if (userFound) {
-
-           res.status(200).json({
-             msg: "Votre compte a bien été validé, veuillez à présent vous connecter.",
-           });
+          res.status(200).json({
+            msg: "Votre compte a bien été validé, veuillez à présent vous connecter.",
+          });
 
           // decommente pour la prod
           /* res.writeHead(302, {
@@ -686,20 +698,16 @@ module.exports = {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = jwtUtils.getUserId(headerAuth);
-    
-  
 
     // Params
     let pseudo = req.body.pseudo;
     let born = req.body.born;
+    let gender = req.body.gender;
 
-    
-    const exactlyNYearsAgoDate = (yearsAgo) => new Date(
-      new Date().setFullYear(new Date().getFullYear() - yearsAgo)
-    )
-    const mockBirthday = new Date(born)
+    const exactlyNYearsAgoDate = (yearsAgo) =>
+      new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));
+    const mockBirthday = new Date(born);
     const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(18).getTime();
-
 
     if (!checkString(pseudo)) {
       return res.status(400).json({
@@ -708,10 +716,15 @@ module.exports = {
       });
     }
 
+    if (gender == null) {
+      return res
+        .status(400)
+        .json({ error: "Gender INVALID (must be (monsieur) - (madame))...." });
+    }
+
     if (!isAdult) {
       return res.status(400).json({
-        error:
-          "born (You should be 18 years of age or older)",
+        error: "born (You should be 18 years of age or older)",
       });
     }
 
@@ -734,6 +747,7 @@ module.exports = {
               .update({
                 pseudo: pseudo ? pseudo : userFound.pseudo,
                 born: born ? born : userFound.born,
+                gender: gender ? gender : userFound.gender,
               })
               .then(function () {
                 done(userFound);

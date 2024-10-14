@@ -23,14 +23,14 @@ module.exports = {
     if (userId <= 0) {
       return res.status(400).json({ error: "missing parameters... " + userId });
     }
-
+//.trim().length === 0
     if (
-      marque == null ||
-      description == null ||
-      blocking == null ||
-      bugLocation == null ||
-      emojis == null ||
-      tips == null
+      marque.trim().length === 0 ||
+      description.trim().length === 0 ||
+      blocking.trim().length === 0 ||
+      bugLocation.trim().length === 0 ||
+      emojis.trim().length === 0 ||
+      tips.trim().length === 0
     ) {
       return res.status(400).json({ error: "all fields must be filled in." });
     }

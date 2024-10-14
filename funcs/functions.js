@@ -164,18 +164,21 @@ exports.sentEmail = function (userEmail, token, domain, userId) {
   });
 };
 
-exports.checkDate = function(date){
-  const exactlyNYearsAgoDate = (yearsAgo) => new Date(
-    new Date().setFullYear(new Date().getFullYear() - yearsAgo)
-  )
-  const mockBirthday = new Date(date)
-  const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(18).getTime()
-  
-  console.log('isAdult:', isAdult)
-
+exports.checkDate = function (date) {
+  const exactlyNYearsAgoDate = (yearsAgo) =>
+    new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));
+  const mockBirthday = new Date(date);
+  const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(16).getTime();
+  console.log("isAdult:", isAdult);
 };
 
-exports.sendResetPasswordEmail = function (toUser, toUserName, domain, userId, token) {
+exports.sendResetPasswordEmail = function (
+  toUser,
+  toUserName,
+  domain,
+  userId,
+  token
+) {
   const transporter = nodemailer.createTransport({
     service: "Gmail",
     auth: {
