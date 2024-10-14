@@ -21,6 +21,7 @@ let sequelize;
   });
   
   sequelize.authenticate().then(() => {
+    console.log("test env: "+ env);
     console.log("Connected successfully");
   }).catch(err => {
     console.log("Error: "+ err);
