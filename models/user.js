@@ -11,14 +11,23 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-        //models.User.hasMany(models.Reporting)
-        models.User.hasMany(models.Reporting, {foreignKey: 'idUSERS', as: 'userReportings'});
-        models.User.hasMany(models.Ticket, {foreignKey: 'ticketId', as: 'userTicket'});
-        
+      //models.User.hasMany(models.Reporting)
+      /* models.User.hasMany(models.Reporting, {foreignKey: 'userId', as: 'userReportings'});
+      models.User.hasMany(models.Ticket, {foreignKey: 'ticketId', as: 'userTicket'}); */
+      models.User.hasMany(models.Marque)
+      models.User.hasMany(models.Reporting)
+      models.User.hasMany(models.Ticket)
+
     }
   };
   User.init({
-    gender: DataTypes.ENUM('monsieur', 'madame'),
+    id: {
+      allowNull: false,
+      primaryKey: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
+    gender: DataTypes.ENUM('monsieur', 'madame', 'N/A'),
     pseudo: DataTypes.STRING,
     email: DataTypes.STRING,
     password: DataTypes.STRING,
@@ -34,6 +43,6 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'User',
   });
-  
+
   return User;
 };

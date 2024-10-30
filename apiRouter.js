@@ -26,9 +26,10 @@ exports.router = (function() {
 
     // 1-b Users routes('/admin/')
     apiRouter.route('/user/admin/:email', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserProfileByAdmin);
+    apiRouter.route('/admin/brand/new', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.createBrandNew);
     apiRouter.route('/user/admin/employe/:email', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserProfileEmployeByAdmin);
     apiRouter.route('/user/admin/:email', cors(corsOption.corsOptionsDelegate)).delete(usersCtrl.destroyUserProfileByAdmin);
-    apiRouter.route('/employe/admin/:email', cors(corsOption.corsOptionsDelegate)).delete(usersCtrl.destroyEmployeProfileByAdmin);
+    apiRouter.route('/user/admin/:email', cors(corsOption.corsOptionsDelegate)).delete(usersCtrl.destroyUserProfileByAdmin);
     apiRouter.route('/admin/users/', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.listUsers);
 
     // signalement
@@ -36,7 +37,7 @@ exports.router = (function() {
     apiRouter.route('/user/admin/reports', cors(corsOption.corsOptionsDelegate)).get(alertCtrl.getAllReports);
 
     // 2- Tickets routes
-    apiRouter.route('/ticket/:idReporting/new', cors(corsOption.corsOptionsDelegate)).get(ticketCtrl.createTicket);
+    apiRouter.route('/ticket/:idReporting/new', cors(corsOption.corsOptionsDelegate)).post(ticketCtrl.createTicket);
     apiRouter.route('/ticket/create/', cors(corsOption.corsOptionsDelegate)).post(ticketCtrl.createTicketForUser);
     apiRouter.route('/ticket/:code', cors(corsOption.corsOptionsDelegate)).get(ticketCtrl.getTicketByCode);
     apiRouter.route('/user/tickets', cors(corsOption.corsOptionsDelegate)).get(ticketCtrl.getAllTicketsFromUser);

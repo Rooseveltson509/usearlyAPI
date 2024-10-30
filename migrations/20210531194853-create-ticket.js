@@ -4,21 +4,23 @@ module.exports = {
     await queryInterface.createTable('Tickets', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4
       },
-      idREPORTINGS: {
-        allowNull: true,
-        type: Sequelize.INTEGER
-        /* references: {
+      reportingId: {
+        allowNull: false,
+        type: Sequelize.UUID,
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+        references: {
           model: 'Reportings',
           key: 'id'
-        } */
+        }
       },
-      adminId: {
+      email: {
         allowNull: false,
-        type: Sequelize.INTEGER
+        type: Sequelize.STRING
       },
       marque: {
         allowNull: false,

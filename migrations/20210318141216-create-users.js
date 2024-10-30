@@ -4,16 +4,18 @@ module.exports = {
     await queryInterface.createTable('Users', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4
       },
       gender: {
         type: Sequelize.ENUM,
         values: [
           'monsieur',
-          'madame'
-        ]
+          'madame',
+          'N/A'
+        ],
+        defaultValue: 'N/A'
       },
       pseudo: {
         allowNull: false,
@@ -48,30 +50,30 @@ module.exports = {
         type: Sequelize.DATE
       },
       confirmationToken: {
-          allowNull: true,
-          type: Sequelize.STRING
+        allowNull: true,
+        type: Sequelize.STRING
       },
       confirmedAt: {
-          allowNull: true,
-          type: Sequelize.DATE
+        allowNull: true,
+        type: Sequelize.DATE
       },
       resetToken: {
-          allowNull: true,
-          type: Sequelize.STRING
+        allowNull: true,
+        type: Sequelize.STRING
       },
       resetAt: {
-          allowNull: true,
-          type: Sequelize.DATE
+        allowNull: true,
+        type: Sequelize.DATE
       },
       expiredAt: {
-          allowNull: true,
-          type: Sequelize.DATE
+        allowNull: true,
+        type: Sequelize.DATE
       },
       rememberToken: {
-          allowNull: true,
-          type: Sequelize.STRING
+        allowNull: true,
+        type: Sequelize.STRING
       },
-      optin: { 
+      optin: {
         type: Sequelize.ENUM,
         values: [
           'yes',

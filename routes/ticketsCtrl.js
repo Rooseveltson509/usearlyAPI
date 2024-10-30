@@ -22,21 +22,21 @@ module.exports = {
     let bugLocation = req.body.bugLocation;
     let emojis = req.body.emojis;
     let tips = req.body.tips;
-    let idREPORTINGS = req.params.idReporting;
+    let idReporting = req.params.idReporting;
 
     if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters... "});
+      return res.status(400).json({ error: "missing parameters... " });
     }
 
     if (
-      marque == null ||
-      title == null ||
-      category == null ||
-      criticality == null ||
-      blocking == null ||
-      bugLocation == null ||
-      emojis == null ||
-      tips == null
+      marque.trim().length === 0 ||
+      title.trim().length === 0 ||
+      category.trim().length === 0 ||
+      criticality.trim().length === 0 ||
+      blocking.trim().length === 0 ||
+      bugLocation.trim().length === 0 ||
+      emojis.trim().length === 0 ||
+      tips.trim().length === 0
     ) {
       return res.status(400).json({ error: "all fields must be filled in." });
     }
@@ -50,30 +50,31 @@ module.exports = {
               done(null, userFound);
             })
             .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
+              return res.status(500).json({ error: "unable to verify user ..." });
             });
         },
         function (userFound, done) {
           if (userFound) {
-            console.log("userfound: " + userFound.pseudo);
 
             models.Reporting.findOne({
-              where: { id: idREPORTINGS}
+              where: { id: idReporting }
             })
               .then(function (report) {
                 done(null, userFound, report);
               })
               .catch(function (err) {
-                return res.status(500).json({ error: "Can Not create ticket..." });
+                return res.status(500).json({ err });
               });
+
+
           } else {
             res.status(403).json({ error: "ACCESS DENIED." });
           }
         },
-        function (userFound, report, done){
+        function (userFound, report, done) {
           models.Ticket.create({
-            idREPORTINGS: report.id,
-            adminId: userFound.id,
+            reportingId: idReporting,
+            email: userFound.email,
             marque: marque,
             title: title,
             category: category,
@@ -88,7 +89,7 @@ module.exports = {
               done(newTicket);
             })
             .catch(function (err) {
-              return res.status(500).json({ error: err });
+              return res.status(500).json({ err });
             });
         }
       ],
@@ -96,7 +97,7 @@ module.exports = {
         if (newTicket) {
           return res.status(201).json(newTicket);
         } else {
-          return res.status(500).json({ error: "can not post property" });
+          return res.status(500).json({ error: "can not create ticket" });
         }
       }
     );
