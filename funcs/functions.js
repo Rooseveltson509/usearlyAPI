@@ -16,6 +16,8 @@ const ALPHANUMERIC_NUMBER = /^([a-zA-Z0-9_-]){2,50}$/;
 const FRENCH_ZIPCODE = /^[0-9]{5}$/;
 const CITY_STRING = /^[a-zA-Z',.\s-]{1,25}$/;
 const ADDRESS_STRING = /^[a-zA-Z0-9\s,.'-]{3,}$/;
+// Check the pattern (dd/mm/yyyy or dd-mm-yyyy)
+const REGEX_DATE_FORMAT_FR = /^(0[1-9]|[12][0-9]|3[01])[-\/](0[1-9]|1[0-2])[-\/](19|20)\d\d$/;
 
 exports.randomDigit = function randomDigit() {
   //^[0-9]{6,6}$
@@ -43,12 +45,65 @@ exports.checkZipcode = function (zipCode) {
 exports.checkPhoneNumber = function (phone) {
   return PHONE_NUMBER.test(phone);
 };
+
+exports.checkDateFormatFr = function (date) {
+  return REGEX_DATE_FORMAT_FR.test(date);
+};
+
 exports.checkCity = function (city) {
   return CITY_STRING.test(city);
 };
 exports.checkAddress = function (address) {
   return ADDRESS_STRING.test(address);
 };
+
+exports.isValidDateFormat = function (dateString) {
+  // Vérifier si la date correspond à l'un des deux formats dd/mm/yyyy ou dd-mm-yyyy
+  const regex = /^(\d{2})(\/|-)(\d{2})(\/|-)(\d{4})$/;
+  const match = dateString.match(regex);
+
+  if (!match) {
+    return false;
+  }
+
+  // Extraire les parties de la date
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[3], 10);
+  const year = parseInt(match[5], 10);
+
+  // Vérifier que les valeurs du jour, mois, et année sont valides
+  const date = new Date(year, month - 1, day); // month - 1 car les mois commencent à 0 en JS
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+};
+
+exports.isOver16 = function (dateString) {
+  if (!exports.isValidDateFormat(dateString)) {
+    return false;
+  }
+
+  const today = new Date();
+  const [day, month, year] = dateString.includes('/')
+    ? dateString.split('/')
+    : dateString.split('-');
+
+  const birthDate = new Date(year, month - 1, day);
+
+  // Calculer l'âge en comparant avec la date actuelle
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
+};
+
+
 
 exports.checkString = function (text) {
   return ALPHANUMERIC_NUMBER.test(text);
@@ -205,3 +260,4 @@ exports.sendResetPasswordEmail = function (
     }
   });
 };
+

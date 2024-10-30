@@ -11,10 +11,24 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      models.Marque.hasMany(models.Ticket)
+      models.Marque.belongsTo(models.User, {
+        foreignKey: {
+          foreignKey: "userId",
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+      });
+      
     }
   };
   Marque.init({
+    id: {
+      allowNull: false,
+      primaryKey: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
+    userId: DataTypes.UUID,
     name: DataTypes.STRING,
     email: DataTypes.STRING,
     mdp: DataTypes.STRING

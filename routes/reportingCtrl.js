@@ -21,7 +21,7 @@ module.exports = {
     let tips = req.body.tips;
 
     if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters... " + userId });
+      return res.status(400).json({ error: "missing parameters... " });
     }
 //.trim().length === 0
     if (
@@ -50,7 +50,7 @@ module.exports = {
         function (userFound, done) {
           if (userFound) {
             models.Reporting.create({
-              idUSERS: userFound.id,
+              userId: userFound.id,
               marque: marque,
               blocking: blocking,
               description: description,

@@ -3,7 +3,7 @@ require("dotenv").config();
 let bcrypt = require("bcryptjs");
 let jwtUtils = require("../utils/jwt.utils");
 let models = require("../models");
-var asyncLib = require("async");
+let asyncLib = require("async");
 let randToken = require("rand-token").uid;
 const validator = require("email-validator");
 const {
@@ -12,6 +12,8 @@ const {
   checkString,
   sentEmail,
   checkDate,
+  isValidDateFormat,
+  isOver16,
   sendResetPasswordEmail,
   getPagination,
   getPagingData,
@@ -43,19 +45,16 @@ module.exports = {
       });
     }
 
-    /* if (gender == null) {
-      return res
-        .status(400)
-        .json({ error: "Gender INVALID (must be (monsieur) - (madame))...." });
-    } */
-    const exactlyNYearsAgoDate = (yearsAgo) =>
-      new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));
-    const mockBirthday = new Date(born);
-    const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(16).getTime();
-
-    if (!isAdult) {
+    if (isValidDateFormat(born)) {
+      if (isOver16(born) < 16) {
+        return res.status(400).json({
+          error: "born (You should be 16 years of age or older)",
+        });
+      }
+    }
+    if (!isValidDateFormat(born)) {
       return res.status(400).json({
-        error: "born (You should be 16 years of age or older)",
+        error: "Wrong format (Format accepted: dd/mm/yyyy or dd-mm-yyyy)",
       });
     }
 
@@ -132,7 +131,7 @@ module.exports = {
         } else {
           return res
             .status(500)
-            .json({ error: "Important d'ajouter cet utilisateur" });
+            .json({ error: "Impossible d'ajouter cet utilisateur" });
         }
       }
     );
@@ -141,7 +140,7 @@ module.exports = {
   // Email sending to confirm account
   confirmEmail: function (req, res) {
     // Params
-    var userId = parseInt(req.params.userId);
+    var userId = req.params.userId;
     var token = req.body.token;
 
     //const { userId, token } = req.query;
@@ -156,7 +155,7 @@ module.exports = {
               done(null, userFound);
             })
             .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
+              return res.status(500).json({ error: "unable to verify the user" });
             });
         },
         function (userFound, done) {
@@ -239,7 +238,7 @@ module.exports = {
             done(userFound);
           } else {
             return res
-              .status(403)
+              .status(400)
               .json({ error: "Email ou mot de passe INVALIDE..." });
           }
         },
@@ -247,9 +246,6 @@ module.exports = {
       function (userFound) {
         if (userFound) {
           return res.status(200).json({
-            userId: userFound.id,
-            email: userFound.email,
-            role: userFound.role,
             token: jwtUtils.generateTokenForUser(userFound),
           });
         } else {
@@ -300,7 +296,7 @@ module.exports = {
             done(userFound);
           } else {
             return res
-              .status(403)
+              .status(400)
               .json({ error: "Email ou mot de passe INVALIDE..." });
           }
         },
@@ -392,7 +388,7 @@ module.exports = {
   // RESET PASSWORD
   resetPassword: function (req, res) {
     // Params
-    let userId = parseInt(req.params.userId);
+    let userId = req.params.userId;
     let token = req.params.token;
     let password = req.body.password;
     let password_confirm = req.body.password_confirm;
@@ -712,7 +708,7 @@ module.exports = {
     if (!checkString(pseudo)) {
       return res.status(400).json({
         error:
-          "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
+          "Invalid pseudo (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
       });
     }
 
@@ -1082,8 +1078,9 @@ module.exports = {
         },
         function (userFound, done) {
           if (userFound) {
+            console.log("userrrrrrrrrrrrrrrrr: " + userFound.email)
             models.User.destroy({
-              where: { email: email },
+              where: { email: userFound.email },
             })
               .then(function () {
                 done(userFound);
@@ -1158,7 +1155,7 @@ module.exports = {
   },
 
   // delete employee profile by admin
-  destroyEmployeProfileByAdmin: function (req, res) {
+  destroyUserProfileByAdmins: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = jwtUtils.getUserId(headerAuth);
@@ -1185,7 +1182,7 @@ module.exports = {
         },
         function (userAdmin, done) {
           if (userAdmin) {
-            models.Employe.findOne({
+            models.User.findOne({
               where: { email: email },
             })
               .then(function (userFound) {
@@ -1195,12 +1192,12 @@ module.exports = {
                 return res.status(500).json({ error: "unable to verify user" });
               });
           } else {
-            res.status(500).json({ error: "Acces denied" });
+            return res.status(500).json({ error: "Acces denied" });
           }
         },
         function (userFound, done) {
           if (userFound) {
-            models.Employe.destroy({
+            models.User.destroy({
               where: { email: email },
             })
               .then(function () {
@@ -1216,43 +1213,31 @@ module.exports = {
       ],
       function (userFound) {
         if (userFound) {
-          return res.status(200).json({ msg: "resource deleted successfully" });
+          return res.status(200).json({ msg: "User has been deleted successfully" });
         } else {
           return res.status(500).json({ error: "cannot delete user profile" });
         }
       }
     );
   },
-  createEmployee: function (req, res) {
+  createBrandNew: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = jwtUtils.getUserId(headerAuth);
 
-    let nom = req.body.nom;
-    let prenom = req.body.prenom;
+    let name = req.body.name;
     let email = req.body.email;
-    let password = req.body.password;
-    let password_confirm = req.body.password_confirm;
-    let magasin = req.body.magasin;
+    let mdp = req.body.mdp;
+    let mdp_confirm = req.body.mdp_confirm;
 
     if (
-      nom == null ||
-      prenom == null ||
-      email == null ||
-      password == null ||
-      magasin == null
-    ) {
+      name.trim().length === 0 ||
+      email.trim().length === 0 ||
+      mdp.trim().length === 0) {
       return res.status(400).json({ error: "all fields must be filled in." });
     }
 
-    if (!checkString(nom)) {
-      return res.status(400).json({
-        error:
-          "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-
-    if (!checkString(prenom)) {
+    if (!checkString(name)) {
       return res.status(400).json({
         error:
           "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
@@ -1263,14 +1248,14 @@ module.exports = {
       return res.status(400).json({ error: "email is not valid" });
     }
 
-    if (!checkPassword(password)) {
+    if (!checkPassword(mdp)) {
       return res.status(400).json({
         error:
           "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
       });
     }
 
-    if (password !== password_confirm) {
+    if (mdp !== mdp_confirm) {
       return res.status(400).json({ error: "passwords do not match." });
     }
 
@@ -1287,17 +1272,16 @@ module.exports = {
               done(null, userAdmin);
             })
             .catch(function (err) {
-              return res.status(401).json({ error: "User admin not found" });
+              return res.status(401).json({ error: "User not found" });
             });
         },
         function (userAdmin, done) {
           if (userAdmin) {
-            models.Employe.findOne({
-              attributes: ["email"],
-              where: { email: email },
+            models.Marque.findOne({
+              where:{ email: email },
             })
               .then(function (userFound) {
-                done(null, userFound);
+                done(null, userAdmin, userFound);
               })
               .catch(function (err) {
                 return res
@@ -1308,41 +1292,41 @@ module.exports = {
             return res.status(401).json({ error: "Access Denied." });
           }
         },
-        function (userFound, done) {
+        function (userAdmin,userFound, done) {
           if (!userFound) {
-            bcrypt.hash(password, 5, function (err, bcryptedPassword) {
-              done(null, userFound, bcryptedPassword);
+            bcrypt.hash(mdp, 5, function (err, bcryptedPassword) {
+              done(null,userFound, bcryptedPassword);
             });
           } else {
-            return res.status(409).json({ error: "employe already exist. " });
+            return res.status(409).json({ error: "Brand already exist. " });
           }
         },
+
         function (userFound, bcryptedPassword, done) {
-          let newUser = models.Employe.create({
-            nom: nom,
-            prenom: prenom,
+          let newBrand = models.Marque.create({
+            userId: userId,
+            name: name,
             email: email,
-            password: bcryptedPassword,
-            magasin: magasin,
+            mdp: bcryptedPassword,
           })
-            .then(function (newUser) {
-              done(newUser);
+            .then(function (newBrand) {
+              done(newBrand);
             })
             .catch(function (err) {
-              return res.status(500).json({ error: "cannot add employe" });
+              return res.status(500).json({ error: "cannot add this brand" });
             });
         },
       ],
-      function (newUser) {
-        if (newUser) {
+      function (newBrand) {
+        if (newBrand) {
           return res.status(201).json({ msg: "account created with success." });
         } else {
-          return res.status(500).json({ error: "cannot add user" });
+          return res.status(500).json({ error: "cannot add this brand" });
         }
       }
     );
   },
-  EmployeesList: function (req, res) {
+  BrandList: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = jwtUtils.getUserId(headerAuth);
@@ -1355,10 +1339,10 @@ module.exports = {
     })
       .then(function (user) {
         if (user) {
-          models.Employe.findAll({})
-            .then(function (employee) {
-              if (employee) {
-                res.status(200).json(employee);
+          models.Marque.findAll({})
+            .then(function (brand) {
+              if (brand) {
+                res.status(200).json(brand);
               }
             })
             .catch(function (err) {

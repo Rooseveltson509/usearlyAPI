@@ -11,18 +11,28 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-     /*  models.Ticket.belongsTo(models.User, {
+      //models.Ticket.belongsTo(models.Reporting);
+
+      models.Ticket.belongsTo(models.Reporting, {
         foreignKey: {
-            allowNull: false,
-            name: 'userId'
+          foreignKey: "reportingId",
+
         },
         onDelete: 'CASCADE',
-    }) */
+        onUpdate: 'CASCADE'
+      });
+      models.Ticket.hasMany(models.TicketMarque);
     }
   };
   Ticket.init({
-    idREPORTINGS: DataTypes.INTEGER,
-    adminId: DataTypes.INTEGER,
+    id: {
+      allowNull: false,
+      primaryKey: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
+    reportingId: DataTypes.UUID,
+    email: DataTypes.STRING,
     marque: DataTypes.STRING,
     title: DataTypes.STRING,
     category: DataTypes.STRING,

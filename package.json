@@ -56,6 +56,6 @@
     "mocha": "^8.4.0",
     "mocha-junit-reporter": "^2.0.0",
     "mochawesome": "^6.2.2",
-    "sequelize-cli": "^6.2.0"
+    "sequelize-cli": "^6.6.2"
   }
 }

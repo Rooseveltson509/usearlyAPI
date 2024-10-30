@@ -13,13 +13,25 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       models.Reporting.belongsTo(models.User, {
-        foreignKey: "idUSERS",
+        foreignKey: {
+          foreignKey: "userId",
+
+        },
         onDelete: 'CASCADE',
-    })
+        onUpdate: 'CASCADE'
+      });
+      models.Reporting.hasMany(models.Ticket);
+
     }
   };
   Reporting.init({
-    idUSERS: DataTypes.INTEGER,
+    id: {
+      allowNull: false,
+      primaryKey: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
+    userId: DataTypes.UUID,
     marque: DataTypes.STRING,
     bugLocation: DataTypes.STRING,
     emojis: DataTypes.STRING,

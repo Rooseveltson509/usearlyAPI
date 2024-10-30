@@ -1,37 +1,49 @@
 'use strict';
-
-const { toDefaultValue } = require("sequelize/lib/utils");
-
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Marques', {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable('TicketMarques', {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4
       },
-      userId: {
+      ticketId: {
         allowNull: false,
         type: Sequelize.UUID,
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
         references: {
-          model: 'Users',
+          model: 'Tickets',
           key: 'id'
         }
       },
-      name: {
+      marqueId: {
+        allowNull: false,
+        type: Sequelize.UUID,
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+        references: {
+          model: 'Marques',
+          key: 'id'
+        }
+      },
+      title: {
         allowNull: false,
         type: Sequelize.STRING
       },
-      email: {
+      description: {
         allowNull: false,
         type: Sequelize.STRING
       },
-      mdp: {
-        allowNull: false,
-        type: Sequelize.STRING
+      ticketStatus: {
+        type: Sequelize.ENUM,
+        values: [
+          'sent',
+          'in progress',
+          'fixed'
+        ],
       },
       createdAt: {
         allowNull: false,
@@ -43,7 +55,7 @@ module.exports = {
       }
     });
   },
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Marques');
+  async down(queryInterface, Sequelize) {
+    await queryInterface.dropTable('TicketMarques');
   }
 };
