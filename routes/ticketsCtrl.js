@@ -63,7 +63,7 @@ module.exports = {
                 done(null, userFound, report);
               })
               .catch(function (err) {
-                return res.status(500).json({ err });
+                return res.status(500).json({ error: "unable to verify ticket." });
               });
 
 
@@ -74,6 +74,7 @@ module.exports = {
         function (userFound, report, done) {
           models.Ticket.create({
             reportingId: idReporting,
+            userId: userId,
             email: userFound.email,
             marque: marque,
             title: title,

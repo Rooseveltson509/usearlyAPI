@@ -12,13 +12,12 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       models.Marque.belongsTo(models.User, {
-        foreignKey: {
-          foreignKey: "userId",
-        },
+        foreignKey: "userId", // Utilisez simplement le nom de la colonne
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
       });
-      
+      // Association avec le modèle TicketMarque
+      models.Marque.hasMany(models.TicketMarque);
     }
   };
   Marque.init({
@@ -31,7 +30,8 @@ module.exports = (sequelize, DataTypes) => {
     userId: DataTypes.UUID,
     name: DataTypes.STRING,
     email: DataTypes.STRING,
-    mdp: DataTypes.STRING
+    mdp: DataTypes.STRING,
+    offres: DataTypes.ENUM('freemium', 'start', 'start pro', 'premium')
   }, {
     sequelize,
     modelName: 'Marque',

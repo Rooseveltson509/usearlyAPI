@@ -11,7 +11,6 @@ const {
   checkPhoneNumber,
   checkString,
   sentEmail,
-  checkDate,
   isValidDateFormat,
   isOver16,
   sendResetPasswordEmail,
@@ -20,7 +19,6 @@ const {
 } = require("../funcs/functions");
 const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
-let config = require("../config/config");
 const { randomCode } = require("../funcs/functions");
 
 // Routers

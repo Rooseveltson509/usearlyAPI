@@ -5,6 +5,8 @@ const corsOption = require('./funcs/functions')
 let usersCtrl = require('./routes/usersCtrl');
 let ticketCtrl = require('./routes/ticketsCtrl');
 let alertCtrl = require('./routes/reportingCtrl');
+let brandCtrl = require('./routes/brandCtrl');
+let brandTicketCtrl = require('./routes/brandTicketCtrl');
 
 // Router
 exports.router = (function() {
@@ -20,6 +22,10 @@ exports.router = (function() {
     apiRouter.route('/user/forget', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.forgotPassword);
     apiRouter.route('/user/resetpwd/:userId/:token', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.resetPassword);
     apiRouter.route('/user/del/:email', cors(corsOption.corsOptionsDelegate)).delete(usersCtrl.destroyUserProfile);
+
+    // Espace Marque
+    apiRouter.route('/brand/login', cors(corsOption.corsOptionsDelegate)).post(brandCtrl.BrandLogin);
+    apiRouter.route('/brand/:idticket/response', cors(corsOption.corsOptionsDelegate)).post(brandTicketCtrl.createBrandTicket);
 
     /* ONLY FOR TEST */
     apiRouter.route('/user/test/validate/:email', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.validateEmailforTest);
