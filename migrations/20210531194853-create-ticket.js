@@ -16,7 +16,8 @@ module.exports = {
         references: {
           model: 'Reportings',
           key: 'id'
-        }
+        },
+        index: true // Ajoout d'un index
       },
       email: {
         allowNull: false,

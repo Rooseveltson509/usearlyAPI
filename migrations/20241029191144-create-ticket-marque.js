@@ -17,7 +17,8 @@ module.exports = {
         references: {
           model: 'Tickets',
           key: 'id'
-        }
+        },
+        index: true // Ajout d'un index
       },
       marqueId: {
         allowNull: false,
@@ -27,7 +28,8 @@ module.exports = {
         references: {
           model: 'Marques',
           key: 'id'
-        }
+        },
+        index: true // Ajout d'un index
       },
       title: {
         allowNull: false,

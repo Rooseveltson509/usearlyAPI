@@ -16,7 +16,8 @@ module.exports = {
         references: {
           model: 'Users',
           key: 'id'
-        }
+        },
+        index: true // Ajout d'un index pour optimiser les requêtes
       },
       marque: {
         allowNull: false,

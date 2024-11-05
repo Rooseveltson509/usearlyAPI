@@ -19,7 +19,8 @@ module.exports = {
         references: {
           model: 'Users',
           key: 'id'
-        }
+        },
+        index: true // Ajout index
       },
       name: {
         allowNull: false,
@@ -27,11 +28,23 @@ module.exports = {
       },
       email: {
         allowNull: false,
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        unique: true // Ajout de l'unicité pour garantir qu'un email ne soit pas dupliqué
+
       },
       mdp: {
         allowNull: false,
         type: Sequelize.STRING
+      },
+      offres: {
+        type: Sequelize.ENUM,
+        values: [
+          'freemium',
+          'start',
+          'start pro',
+          'premium'
+        ],
+        defaultValue: 'freemium'
       },
       createdAt: {
         allowNull: false,

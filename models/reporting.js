@@ -13,13 +13,12 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       models.Reporting.belongsTo(models.User, {
-        foreignKey: {
-          foreignKey: "userId",
-
-        },
+        foreignKey: "userId", // Utilisez simplement le nom de la colonne
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
       });
+
+      // Association avec le modèle Ticket
       models.Reporting.hasMany(models.Ticket);
 
     }

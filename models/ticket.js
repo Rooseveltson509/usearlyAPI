@@ -11,16 +11,13 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      //models.Ticket.belongsTo(models.Reporting);
-
       models.Ticket.belongsTo(models.Reporting, {
-        foreignKey: {
-          foreignKey: "reportingId",
-
-        },
+        foreignKey: "reportingId", // Utilisez uniquement le nom de la colonne
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
       });
+    
+      // Association avec le modèle TicketMarque
       models.Ticket.hasMany(models.TicketMarque);
     }
   };

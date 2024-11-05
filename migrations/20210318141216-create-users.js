@@ -23,7 +23,8 @@ module.exports = {
       },
       email: {
         allowNull: false,
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        unique: true // Ajout de l'unicité pour garantir qu'un email ne soit pas dupliqué
       },
       password: {
         allowNull: false,
