@@ -123,14 +123,9 @@ exports.getPagingData = (data, page, limit) => {
 };
 
 let allowlist = [
-  "http://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr",
-  "http://thetiptop.dsp-archiwebo20-ba-rc-js-jl.fr",
+  "chrome-extension://ddphcookbkidjkkepjjhbfggmknkeglj",
   "http://" + process.env.IP_SERVEUR + ":3003",
-  "http://" + process.env.IP_SERVEUR + ":4200",
-  "http://localhost:3000/",
-  "http://localhost:3003/",
-  "http://localhost",
-  "http://localhost:4200",
+  "http://" + process.env.IP_SERVEUR + ":4200"
 ];
 exports.corsOptionsDelegate = function (req, callback) {
   let corsOptions;
