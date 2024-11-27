@@ -6,7 +6,7 @@ let usersCtrl = require('./routes/usersCtrl');
 let ticketCtrl = require('./routes/ticketsCtrl');
 let alertCtrl = require('./routes/reportingCtrl');
 let suggesttionCtrl = require('./routes/suggestionCtrl');
-let coupdecoeurCtrl = require('./routes/coupdecoeurCtrl'); 
+let coupdecoeurCtrl = require('./routes/coupdecoeurCtrl');
 let brandCtrl = require('./routes/brandCtrl');
 let brandTicketCtrl = require('./routes/brandTicketCtrl');
 
@@ -16,18 +16,7 @@ exports.router = (function () {
 
     // 1-a Users routes
     apiRouter.route('/user/register', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.register);
-    apiRouter
-    .route('/user/login')
-    .options((req, res) => {
-        res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS'); // Méthodes autorisées
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers autorisés
-        res.status(200).end(); // Répondre avec un statut 200 pour OPTIONS
-    })
-    .post((req, res) => {
-        res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-        usersCtrl.login(req, res); // Gestion POST
-    });
+    apiRouter.route('/user/login', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.login);
     apiRouter.route('/user/me', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.getUserProfile);
     apiRouter.route('/user/me', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserProfile);
     apiRouter.route('/user/pwd/me', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserPassword);
@@ -52,59 +41,15 @@ exports.router = (function () {
     apiRouter.route('/admin/users/', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.listUsers);
 
     // signalement
-    // Exemple d'une route utilisateur avec OPTIONS et POST
-    apiRouter
-        .route('/user/alert/new')
-        .options((req, res) => {
-            res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-            res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS'); // Méthodes autorisées
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers autorisés
-            res.status(200).end(); // Répondre avec un statut 200 pour OPTIONS
-        })
-        .post((req, res) => {
-            res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-            alertCtrl.createAlert(req, res); // Gestion POST
-        });
-        apiRouter
-        .route('/user/update-category')
-        .options((req, res) => {
-            res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-            res.setHeader('Access-Control-Allow-Methods', 'PUT, OPTIONS'); // Méthodes autorisées
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers autorisés
-            res.status(200).end(); // Répondre avec un statut 200 pour OPTIONS
-        })
-        .put((req, res) => {
-            res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-            alertCtrl.updateAlert(req, res); // Gestion POST
-        });
+    apiRouter.route('/user/alert/new', cors(corsOption.corsOptionsDelegate)).post(alertCtrl.createAlert);
+    /* update category */
+    apiRouter.route('/user/update-category', cors(corsOption.corsOptionsDelegate)).put(alertCtrl.updateAlert);
 
-        /* Create suggestion */
-        apiRouter
-        .route('/user/suggestion/new')
-        .options((req, res) => {
-            res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-            res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS'); // Méthodes autorisées
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers autorisés
-            res.status(200).end(); // Répondre avec un statut 200 pour OPTIONS
-        })
-        .post((req, res) => {
-            res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-            suggesttionCtrl.createSuggestion(req, res); // Gestion POST
-        });
+    /* Create suggestion */
+    apiRouter.route('/user/suggestion/new', cors(corsOption.corsOptionsDelegate)).post(suggesttionCtrl.createSuggestion);
 
-        /* Create coup de coeur */
-        apiRouter
-       .route('/user/coupdecoeur/new')
-       .options((req, res) => {
-           res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS'); // Méthodes autorisées
-           res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers autorisés
-           res.status(200).end(); // Répondre avec un statut 200 pour OPTIONS
-       })
-       .post((req, res) => {
-           res.setHeader('Access-Control-Allow-Origin', '*'); // Permet toutes les origines
-           coupdecoeurCtrl.createCoupDeCoeur(req, res); // Gestion POST
-       });
+    /* Create coup de coeur */
+    apiRouter.route('/user/coupdecoeur/new', cors(corsOption.corsOptionsDelegate)).post(coupdecoeurCtrl.createCoupDeCoeur);
 
     apiRouter.route('/user/admin/reports', cors(corsOption.corsOptionsDelegate)).get(alertCtrl.getAllReports);
     // 2- Tickets routes
