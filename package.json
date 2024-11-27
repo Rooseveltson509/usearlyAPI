@@ -34,6 +34,7 @@
     "express-prom-bundle": "^6.4.1",
     "graphql-metrics": "^1.0.2",
     "i": "^0.3.6",
+    "joi": "^17.13.3",
     "jsonwebtoken": "^8.5.1",
     "mailgen": "^2.0.28",
     "mysql2": "^3.10.1",
