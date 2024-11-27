@@ -36,7 +36,13 @@ module.exports = (sequelize, DataTypes) => {
     emojis: DataTypes.STRING,
     description: DataTypes.STRING,
     blocking: DataTypes.BOOLEAN,
-    tips: DataTypes.STRING
+    capture: DataTypes.STRING,
+    tips: DataTypes.STRING,
+    category: {
+      type: DataTypes.ENUM('cat1', 'cat2', 'cat3', 'autre'),
+      allowNull: true,
+      defaultValue: 'autre',
+    }
   }, {
     sequelize,
     modelName: 'Reporting',

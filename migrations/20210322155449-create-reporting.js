@@ -43,9 +43,27 @@ module.exports = {
         ],
         defaultValue: 'no'
       },
+      hooks: {
+        beforeValidate: (instance) => {
+          if (instance.blocking !== 'yes' && instance.blocking !== 'no') {
+            throw new Error('Invalid value for blocking. Accepted values are "yes" or "no".');
+          }
+        },
+      },
       tips: {
+        allowNull: true,
+        type: Sequelize.STRING
+      },
+      capture: {
         allowNull: false,
         type: Sequelize.STRING
+      },
+      category: {
+        type: Sequelize.ENUM,
+        values: [
+          'cat1', 'cat2', 'cat3', 'autre'
+        ],
+        defaultValue: 'autre'
       },
       createdAt: {
         allowNull: false,

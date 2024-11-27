@@ -1,83 +1,81 @@
 require("dotenv").config();
+// Après (avec ESM)
+// Utilisez import au lieu de require
+/* import dotenv from "dotenv";
+dotenv.config(); */
+
+
+
 let bcrypt = require("bcryptjs");
 let jwtUtils = require("../utils/jwt.utils");
 let models = require("../models");
 var asyncLib = require("async");
+//import Joi from 'joi';
+const Joi = require("joi"); // Et cette ligne
 const { randomCode } = require("../funcs/functions");
 const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
 
+
+
+const alertSchema = Joi.object({
+  marque: Joi.string().trim().required(),
+  blocking: Joi.string().valid("yes", "no").required(),
+  bugLocation: Joi.string().trim().required(),
+  description: Joi.string().trim().required(),
+  emojis: Joi.string().trim().required(),
+  tips: Joi.string().optional().allow(null, ''), // Autorise null ou une chaîne vide
+  capture: Joi.string().optional().allow(null, ''), // Idem pour capture si besoin
+});
+
+
 module.exports = {
-  createAlert: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
 
-    let marque = req.body.marque;
-    let blocking = req.body.blocking;
-    let bugLocation = req.body.bugLocation;
-    let description = req.body.description;
-    let emojis = req.body.emojis;
-    let tips = req.body.tips;
+  createAlert: async function (req, res) {
+    try {
+      const headerAuth = req.headers["authorization"];
+      const userId = jwtUtils.getUserId(headerAuth);
 
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters... " });
-    }
-//.trim().length === 0
-    if (
-      marque.trim().length === 0 ||
-      description.trim().length === 0 ||
-      blocking.trim().length === 0 ||
-      bugLocation.trim().length === 0 ||
-      emojis.trim().length === 0 ||
-      tips.trim().length === 0
-    ) {
-      return res.status(400).json({ error: "all fields must be filled in." });
-    }
-    asyncLib.waterfall(
-      [
-        function (done) {
-          models.User.findOne({
-            where: { id: userId },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            models.Reporting.create({
-              userId: userFound.id,
-              marque: marque,
-              blocking: blocking,
-              description: description,
-              bugLocation: bugLocation,
-              emojis: emojis,
-              tips: tips
-            })
-              .then(function (newAlert) {
-                done(null, newAlert);
-              })
-              .catch(function (err) {
-                return res.status(500).json({ error: err });
-              });
-          } else {
-            res.status(403).json({ error: "ACCESS DENIED." });
-          }
-        }, 
-        function (newAlert) {
-        if (newAlert) {
-          return res.status(201).json(newAlert);
-        } else {
-          return res.status(500).json({ error: "cannot post property" });
-        }
+      if (userId <= 0) {
+        return res.status(400).json({ error: "missing parameters... " });
       }
-      ],
 
-    );
+      // Validation des données
+      const { error } = alertSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+
+      const { marque, blocking, bugLocation, description, emojis, tips, capture } = req.body;
+
+      // Vérifier si l'utilisateur existe
+      const userFound = await models.User.findOne({ where: { id: userId } });
+      if (!userFound) {
+        return res.status(403).json({ error: "ACCESS DENIED." });
+      }
+
+      // Créer un nouveau signalement
+      const alert = await models.Reporting.create({
+        userId: userFound.id,
+        marque,
+        blocking,
+        description,
+        bugLocation,
+        emojis,
+        capture,
+        tips,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Alerte créée avec succès.",
+        alertId: alert.id,
+      });
+    } catch (err) {
+      console.error("Erreur lors de la création du signalement :", err);
+      return res.status(500).json({ error: "An error occurred", details: err.message });
+    }
+
   },
 
   // Find User Ticket By code
@@ -187,135 +185,100 @@ module.exports = {
   },
 
 
-    // Find User Reportings By store
-    getAllReports: function (req, res) {
-      
-      // Getting auth header
-      var headerAuth = req.headers["authorization"];
-      var userId = jwtUtils.getUserId(headerAuth);
-  
-      if (userId <= 0) {
-        return res.status(400).json({ error: "missing parameters" });
-      }
-  
-      models.User.findOne({
-        where: { id: userId, role: "admin" },
-      })
-        .then(function (user) {
-          if (user) {
-            models.Reporting.findAll({
-              attributes: ["id", "idUSERS", "marque", "bugLocation", "emojis", "description", "blocking", "tips"],
-              include:
-                {
-                  model: models.User,
-                  attributes: [
-                    "pseudo",
-                    "email",
-                  ],
-                },
-              
-            })
-              .then(function (report) {
-                if (report) {
-                  return res.status(200).json(report);
-                } else {
-                  return res.status(404).json({ error: "Report not found." });
-                }
-              })
-              .catch(function (err) {
-                res.status(404).json({ err });
-              });
-          } else {
-            return res.status(404).json({ error: "Accès non autorisé....." });
-          }
-        })
-        .catch(function (err) {
-          res.status(500).json({ error: "cannot fetch Ticket..." });
-        });
-    },
-  // Find User Ticket By code
-  createTicketForUser: function (req, res) {
+  // Find User Reportings By store
+  getAllReports: function (req, res) {
+
     // Getting auth header
-    let headerAuth = req.headers["authorization"];
-    let userId = jwtUtils.getUserId(headerAuth);
-    let buyer = req.body.buyer;
+    var headerAuth = req.headers["authorization"];
+    var userId = jwtUtils.getUserId(headerAuth);
 
     if (userId <= 0) {
       return res.status(400).json({ error: "missing parameters" });
     }
 
-    asyncLib.waterfall(
-      [
-        function (done) {
-          models.User.findOne({
-            where: { id: userId },
+    models.User.findOne({
+      where: { id: userId, role: "admin" },
+    })
+      .then(function (user) {
+        if (user) {
+          models.Reporting.findAll({
+            attributes: ["id", "idUSERS", "marque", "bugLocation", "emojis", "description", "blocking", "tips"],
+            include:
+            {
+              model: models.User,
+              attributes: [
+                "pseudo",
+                "email",
+              ],
+            },
+
           })
-            .then(function (userFound) {
-              done(null, userFound);
+            .then(function (report) {
+              if (report) {
+                return res.status(200).json(report);
+              } else {
+                return res.status(404).json({ error: "Report not found." });
+              }
             })
             .catch(function (err) {
-              return res
-                .status(500)
-                .json({ error: "unable to verify user " + userId });
+              res.status(404).json({ err });
             });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            if (buyer >= 49) {
-              models.Ticket.findOne({
-                order: Sequelize.fn("RAND"),
-                where: {
-                  etat: {
-                    [Op.like]: "%non-distribue%",
-                  },
-                },
-              })
-                .then(function (ticketFound) {
-                  done(null, ticketFound);
-                })
-                .catch(function (err) {
-                  res.status(500).json({ error: "cannot fetch ticket" });
-                });
-            } else {
-              return res.status(404).json({
-                error:
-                  "Vous avez acheté pour: " +
-                  buyer +
-                  "€ plus de " +
-                  (49 - buyer) +
-                  "€ et vous pouvez gagner un lot...",
-              });
-            }
-          } else {
-            res.status(404).json({ error: "user not found" });
-          }
-        },
-        function (ticketFound, done) {
-          if (ticketFound) {
-            ticketFound
-              .update({
-                userId: userId,
-                etat: "distribue",
-                where: { id: ticketFound.id },
-              })
-              .then(function () {
-                done(ticketFound);
-              })
-              .catch(function (err) {
-                res.status(500).json({ error: "cannot update ticket" });
-              });
-          } else {
-            res.status(404).json({ error: "ticket not found..." });
-          }
-        },
-      ],
-      function (ticketFound) {
-        if (ticketFound) {
-          return res.status(200).json({ ticketCode: ticketFound.code });
         } else {
-          return res.status(500).json({ error: "cannot update ticket" });
+          return res.status(404).json({ error: "Accès non autorisé....." });
         }
-      }
-    );
+      })
+      .catch(function (err) {
+        res.status(500).json({ error: "cannot fetch Ticket..." });
+      });
   },
+  // Find User Ticket By code
+  updateAlert: async function (req, res) {
+    try {
+      // Récupérer l'utilisateur à partir du header d'authentification
+      const headerAuth = req.headers["authorization"];
+      const userId = jwtUtils.getUserId(headerAuth);
+  
+      const { category } = req.body;
+  
+      if (!category) {
+        return res.status(400).json({ error: "Paramètre catégorie manquant." });
+      }
+  
+      // Liste des catégories valides
+      const validCategories = ["cat1", "cat2", "cat3", "autre"];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({ error: "Valeur de catégorie non valide." });
+      }
+  
+      // Vérifier l'utilisateur
+      const userFound = await models.User.findOne({ where: { id: userId } });
+      if (!userFound) {
+        return res.status(404).json({ error: "Utilisateur non trouvé." });
+      }
+  
+      // Trouver la dernière alerte de cet utilisateur (vous pouvez affiner ce critère si nécessaire)
+      const lastAlert = await models.Reporting.findOne({
+        where: { userId },
+        order: [["createdAt", "DESC"]], // Trier pour obtenir la plus récente
+      });
+  
+      if (!lastAlert) {
+        return res.status(404).json({ error: "Aucune alerte trouvée pour cet utilisateur." });
+      }
+  
+      // Mettre à jour la catégorie de l'alerte
+      lastAlert.category = category;
+      await lastAlert.save();
+  
+      return res.status(200).json({
+        success: true,
+        message: "Catégorie mise à jour avec succès.",
+      });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la catégorie :", error);
+      return res.status(500).json({ error: "Erreur interne.", details: error.message });
+    }
+  },
+  
+
 };

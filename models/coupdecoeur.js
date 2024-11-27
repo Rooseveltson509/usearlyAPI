@@ -1,0 +1,42 @@
+'use strict';
+const {
+  Model
+} = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class CoupDeCoeur extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate(models) {
+      // define association here
+      CoupDeCoeur.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user',
+        onDelete: 'CASCADE',
+      });
+    }
+  }
+  CoupDeCoeur.init({
+    id: {
+      allowNull: false,
+      primaryKey: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4
+    },
+    userId: DataTypes.UUID,
+    marque: DataTypes.STRING,
+    description: DataTypes.STRING,
+    emplacement: DataTypes.STRING,
+    emoji: DataTypes.STRING,
+    likes: DataTypes.INTEGER,
+    validated: DataTypes.BOOLEAN,
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE
+  }, {
+    sequelize,
+    modelName: 'CoupDeCoeur',
+  });
+  return CoupDeCoeur;
+};

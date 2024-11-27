@@ -15,11 +15,12 @@ const swaggerJSDoc = require("swagger-jsdoc");
 var server = express();
 
 // server.use(cors());
-server.use(cors(corsOptions.corsOptionsDelegate));
+//server.use(cors(corsOptions.corsOptionsDelegate));
 
 // Body Parser configuration
-server.use(bodyParser.urlencoded({ extended: true }));
-server.use(bodyParser.json());
+server.use(bodyParser.urlencoded({ extended: true, limit: '10mb' })); // Augmente la limite des requêtes URL-encoded
+server.use(bodyParser.json({ limit: '10mb' })); // Augmente la limite des requêtes JSON
+
 server.use(
   config.rootAPI + "api-docs",
   swaggerUi.serve,
@@ -35,6 +36,13 @@ server.get(config.rootAPI, function (req, res) {
   res.status(200).send("<h1>Welcom to the ApiRestFull server</h1>");
 });
 
+// Désactiver CORS sur la route /user/login
+server.use(config.rootAPI, (req, res, next) => {
+  if (req.path === "/user/login" || req.path === "/user/alert/new") {
+    return next(); // Aucun middleware CORS pour cette route
+  }
+  cors(corsOptions.corsOptionsDelegate)(req, res, next); // Appliquer CORS aux autres routes
+});
 server.use(config.rootAPI, apiRouter);
 //let apiRouter = express.Router();
 
