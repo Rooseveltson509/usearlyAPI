@@ -123,10 +123,9 @@ exports.getPagingData = (data, page, limit) => {
 };
 
 let allowlist = [
-  "chrome-extension://ddphcookbkidjkkepjjhbfggmknkeglj",
+  "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
   "http://" + process.env.IP_SERVEUR + ":3003",
   "https://www.laboutiqueofficielle.com",
-  'https://1073-2a01-cb08-512-d600-29df-3525-253f-fd48.ngrok-free.app',
   "http://" + process.env.IP_SERVEUR + ":4200"
 ];
 exports.corsOptionsDelegate = function (req, callback) {
