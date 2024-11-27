@@ -16,7 +16,6 @@ exports.router = (function () {
 
     // 1-a Users routes
     apiRouter.route('/user/register', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.register);
-    //apiRouter.route('/user/login', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.login);
     apiRouter
     .route('/user/login')
     .options((req, res) => {
@@ -53,7 +52,6 @@ exports.router = (function () {
     apiRouter.route('/admin/users/', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.listUsers);
 
     // signalement
-    //apiRouter.route('/user/alert/new', cors(corsOption.corsOptionsDelegate)).post(alertCtrl.createAlert);
     // Exemple d'une route utilisateur avec OPTIONS et POST
     apiRouter
         .route('/user/alert/new')
