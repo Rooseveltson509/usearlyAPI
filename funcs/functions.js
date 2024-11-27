@@ -122,24 +122,34 @@ exports.getPagingData = (data, page, limit) => {
   return { totalItems, users, totalPages, currentPage };
 };
 
-let allowlist = [
+const allowlist = [
   "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
-  "http://" + process.env.IP_SERVEUR + ":3003",
+  `http://${process.env.IP_SERVEUR}:3003`,
   "https://www.laboutiqueofficielle.com",
-  "http://" + process.env.IP_SERVEUR + ":4200"
+  `http://${process.env.IP_SERVEUR}:4200`
 ];
+
 exports.corsOptionsDelegate = function (req, callback) {
+  const origin = req.header("Origin") || "";
   let corsOptions;
-  if (allowlist.indexOf(req.header("Origin")) !== -1) {
-    console.log("origin is there : " + allowlist.indexOf(req.header("Origin")));
-    corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
+
+  if (allowlist.includes(origin)) {
+    console.log(`Origine autorisée : ${origin}`);
+    corsOptions = {
+      origin: true,
+      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+      allowedHeaders: "Authorization,Content-Type",
+      credentials: true // Autorise les cookies et les sessions si nécessaire
+    };
   } else {
-    console.log("testet" + allowlist.indexOf(req.header("Origin")));
-    corsOptions = { origin: false }; // disable CORS for this request
-    //console.log("testet : " + corsOptions.origin)
+    console.log(`Origine refusée : ${origin}`);
+    corsOptions = { origin: false };
   }
-  callback(null, corsOptions); // callback expects two parameters: error and options
+
+  callback(null, corsOptions);
 };
+
+
 
 exports.sendConfirmationEmail = function (
   toUser,
