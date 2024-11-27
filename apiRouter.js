@@ -14,9 +14,14 @@ let brandTicketCtrl = require('./routes/brandTicketCtrl');
 exports.router = (function () {
     let apiRouter = express.Router();
 
+    apiRouter.get('/test-cors', (req, res) => {
+        res.json({ message: "CORS is working properly!" });
+      });
+      
+
     // 1-a Users routes
     apiRouter.route('/user/register', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.register);
-    apiRouter.route('/user/login', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.login);
+    apiRouter.route('/user/login').post(usersCtrl.login);
     apiRouter.route('/user/me', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.getUserProfile);
     apiRouter.route('/user/me', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserProfile);
     apiRouter.route('/user/pwd/me', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserPassword);
@@ -37,13 +42,12 @@ exports.router = (function () {
     apiRouter.route('/admin/brand/new', cors(corsOption.corsOptionsDelegate)).post(usersCtrl.createBrandNew);
     apiRouter.route('/user/admin/employe/:email', cors(corsOption.corsOptionsDelegate)).put(usersCtrl.updateUserProfileEmployeByAdmin);
     apiRouter.route('/user/admin/:email', cors(corsOption.corsOptionsDelegate)).delete(usersCtrl.destroyUserProfileByAdmin);
-    apiRouter.route('/user/admin/:email', cors(corsOption.corsOptionsDelegate)).delete(usersCtrl.destroyUserProfileByAdmin);
     apiRouter.route('/admin/users/', cors(corsOption.corsOptionsDelegate)).get(usersCtrl.listUsers);
 
     // signalement
-    apiRouter.route('/user/alert/new', cors(corsOption.corsOptionsDelegate)).post(alertCtrl.createAlert);
+    apiRouter.route('/user/alert/new').post(alertCtrl.createAlert);
     /* update category */
-    apiRouter.route('/user/update-category', cors(corsOption.corsOptionsDelegate)).put(alertCtrl.updateAlert);
+    apiRouter.route('/user/update-category').put(alertCtrl.updateAlert);
 
     /* Create suggestion */
     apiRouter.route('/user/suggestion/new', cors(corsOption.corsOptionsDelegate)).post(suggesttionCtrl.createSuggestion);

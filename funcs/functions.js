@@ -122,24 +122,24 @@ exports.getPagingData = (data, page, limit) => {
   return { totalItems, users, totalPages, currentPage };
 };
 
-const allowlist = [
+let allowlist = [
   "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
-  `http://${process.env.IP_SERVEUR}:3003`,
-  "https://www.laboutiqueofficielle.com",
-  `http://${process.env.IP_SERVEUR}:4200`
+  "https://www.nike.com",
+  "https://usearly-api.vercel.app",
 ];
 
 exports.corsOptionsDelegate = function (req, callback) {
   const origin = req.header("Origin") || "";
+  console.log(`Requête reçue avec origine : ${origin}`);
+  
   let corsOptions;
-
   if (allowlist.includes(origin)) {
     console.log(`Origine autorisée : ${origin}`);
     corsOptions = {
       origin: true,
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
       allowedHeaders: "Authorization,Content-Type",
-      credentials: true // Autorise les cookies et les sessions si nécessaire
+      credentials: true,
     };
   } else {
     console.log(`Origine refusée : ${origin}`);
@@ -148,6 +148,8 @@ exports.corsOptionsDelegate = function (req, callback) {
 
   callback(null, corsOptions);
 };
+
+
 
 
 

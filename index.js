@@ -14,8 +14,9 @@ const swaggerJSDoc = require("swagger-jsdoc");
 // Instanciate server
 var server = express();
 
-// server.use(cors());
-//server.use(cors(corsOptions.corsOptionsDelegate));
+// Global middleware for CORS in index.js
+server.use(cors(corsOptions.corsOptionsDelegate));
+server.options('*', cors(corsOptions.corsOptionsDelegate));
 
 // Body Parser configuration
 server.use(bodyParser.urlencoded({ extended: true, limit: '10mb' })); // Augmente la limite des requêtes URL-encoded
@@ -38,9 +39,6 @@ server.get(config.rootAPI, function (req, res) {
 
 server.use(config.rootAPI, apiRouter);
 //let apiRouter = express.Router();
-
-// Middleware global pour gérer les erreurs CORS des requêtes OPTIONS
-server.options("*", cors(corsOptions.corsOptionsDelegate));
 
 // launch server
 server.listen(config.port, function () {
