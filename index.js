@@ -33,18 +33,14 @@ server.use(metricsMiddleware);
 // Configure routes
 server.get(config.rootAPI, function (req, res) {
   res.setHeader("Content-Type", "text/html");
-  res.status(200).send("<h1>Welcom to the ApiRestFull server</h1>");
+  res.status(200).send("<h1>Welcom to Usearly ApiRestFull.</h1>");
 });
 
-// Désactiver CORS sur la route /user/login
-server.use(config.rootAPI, (req, res, next) => {
-  if (req.path === "/user/login" || req.path === "/user/alert/new") {
-    return next(); // Aucun middleware CORS pour cette route
-  }
-  cors(corsOptions.corsOptionsDelegate)(req, res, next); // Appliquer CORS aux autres routes
-});
 server.use(config.rootAPI, apiRouter);
 //let apiRouter = express.Router();
+
+// Middleware global pour gérer les erreurs CORS des requêtes OPTIONS
+server.options("*", cors(corsOptions.corsOptionsDelegate));
 
 // launch server
 server.listen(config.port, function () {
