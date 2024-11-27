@@ -14,6 +14,21 @@ module.exports = (sequelize, DataTypes) => {
       models.User.hasMany(models.Marque); // Association correcte
       models.User.hasMany(models.Reporting); // Association correcte
 
+      User.associate = (models) => {
+        Users.hasMany(models.CoupDeCoeur, {
+          foreignKey: 'userId',
+          as: 'coupsDeCoeur',
+          onDelete: 'CASCADE',
+        });
+      
+        User.hasMany(models.Suggestion, {
+          foreignKey: 'userId',
+          as: 'suggestions',
+          onDelete: 'CASCADE',
+        });
+      };
+      
+
     }
   };
   User.init({
