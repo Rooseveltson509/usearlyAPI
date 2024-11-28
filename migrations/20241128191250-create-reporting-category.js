@@ -1,5 +1,4 @@
 'use strict';
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('ReportingCategories', {
@@ -12,20 +11,14 @@ module.exports = {
       reportingId: {
         type: Sequelize.UUID,
         allowNull: false,
-        references: {
-          model: 'Reportings',
-          key: 'id',
-        },
+        references: { model: 'Reportings', key: 'id' },
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       },
       categoryId: {
         type: Sequelize.UUID,
         allowNull: false,
-        references: {
-          model: 'Categories',
-          key: 'id',
-        },
+        references: { model: 'Categories', key: 'id' },
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       },
@@ -41,7 +34,6 @@ module.exports = {
       },
     });
 
-    // Ajout de la contrainte d'unicité composite
     await queryInterface.addConstraint('ReportingCategories', {
       fields: ['reportingId', 'categoryId'],
       type: 'unique',
@@ -50,7 +42,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeConstraint('ReportingCategories', 'unique_reporting_category');
     await queryInterface.dropTable('ReportingCategories');
   },
 };

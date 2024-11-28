@@ -6,7 +6,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     // Récupérer les IDs des SiteTypes existants
     const siteTypes = await queryInterface.sequelize.query(
-      'SELECT id, name FROM "SiteTypes";',
+      'SELECT id, name FROM SiteTypes;',
       { type: queryInterface.sequelize.QueryTypes.SELECT }
     );
 
@@ -23,7 +23,7 @@ module.exports = {
     console.log('Mapping SiteTypes :', siteTypeMap); // Debugging
 
     // Insérer les catégories dans la table `Categories`
-    const categories = [
+    await queryInterface.bulkInsert('Categories', [
       // Catégories pour E-commerce
       { id: uuidv4(), name: 'Mode', siteTypeId: siteTypeMap['E-commerce'], createdAt: new Date(), updatedAt: new Date() },
       { id: uuidv4(), name: 'Électronique', siteTypeId: siteTypeMap['E-commerce'], createdAt: new Date(), updatedAt: new Date() },
@@ -43,12 +43,7 @@ module.exports = {
       { id: uuidv4(), name: 'CRM', siteTypeId: siteTypeMap['SaaS'], createdAt: new Date(), updatedAt: new Date() },
       { id: uuidv4(), name: 'Gestion de projet', siteTypeId: siteTypeMap['SaaS'], createdAt: new Date(), updatedAt: new Date() },
       { id: uuidv4(), name: 'Analyse de données', siteTypeId: siteTypeMap['SaaS'], createdAt: new Date(), updatedAt: new Date() },
-    ];
-
-    // Vérifiez les catégories avant l'insertion
-    console.log('Catégories à insérer :', categories);
-
-    await queryInterface.bulkInsert('Categories', categories);
+    ]);
   },
 
   async down(queryInterface, Sequelize) {
