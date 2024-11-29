@@ -1,18 +1,7 @@
-require("dotenv").config();
-// Après (avec ESM)
-// Utilisez import au lieu de require
-/* import dotenv from "dotenv";
-dotenv.config(); */
-
-
-
-let bcrypt = require("bcryptjs");
+require("dotenv").config();let bcrypt = require("bcryptjs");
 let jwtUtils = require("../utils/jwt.utils");
 let models = require("../models");
-var asyncLib = require("async");
-//import Joi from 'joi';
 const Joi = require("joi"); // Et cette ligne
-const { randomCode } = require("../funcs/functions");
 const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
 
@@ -68,7 +57,7 @@ module.exports = {
 
       return res.status(201).json({
         success: true,
-        message: "Alerte créée avec succès.",
+        message: "Signalement créé avec succès.",
         alertId: alert.id,
       });
     } catch (err) {
@@ -231,7 +220,7 @@ module.exports = {
         res.status(500).json({ error: "cannot fetch Ticket..." });
       });
   },
-  // Find User Ticket By code
+  // Update bugs Category
   updateAlert: async function (req, res) {
     try {
       // Récupérer l'utilisateur à partir du header d'authentification
