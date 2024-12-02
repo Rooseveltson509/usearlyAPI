@@ -1,6 +1,6 @@
 'use strict';
-module.exports = {
-  up: async (queryInterface, Sequelize) => {
+/** @type {import('sequelize-cli').Migration} */
+  export async function up(queryInterface, Sequelize) {
     await queryInterface.createTable('Reportings', {
       id: {
         allowNull: false,
@@ -18,6 +18,23 @@ module.exports = {
           key: 'id'
         },
         index: true // Ajout d'un index pour optimiser les requêtes
+      },
+/*       siteTypeId: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'SiteTypes',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
+      }, */
+      siteUrl: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          isUrl: true,
+        },
       },
       marque: {
         allowNull: false,
@@ -58,13 +75,13 @@ module.exports = {
         allowNull: false,
         type: Sequelize.STRING
       },
-      category: {
-        type: Sequelize.ENUM,
-        values: [
-          'cat1', 'cat2', 'cat3', 'autre'
-        ],
-        defaultValue: 'autre'
-      },
+      /*       category: {
+              type: Sequelize.ENUM,
+              values: [
+                'cat1', 'cat2', 'cat3', 'autre'
+              ],
+              defaultValue: 'autre'
+            }, */
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
@@ -74,8 +91,7 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
-  },
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Reportings');
   }
-};
+  export async function down(queryInterface, Sequelize) {
+    await queryInterface.removeColumn('Reportings', 'siteTypeId');
+  }

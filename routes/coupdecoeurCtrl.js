@@ -1,16 +1,21 @@
-let jwtUtils = require("../utils/jwt.utils");
+/* let jwtUtils = require("../utils/jwtUtils");
 let models = require("../models");
 const Sequelize = require("sequelize");
 const { coupDeCoeurSchema } = require("../validation/CoupdeCoeurSchema");
-const Op = Sequelize.Op;
+const Op = Sequelize.Op; */
+import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+import { coupDeCoeurSchema } from '../validation/CoupdeCoeurSchema.js';
+const {CoupDeCoeur } = db;
+import { getUserId } from '../utils/jwtUtils.js';
 
 
 
-module.exports = {
-    createCoupDeCoeur: async function (req, res) {
+
+export const coupDeCoeur = {
+    createCoupdeCoeur: async function (req, res) {
       try {
         const headerAuth = req.headers["authorization"];
-        const userId = jwtUtils.getUserId(headerAuth);
+        const userId = getUserId(headerAuth);
   
         if (userId <= 0) {
           return res.status(400).json({ error: "Missing parameters." });
@@ -31,7 +36,7 @@ module.exports = {
         }
   
         // Créer un nouveau coup de coeur
-        const coupDeCoeur = await models.CoupDeCoeur.create({
+        const coupDeCoeur = await CoupDeCoeur.create({
           userId: userFound.id,
           marque,
           description,

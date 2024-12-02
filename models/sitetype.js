@@ -1,7 +1,6 @@
 'use strict';
-const { Model } = require('sequelize');
-
-module.exports = (sequelize, DataTypes) => {
+import { Model } from 'sequelize';
+export default (sequelize, DataTypes) => {
   class SiteType extends Model {
     /**
      * Helper method for defining associations.
@@ -19,6 +18,12 @@ module.exports = (sequelize, DataTypes) => {
 
   SiteType.init(
     {
+      id: {
+        allowNull: false,
+        primaryKey: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4
+      },
       name: {
         type: DataTypes.STRING,
         allowNull: false,

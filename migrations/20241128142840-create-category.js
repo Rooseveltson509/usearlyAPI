@@ -1,7 +1,6 @@
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
-  async up(queryInterface, Sequelize) {
+export async function up(queryInterface, Sequelize) {
     // Création de la table Categories
     await queryInterface.createTable('Categories', {
       id: {
@@ -42,13 +41,13 @@ module.exports = {
       unique: true,
       name: 'unique_category_name',
     });
-  },
+  }
 
-  async down(queryInterface, Sequelize) {
+  export async function down(queryInterface, Sequelize) { 
+    // Puis supprime la table
+    await queryInterface.dropTable('Categories');
     // Supprime d'abord l'index
     await queryInterface.removeIndex('Categories', 'unique_category_name');
 
-    // Puis supprime la table
-    await queryInterface.dropTable('Categories');
-  },
-};
+
+  }

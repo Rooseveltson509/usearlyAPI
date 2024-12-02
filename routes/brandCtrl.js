@@ -1,15 +1,27 @@
-require("dotenv").config();
+/* require("dotenv").config();
 let bcrypt = require("bcryptjs");
 let jwtUtils = require("../utils/jwt.utils");
 let models = require("../models");
-var asyncLib = require("async");
+var asyncLib = require("async"); */
+import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+import bcrypt from "bcryptjs";
+//import jwtUtils from "../utils/jwtUtils.js";
+import { generateTokenForUser, parseAuthorization, getUserId } from '../utils/jwtUtils.js';
 
-module.exports = {
-  // Login brand
-  BrandLogin: function (req, res) {
+// Exemple d'utilisation dans votre fichier :
+//const token = generateTokenForUser(userFound);
+
+//import models from "../models/index.js";
+// Récupération des modèles nécessaires
+const {Marque } = db;
+import asyncLib from "async";
+
+// Méthodes exportées
+export const brandCtrl = {
+  login: function (req, res) {
     // Params
-    var email = req.body.email;
-    var mdp = req.body.mdp;
+    const email = req.body.email;
+    const mdp = req.body.mdp;
 
     if (email == null || mdp == null) {
       return res.status(400).json({ error: "missing parameters" });
@@ -18,13 +30,13 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.Marque.findOne({
+          Marque.findOne({
             where: { email: email },
           })
             .then(function (userFound) {
               done(null, userFound);
             })
-            .catch(function (err) {
+            .catch(function () {
               return res.status(500).json({ error: "unable to verify user" });
             });
         },
@@ -54,7 +66,7 @@ module.exports = {
       function (userFound) {
         if (userFound) {
           return res.status(200).json({
-            token: jwtUtils.generateTokenForUser(userFound),
+            token: generateTokenForUser(userFound),
           });
         } else {
           return res.status(500).json({ error: "cannot log on user" });

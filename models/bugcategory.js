@@ -1,6 +1,6 @@
 'use strict';
-const { Model } = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
+import { Model } from 'sequelize';
+export default (sequelize, DataTypes) => {
   class BugCategory extends Model {
     static associate(models) {
       // Associer BugCategory à SiteTypes
@@ -12,6 +12,12 @@ module.exports = (sequelize, DataTypes) => {
   }
   BugCategory.init(
     {
+/*       id: {
+        allowNull: false,
+        primaryKey: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+      }, */
       name: DataTypes.STRING,
       siteTypeId: DataTypes.UUID,
     },
@@ -20,5 +26,6 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'BugCategory',
     }
   );
+  
   return BugCategory;
 };

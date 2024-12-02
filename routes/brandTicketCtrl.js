@@ -1,15 +1,20 @@
-require("dotenv").config();
-let jwtUtils = require("../utils/jwt.utils");
-let models = require("../models");
-var asyncLib = require("async");
-const { v4: uuidv4 } = require('uuid');
+import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+const {Marque, Ticket, TicketMarque } = db;
+import asyncLib from "async";
+//const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid';
 
-module.exports = {
+//import jwtUtils from "../utils/jwtUtils.js";
+import { generateTokenForUser, parseAuthorization, getUserId } from '../utils/jwtUtils.js';
+
+
+
+export const createBrandTicket = {
   // create brand response to usearly ticket
-  createBrandTicket: function (req, res) {
+  createTicket: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
   
     let title = req.body.title;
     let description = req.body.description;
@@ -35,7 +40,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.Marque.findOne({
+          Marque.findOne({
             where: { id: userId },
           })
             .then(function (brandFound) {
@@ -48,7 +53,7 @@ module.exports = {
         },
         function (brandFound, done) {
           if (brandFound) {
-            models.Ticket.findOne({
+            Ticket.findOne({
               where: { id: idticket },
             })
               .then(function (ticketFound) {
@@ -67,7 +72,7 @@ module.exports = {
             return res.status(404).json({ error: "ticket not found." });
           }
   
-          models.TicketMarque.create({
+          TicketMarque.create({
             id: uuidv4(), // Génération explicite de l'UUID
             ticketId: ticketFound.id,
             title: title,

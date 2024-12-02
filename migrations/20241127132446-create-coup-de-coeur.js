@@ -1,7 +1,6 @@
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
-  async up(queryInterface, Sequelize) {
+export async function up(queryInterface, Sequelize) {
     await queryInterface.createTable('CoupDeCoeurs', {
       id: {
         type: Sequelize.UUID,
@@ -53,9 +52,8 @@ module.exports = {
         allowNull: false,
       },
     });
-  },
+  }
 
-  async down(queryInterface) {
+  export async function down(queryInterface) {
     await queryInterface.dropTable('CoupDeCoeurs');
-  },
-};
+  }

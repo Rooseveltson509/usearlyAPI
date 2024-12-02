@@ -1,6 +1,6 @@
 'use strict';
-const { Model } = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
+import { Model } from 'sequelize';
+export default (sequelize, DataTypes) => {
   class ReportingCategory extends Model {
     /**
      * Helper method for defining associations.
@@ -26,6 +26,12 @@ module.exports = (sequelize, DataTypes) => {
 
   ReportingCategory.init(
     {
+      id: {
+        allowNull: false,
+        primaryKey: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4
+      },
       reportingId: {
         type: DataTypes.UUID,
         allowNull: false, // Champ obligatoire

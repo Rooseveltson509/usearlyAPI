@@ -3,24 +3,24 @@
   "port": 3000,
   "logging": true,
   "development": {
-    "username": "usearly_dbname",
-    "password": "Mireille@509",
-    "database": "usearly_db",
-    "host": "db4free.net",
+    "username": "${DB_USER}",
+    "password": "${DB_PASSWORD}",
+    "database": "${DB_NAME}",
+    "host": "${DB_HOST}",
     "dialect": "mysql"
   },
   "test": {
-    "username": "usearly_dbname",
-    "password": "Mireille@509",
-    "database": "usearly_db",
-    "host": "db4free.net",
+    "username": "${DB_USER}",
+    "password": "${DB_PASSWORD}",
+    "database": "${DB_NAME}",
+    "host": "${DB_HOST}",
     "dialect": "mysql"
   },
   "production": {
-    "username": "usearly_dbname",
-    "password": "Mireille@509",
-    "database": "usearly_db",
-    "host": "db4free.net",
+    "username": "${DB_USER}",
+    "password": "${DB_PASSWORD}",
+    "database": "${DB_NAME}",
+    "host": "${DB_HOST}",
     "dialect": "mysql"
   }
 }
