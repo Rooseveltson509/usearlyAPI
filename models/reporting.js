@@ -1,9 +1,6 @@
 'use strict';
-const { foreign_key } = require('i/lib/methods');
-const {
-  Model
-} = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
+import { Model } from 'sequelize';
+export default (sequelize, DataTypes) => {
   class Reporting extends Model {
     /**
      * Helper method for defining associations.
@@ -21,6 +18,18 @@ module.exports = (sequelize, DataTypes) => {
       // Association avec le modèle Ticket
       models.Reporting.hasMany(models.Ticket);
 
+      Reporting.belongsToMany(models.Category, {
+        through: 'ReportingCategories',
+        foreignKey: 'reportingId',
+        as: 'categories',
+      });
+
+      // Association avec SiteType
+      Reporting.belongsTo(models.SiteType, {
+        foreignKey: 'siteTypeId',
+        as: 'siteType',
+      });
+
     }
   };
   Reporting.init({
@@ -31,6 +40,8 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4
     },
     userId: DataTypes.UUID,
+    //siteTypeId: DataTypes.UUID,
+    siteUrl: DataTypes.STRING,
     marque: DataTypes.STRING,
     bugLocation: DataTypes.STRING,
     emojis: DataTypes.STRING,
@@ -38,11 +49,6 @@ module.exports = (sequelize, DataTypes) => {
     blocking: DataTypes.BOOLEAN,
     capture: DataTypes.STRING,
     tips: DataTypes.STRING,
-    category: {
-      type: DataTypes.ENUM('cat1', 'cat2', 'cat3', 'autre'),
-      allowNull: true,
-      defaultValue: 'autre',
-    }
   }, {
     sequelize,
     modelName: 'Reporting',

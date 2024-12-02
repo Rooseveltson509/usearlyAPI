@@ -1,7 +1,6 @@
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
-  async up(queryInterface, Sequelize) {
+export async function up(queryInterface, Sequelize) {
     await queryInterface.createTable('SuggestionCategories', {
       id: {
         allowNull: false,
@@ -38,8 +37,7 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
-  },
-  async down(queryInterface, Sequelize) {
+  }
+  export async function down(queryInterface, Sequelize) {
     await queryInterface.dropTable('SuggestionCategories');
-  },
-};
+  }

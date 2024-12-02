@@ -1,7 +1,6 @@
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
-module.exports = {
-  async up(queryInterface, Sequelize) {
+export async function up(queryInterface, Sequelize) {
     await queryInterface.createTable('SiteTypes', {
       id: {
         allowNull: false,
@@ -35,13 +34,11 @@ module.exports = {
       unique: true,
       name: 'unique_siteType_name',
     });
-  },
+  }
 
-  async down(queryInterface, Sequelize) {
-    // Supprime l'index en premier
+  export async function down(queryInterface, Sequelize) {
+    await queryInterface.dropTable('SiteTypes');
     await queryInterface.removeIndex('SiteTypes', 'unique_siteType_name');
 
-    // Ensuite, supprime la table
-    await queryInterface.dropTable('SiteTypes');
-  },
-};
+
+  }

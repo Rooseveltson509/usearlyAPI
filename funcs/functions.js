@@ -1,12 +1,11 @@
 // Imports
-require("dotenv").config();
-const sendmail = require("sendmail")();
-const {
-  validateMailAccount,
-  updatePassword,
-} = require("./template-validate-mail");
+//require("dotenv").config();
+import sendmail from "sendmail";
+//const sendmail = require("sendmail")();
+//import { validateMailAccount, updatePassword } from "./template-validate-mail.js";
 
-var nodemailer = require("nodemailer");
+import { createTransport } from "nodemailer";
+import {validateMailAccount, updatePassword} from "./TemplateValidate.js";
 
 // Constants
 const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
@@ -19,45 +18,53 @@ const ADDRESS_STRING = /^[a-zA-Z0-9\s,.'-]{3,}$/;
 // Check the pattern (dd/mm/yyyy or dd-mm-yyyy)
 const REGEX_DATE_FORMAT_FR = /^(0[1-9]|[12][0-9]|3[01])[-\/](0[1-9]|1[0-2])[-\/](19|20)\d\d$/;
 
-exports.randomDigit = function randomDigit() {
-  //^[0-9]{6,6}$
+
+let allowlist = [
+  "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
+  "https://www.nike.com",
+  "https://usearly-api.vercel.app",
+];
+
+
+export const func = {
+
+  randomDigit:  function() {
+    //^[0-9]{6,6}$
+    var result = "";
+    for (var i = length; i > 0; --i)
+      result += chars[Math.round(Math.random() * (chars.length - 1))];
+    return result;
+  },
+
+  randomCode: function (length, chars) {
   var result = "";
   for (var i = length; i > 0; --i)
     result += chars[Math.round(Math.random() * (chars.length - 1))];
   return result;
-};
+},
 
-exports.randomCode = function (length, chars) {
-  var result = "";
-  for (var i = length; i > 0; --i)
-    result += chars[Math.round(Math.random() * (chars.length - 1))];
-  return result;
-};
-
-exports.checkPassword = function (pwd) {
+checkPassword: function (pwd) {
   return PASSWORD_REGEX.test(pwd);
-};
+},
 
-exports.checkZipcode = function (zipCode) {
+checkZipcode: function (zipCode) {
   return FRENCH_ZIPCODE.test(zipCode);
-};
-
-exports.checkPhoneNumber = function (phone) {
+},
+checkPhoneNumber: function (phone) {
   return PHONE_NUMBER.test(phone);
-};
+},
 
-exports.checkDateFormatFr = function (date) {
+checkDateFormatFr: function  (date) {
   return REGEX_DATE_FORMAT_FR.test(date);
-};
-
-exports.checkCity = function (city) {
+},
+checkCity: function (city) {
   return CITY_STRING.test(city);
-};
-exports.checkAddress = function (address) {
+},
+checkAddress: function (address) {
   return ADDRESS_STRING.test(address);
-};
+},
 
-exports.isValidDateFormat = function (dateString) {
+isValidDateFormat: function (dateString) {
   // Vérifier si la date correspond à l'un des deux formats dd/mm/yyyy ou dd-mm-yyyy
   const regex = /^(\d{2})(\/|-)(\d{2})(\/|-)(\d{4})$/;
   const match = dateString.match(regex);
@@ -78,10 +85,10 @@ exports.isValidDateFormat = function (dateString) {
     date.getMonth() === month - 1 &&
     date.getDate() === day
   );
-};
+},
 
-exports.isOver16 = function (dateString) {
-  if (!exports.isValidDateFormat(dateString)) {
+isOver16: function (dateString) {
+  if (!isValidDateFormat(dateString)) {
     return false;
   }
 
@@ -101,34 +108,27 @@ exports.isOver16 = function (dateString) {
   }
 
   return age;
-};
+},
 
-
-
-exports.checkString = function (text) {
+checkString: function (text) {
   return ALPHANUMERIC_NUMBER.test(text);
-};
-exports.getPagination = (page, size) => {
+},
+getPagination: function (page, size) {
   const limit = size ? +size : 3;
   const offset = page ? page * limit : 0;
 
   return { limit, offset };
-};
-exports.getPagingData = (data, page, limit) => {
+},
+getPagingData: function(data, page, limit) {
   const { count: totalItems, rows: users } = data;
   const currentPage = page ? +page : 0;
   const totalPages = Math.ceil(totalItems / limit);
 
   return { totalItems, users, totalPages, currentPage };
-};
+},
 
-let allowlist = [
-  "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
-  "https://www.nike.com",
-  "https://usearly-api.vercel.app",
-];
 
-exports.corsOptionsDelegate = function (req, callback) {
+corsOptionsDelegate: function (req, callback) {
   const origin = req.header("Origin") || "";
   console.log(`Requête reçue avec origine : ${origin}`);
   
@@ -147,13 +147,9 @@ exports.corsOptionsDelegate = function (req, callback) {
   }
 
   callback(null, corsOptions);
-};
+},
 
-
-
-
-
-exports.sendConfirmationEmail = function (
+sendConfirmationEmail: function (
   toUser,
   toUserName,
   newUserId,
@@ -172,9 +168,9 @@ exports.sendConfirmationEmail = function (
       console.dir(reply);
     }
   );
-};
+},
 
-exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
+sendEmail: function (userName, toUser, domain, newUserId, token) {
   let config = {
     service: "gmail",
     auth: {
@@ -197,10 +193,10 @@ exports.sendEmail = function (userName, toUser, domain, newUserId, token) {
       console.log("Email sent: " + info.response);
     }
   });
-};
+},
 
-exports.sentEmail = function (userEmail, token, domain, userId) {
-  const transporter = nodemailer.createTransport({
+sentEmail: function (userEmail, token, domain, userId) {
+  const transporter = createTransport({
     service: "Gmail",
     auth: {
       user: "rooseveltsonc@gmail.com",
@@ -225,24 +221,24 @@ exports.sentEmail = function (userEmail, token, domain, userId) {
       console.log("Email sent successfully..." + info.messageId);
     }
   });
-};
+},
 
-exports.checkDate = function (date) {
+checkDate: function (date) {
   const exactlyNYearsAgoDate = (yearsAgo) =>
     new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));
   const mockBirthday = new Date(date);
   const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(16).getTime();
   console.log("isAdult:", isAdult);
-};
+},
 
-exports.sendResetPasswordEmail = function (
+sendResetPasswordEmail: function  (
   toUser,
   toUserName,
   domain,
   userId,
   token
 ) {
-  const transporter = nodemailer.createTransport({
+  const transporter = createTransport({
     service: "Gmail",
     auth: {
       user: "rooseveltsonc@gmail.com",
@@ -267,5 +263,6 @@ exports.sendResetPasswordEmail = function (
       console.log("Email sent successfully..." + info.messageId);
     }
   });
-};
+}
 
+}

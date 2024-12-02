@@ -1,7 +1,6 @@
 'use strict';
-const { Model } = require('sequelize');
-
-module.exports = (sequelize, DataTypes) => {
+import { Model } from 'sequelize';
+export default (sequelize, DataTypes) => {
   class Category extends Model {
     /**
      * Helper method for defining associations.
@@ -37,6 +36,12 @@ module.exports = (sequelize, DataTypes) => {
 
   Category.init(
     {
+      id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4, // Automatically generates a UUIDv4
+      },
       name: {
         type: DataTypes.STRING,
         allowNull: false, // Ensure name is required

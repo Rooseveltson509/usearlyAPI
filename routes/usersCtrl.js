@@ -1,12 +1,21 @@
 // Imports
-require("dotenv").config();
-let bcrypt = require("bcryptjs");
-let jwtUtils = require("../utils/jwt.utils");
-let models = require("../models");
-let asyncLib = require("async");
-let randToken = require("rand-token").uid;
-const validator = require("email-validator");
-const {
+import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+import dotenv from 'dotenv';
+dotenv.config();
+import bcrypt from "bcryptjs";
+import { generateTokenForUser, getUserId } from '../utils/jwtUtils.js';
+const { User } = db;
+import asyncLib from "async";
+
+//let bcrypt = require("bcryptjs");
+//let jwtUtils = require("../utils/jwtUtils");
+//let models = require("../models");
+//let asyncLib = require("async");
+import randToken from 'rand-token';
+const { uid } = randToken;
+import validator from 'email-validator';
+//const validator = require("email-validator");
+/* const {
   checkPassword,
   checkPhoneNumber,
   checkString,
@@ -16,13 +25,20 @@ const {
   sendResetPasswordEmail,
   getPagination,
   getPagingData,
-} = require("../funcs/functions");
-const Sequelize = require("sequelize");
-const Op = Sequelize.Op;
-const { randomCode } = require("../funcs/functions");
+} = require("../funcs/functions"); */
+
+
+import { func } from '../funcs/functions.js';
+
+/* const Sequelize = require("sequelize");
+const Op = Sequelize.Op; */
+
+import Sequelize from 'sequelize';
+const { Op } = Sequelize;
+//import { randomCode } from "../funcs/functions";
 
 // Routers
-module.exports = {
+export const user = {
   register: function (req, res) {
     //let gender = req.body.gender;
     let pseudo = req.body.pseudo;
@@ -30,27 +46,27 @@ module.exports = {
     let email = req.body.email;
     let password = req.body.password;
     let password_confirm = req.body.password_confirm;
-    let token = randomCode(6, "0123456789");
+    let token = func.randomCode(6, "0123456789");
 
     if (pseudo == null || email == null || password == null) {
       return res.status(400).json({ error: "all fields must be filled in." });
     }
 
-    if (!checkString(pseudo)) {
+    if (!func.checkString(pseudo)) {
       return res.status(400).json({
         error:
           "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
       });
     }
 
-    if (isValidDateFormat(born)) {
-      if (isOver16(born) < 16) {
+    if (func.isValidDateFormat(born)) {
+      if (func.isOver16(born) < 16) {
         return res.status(400).json({
           error: "born (You should be 16 years of age or older)",
         });
       }
     }
-    if (!isValidDateFormat(born)) {
+    if (!func.isValidDateFormat(born)) {
       return res.status(400).json({
         error: "Wrong format (Format accepted: dd/mm/yyyy or dd-mm-yyyy)",
       });
@@ -60,7 +76,7 @@ module.exports = {
       return res.status(400).json({ error: "email is not valid" });
     }
 
-    if (!checkPassword(password)) {
+    if (!func.checkPassword(password)) {
       return res.status(400).json({
         error:
           "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
@@ -74,7 +90,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             attributes: ["email"],
             where: { email: email },
           })
@@ -97,7 +113,7 @@ module.exports = {
           }
         },
         function (userFound, bcryptedPassword, done) {
-          models.User.create({
+          User.create({
             pseudo: pseudo,
             born: born,
             email: email,
@@ -116,7 +132,7 @@ module.exports = {
       ],
       function (newUser) {
         if (newUser) {
-          sentEmail(
+          func.sentEmail(
             newUser.email,
             token,
             "https://usearly-api.vercel.app",
@@ -146,7 +162,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId, confirmationToken: token },
           })
             .then(function (userFound) {
@@ -208,7 +224,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { email: email },
           })
             .then(function (userFound) {
@@ -244,7 +260,7 @@ module.exports = {
       function (userFound) {
         if (userFound) {
           return res.status(200).json({
-            token: jwtUtils.generateTokenForUser(userFound),
+            token: generateTokenForUser(userFound),
           });
         } else {
           return res.status(500).json({ error: "cannot log on user" });
@@ -253,65 +269,6 @@ module.exports = {
     );
   },
 
-  // Login employe
-  EmployeLogin: function (req, res) {
-    // Params
-    var email = req.body.email;
-    var password = req.body.password;
-
-    if (email == null || password == null) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    asyncLib.waterfall(
-      [
-        function (done) {
-          models.Employe.findOne({
-            where: { email: email },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            bcrypt.compare(
-              password,
-              userFound.password,
-              function (errBycrypt, resBycrypt) {
-                done(null, userFound, resBycrypt);
-              }
-            );
-          } else {
-            return res.status(404).json({ error: "Utilisateur introuvable." });
-          }
-        },
-        function (userFound, resBycrypt, done) {
-          if (resBycrypt) {
-            done(userFound);
-          } else {
-            return res
-              .status(400)
-              .json({ error: "Email ou mot de passe INVALIDE..." });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(200).json({
-            employeId: userFound.id,
-            email: userFound.email,
-            token: jwtUtils.generateTokenForUser(userFound),
-          });
-        } else {
-          return res.status(500).json({ error: "cannot log on user" });
-        }
-      }
-    );
-  },
   // Email sending to confirm account
   forgotPassword: function (req, res) {
     // Params
@@ -328,7 +285,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { email: email },
           })
             .then(function (userFound) {
@@ -342,7 +299,7 @@ module.exports = {
         },
         function (userFound, done) {
           if (userFound && userFound.confirmedAt !== null) {
-            const resetToken = randToken(64);
+            const resetToken = uid(64);
             userFound
               .update({
                 resetToken: resetToken,
@@ -350,7 +307,7 @@ module.exports = {
                 expiredAt: new Date(Date.now() + 60 * 60 * 1000),
               })
               .then(function (userFound) {
-                sendResetPasswordEmail(
+                func.sendResetPasswordEmail(
                   userFound.email,
                   userFound.pseudo,
                   "https://usearly-api.vercel.app",
@@ -391,7 +348,7 @@ module.exports = {
     let password = req.body.password;
     let password_confirm = req.body.password_confirm;
 
-    if (!checkPassword(password)) {
+    if (!func.checkPassword(password)) {
       return res.status(400).json({
         error:
           "password invalid (must length 6 - 10 and include 1 number at least)",
@@ -404,7 +361,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId },
           })
             .then(function (userFound) {
@@ -471,7 +428,7 @@ module.exports = {
   findAllUsers: (req, res) => {
     // Getting auth header
     let headerAuth = req.headers["authorization"];
-    let userId = jwtUtils.getUserId(headerAuth);
+    let userId = getUserId(headerAuth);
 
     if (userId < 0) {
       return res.status(400).json({ error: "missing parameters" });
@@ -480,9 +437,9 @@ module.exports = {
     let page = parseInt(req.params.page);
     let size = parseInt(req.params.page);
 
-    const { limit, offset } = getPagination(page, 10);
+    const { limit, offset } = func.getPagination(page, 10);
 
-    models.User.findAndCountAll({
+    User.findAndCountAll({
       where: {
         role: {
           [Op.notLike]: "%admin%",
@@ -492,7 +449,7 @@ module.exports = {
       offset,
     })
       .then((data) => {
-        const response = getPagingData(data, page, 10);
+        const response = func.getPagingData(data, page, 10);
         res.send(response);
       })
       .catch((err) => {
@@ -506,18 +463,18 @@ module.exports = {
   listUsers: function (req, res) {
     // Getting auth header
     let headerAuth = req.headers["authorization"];
-    let userId = jwtUtils.getUserId(headerAuth);
+    let userId = getUserId(headerAuth);
 
     if (userId <= 0) {
       return res.status(400).json({ error: "missing parameters" });
     }
 
-    models.User.findOne({
+    User.findOne({
       where: { id: userId },
     })
       .then(function (user) {
         if (user.role == "admin") {
-          models.User.findAll({
+          User.findAll({
             where: {
               role: {
                 [Op.notLike]: "%admin%",
@@ -544,7 +501,7 @@ module.exports = {
   getUserByEmail: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
     var email = req.params.email;
 
     if (userId <= 0) {
@@ -553,12 +510,12 @@ module.exports = {
     if (!validator.validate(email)) {
       return res.status(400).json({ error: "email is not valid" });
     }
-    models.User.findOne({
+    User.findOne({
       where: { id: userId, role: "admin" },
     })
       .then(function (user) {
         if (user) {
-          models.User.findAll({
+          User.findAll({
             where: { email: email },
           })
             .then(function (user2) {
@@ -581,97 +538,16 @@ module.exports = {
         res.status(500).json({ error: "cannot fetch user..." });
       });
   },
-  // Find Employe By EMAIL
-  getEmployeByEmail: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-    var email = req.params.email;
 
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-    models.User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          models.Employe.findAll({
-            where: { email: email },
-          })
-            .then(function (user2) {
-              if (user2) {
-                return res.status(200).json(user2);
-              } else {
-                return res.status(404).json({ error: "Employe not found" });
-              }
-            })
-            .catch(function (err) {
-              res
-                .status(404)
-                .json({ error: "cannot fetch Employe......" + email });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch Employe..." });
-      });
-  },
-  // Find User By EMAIL from employe
-  getUserByEmailFromEmploye: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-    var email = req.params.email;
-
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-    models.Employe.findOne({
-      where: { id: userId },
-    })
-      .then(function (user) {
-        if (user) {
-          models.User.findAll({
-            where: { email: email },
-          })
-            .then(function (user2) {
-              if (user2) {
-                res.status(201).json(user2);
-              } else {
-                res.status(404).json({ error: "User not found" });
-              }
-            })
-            .catch(function (err) {
-              res
-                .status(404)
-                .json({ error: "cannot fetch user......" + email });
-            });
-        } else {
-          res.status(404).json({ error: "Accès non autorisé." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch user..." });
-      });
-  },
   // user account after login
   getUserProfile: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     if (userId < 0) return res.status(400).json({ error: "wrong token" });
 
-    models.User.findOne({
+    User.findOne({
       attributes: ["gender", "pseudo", "born", "email"],
       where: { id: userId },
     })
@@ -691,7 +567,7 @@ module.exports = {
   updateUserProfile: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     // Params
     let pseudo = req.body.pseudo;
@@ -703,7 +579,7 @@ module.exports = {
     const mockBirthday = new Date(born);
     const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(18).getTime();
 
-    if (!checkString(pseudo)) {
+    if (!func.checkString(pseudo)) {
       return res.status(400).json({
         error:
           "Invalid pseudo (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
@@ -725,7 +601,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId },
           })
             .then(function (userFound) {
@@ -768,7 +644,7 @@ module.exports = {
   updateUserPassword: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     // Params
     let password = req.body.password;
@@ -778,7 +654,7 @@ module.exports = {
       return res.status(400).json({ error: "missing parameters" });
     }
 
-    if (!checkPassword(password)) {
+    if (!func.checkPassword(password)) {
       return res.status(304).json({
         error:
           "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
@@ -792,7 +668,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId },
           })
             .then(function (userFound) {
@@ -842,7 +718,7 @@ module.exports = {
   updateUserProfileByAdmin: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     // Params
     let email = req.params.email;
@@ -853,14 +729,14 @@ module.exports = {
     var zipCode = req.body.zipCode;
     let phone = req.body.phone;
 
-    if (!checkString(nom)) {
+    if (!func.checkString(nom)) {
       return res.status(400).json({
         error:
           "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
       });
     }
 
-    if (!checkString(prenom)) {
+    if (!func.checkString(prenom)) {
       return res.status(400).json({
         error:
           "firstname invalid (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
@@ -880,7 +756,7 @@ module.exports = {
       });
     }
 
-    if (!checkPhoneNumber(phone)) {
+    if (!func.checkPhoneNumber(phone)) {
       return res.status(400).json({
         error:
           "Phone Number invalid (example : 06 01 02 03 04 | 06-01-02-03-04 | +33 6 01 02 03 04 |  0033 6 01 02 03 04)",
@@ -890,7 +766,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId, role: "admin" },
           })
             .then(function (userAdmin) {
@@ -902,7 +778,7 @@ module.exports = {
         },
         function (userAdmin, done) {
           if (userAdmin) {
-            models.User.findOne({
+            User.findOne({
               where: { email: email },
             })
               .then(function (userFound) {
@@ -946,98 +822,12 @@ module.exports = {
       }
     );
   },
-  // update employe profile by admin
-  updateUserProfileEmployeByAdmin: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-
-    // Params
-    let email = req.params.email;
-    let nom = req.body.nom;
-    let prenom = req.body.prenom;
-    let newEmail = req.body.email;
-
-    if (!checkString(nom)) {
-      return res.status(400).json({
-        error:
-          "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-
-    if (!checkString(prenom)) {
-      return res.status(400).json({
-        error:
-          "firstname invalid (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "INVALID PARAMETER" });
-    }
-    if (!validator.validate(newEmail)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-    asyncLib.waterfall(
-      [
-        function (done) {
-          models.User.findOne({
-            where: { id: userId, role: "admin" },
-          })
-            .then(function (userAdmin) {
-              done(null, userAdmin);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userAdmin, done) {
-          if (userAdmin) {
-            models.Employe.findOne({
-              where: { email: email },
-            })
-              .then(function (userFound) {
-                done(null, userFound);
-              })
-              .catch(function (err) {
-                return res.status(500).json({ error: "unable to verify user" });
-              });
-          } else {
-            res.status(500).json({ error: "Access denied" });
-          }
-        },
-        function (userFound, done) {
-          if (userFound) {
-            userFound
-              .update({
-                nom: nom ? nom : userFound.nom,
-                prenom: prenom ? prenom : userFound.prenom,
-                email: newEmail ? newEmail : userFound.email,
-              })
-              .then(function () {
-                done(userFound);
-              })
-              .catch(function (err) {
-                res.status(500).json({ error: "cannot update employe" });
-              });
-          } else {
-            res.status(404).json({ error: "employe not found" });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(201).json(userFound);
-        } else {
-          return res.status(500).json({ error: "cannot update user profile" });
-        }
-      }
-    );
-  },
+  // delete user by admin
   // delete user profile by admin
   destroyUserProfileByAdmin: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     // Params
     let email = req.params.email;
@@ -1049,7 +839,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId, role: "admin" },
           })
             .then(function (userAdmin) {
@@ -1061,7 +851,7 @@ module.exports = {
         },
         function (userAdmin, done) {
           if (userAdmin) {
-            models.User.findOne({
+            User.findOne({
               where: { email: email },
             })
               .then(function (userFound) {
@@ -1076,8 +866,7 @@ module.exports = {
         },
         function (userFound, done) {
           if (userFound) {
-            console.log("userrrrrrrrrrrrrrrrr: " + userFound.email)
-            models.User.destroy({
+            User.destroy({
               where: { email: userFound.email },
             })
               .then(function () {
@@ -1104,7 +893,7 @@ module.exports = {
   destroyUserProfile: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     // Params
     let email = req.params.email;
@@ -1115,7 +904,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId },
           })
             .then(function (userF) {
@@ -1127,7 +916,7 @@ module.exports = {
         },
         function (userF, done) {
           if (userF.email === email && userF.id === userId) {
-            models.User.destroy({
+            User.destroy({
               where: { email: email, id: userId },
               truncate: { cascade: false },
             })
@@ -1156,7 +945,7 @@ module.exports = {
   destroyUserProfileByAdmins: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     // Params
     let email = req.params.email;
@@ -1168,7 +957,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId, role: "admin" },
           })
             .then(function (userAdmin) {
@@ -1180,7 +969,7 @@ module.exports = {
         },
         function (userAdmin, done) {
           if (userAdmin) {
-            models.User.findOne({
+            User.findOne({
               where: { email: email },
             })
               .then(function (userFound) {
@@ -1195,7 +984,7 @@ module.exports = {
         },
         function (userFound, done) {
           if (userFound) {
-            models.User.destroy({
+            User.destroy({
               where: { email: email },
             })
               .then(function () {
@@ -1221,7 +1010,7 @@ module.exports = {
   createBrandNew: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     let name = req.body.name;
     let email = req.body.email;
@@ -1235,7 +1024,7 @@ module.exports = {
       return res.status(400).json({ error: "all fields must be filled in." });
     }
 
-    if (!checkString(name)) {
+    if (!func.checkString(name)) {
       return res.status(400).json({
         error:
           "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
@@ -1246,7 +1035,7 @@ module.exports = {
       return res.status(400).json({ error: "email is not valid" });
     }
 
-    if (!checkPassword(mdp)) {
+    if (!func.checkPassword(mdp)) {
       return res.status(400).json({
         error:
           "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
@@ -1263,7 +1052,7 @@ module.exports = {
     asyncLib.waterfall(
       [
         function (done) {
-          models.User.findOne({
+          User.findOne({
             where: { id: userId, role: "admin" },
           })
             .then(function (userAdmin) {
@@ -1275,8 +1064,8 @@ module.exports = {
         },
         function (userAdmin, done) {
           if (userAdmin) {
-            models.Marque.findOne({
-              where:{ email: email },
+            Marque.findOne({
+              where: { email: email },
             })
               .then(function (userFound) {
                 done(null, userAdmin, userFound);
@@ -1290,10 +1079,10 @@ module.exports = {
             return res.status(401).json({ error: "Access Denied." });
           }
         },
-        function (userAdmin,userFound, done) {
+        function (userAdmin, userFound, done) {
           if (!userFound) {
             bcrypt.hash(mdp, 5, function (err, bcryptedPassword) {
-              done(null,userFound, bcryptedPassword);
+              done(null, userFound, bcryptedPassword);
             });
           } else {
             return res.status(409).json({ error: "Brand already exist. " });
@@ -1301,7 +1090,7 @@ module.exports = {
         },
 
         function (userFound, bcryptedPassword, done) {
-          let newBrand = models.Marque.create({
+          let newBrand = Marque.create({
             userId: userId,
             name: name,
             email: email,
@@ -1327,17 +1116,17 @@ module.exports = {
   BrandList: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
+    var userId = getUserId(headerAuth);
 
     if (userId <= 0) {
       return res.status(400).json({ error: "missing parameters" });
     }
-    models.User.findOne({
+    User.findOne({
       where: { id: userId, role: "admin" },
     })
       .then(function (user) {
         if (user) {
-          models.Marque.findAll({})
+          Marque.findAll({})
             .then(function (brand) {
               if (brand) {
                 res.status(200).json(brand);
@@ -1355,207 +1144,4 @@ module.exports = {
       });
   },
 
-  // FIND AND DISPLAY ALL TICKETS BY STORE
-  findTicketsByStore: function (req, res) {
-    // variable
-    let store = req.body.store;
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    models.User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          models.Ticket.findAll({
-            attributes: [
-              "gain",
-              "magasin",
-              [Sequelize.fn("COUNT", Sequelize.col("gain")), "win"],
-            ],
-            group: "gain",
-            raw: true,
-            logging: true,
-            where: { magasin: store },
-          })
-            .then((data) => {
-              console.log("Query Result", data);
-              return res.status(200).json(data);
-            })
-            .catch(function (err) {
-              res.status(404).json({ error: "cannot find this Store..." });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch Ticket..." });
-      });
-  },
-
-  // FIND AND COUNT ALL TICKET
-  ticketsList: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    models.User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          models.Ticket.findAll({
-            attributes: [
-              "gain",
-              [Sequelize.fn("COUNT", Sequelize.col("gain")), "count"],
-            ],
-            group: "gain",
-            raw: true,
-            logging: true,
-          })
-            .then((data) => {
-              console.log("Query Result", data);
-              return res.status(200).json(data);
-            })
-            .catch(function (err) {
-              res.status(404).json({ error: "cannot fetch Ticket......" });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch Ticket..." });
-      });
-  },
-  // FIND AND DISPLAY REMAINING TICKETS
-  remainingTickets: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    models.User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          models.Ticket.findAll({
-            attributes: [
-              "gain",
-              [Sequelize.fn("COUNT", Sequelize.col("gain")), "remaining"],
-            ],
-            group: "gain",
-            raw: true,
-            logging: true,
-            where: { etat: "non-distribue" },
-          })
-            .then((data) => {
-              console.log("Query Result", data);
-              return res.status(200).json(data);
-            })
-            .catch(function (err) {
-              res.status(404).json({ error: "cannot fetch Ticket......" });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch Ticket..." });
-      });
-  },
-  // found the winning tickets
-  winningTickets: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = jwtUtils.getUserId(headerAuth);
-
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    models.User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          models.Ticket.findAll({
-            attributes: [
-              "gain",
-              [Sequelize.fn("COUNT", Sequelize.col("gain")), "win"],
-            ],
-            group: "gain",
-            where: { etat: "valide" },
-            raw: true,
-            logging: true,
-          })
-            .then((data) => {
-              console.log("Query Result", data);
-              return res.status(200).json(data);
-            })
-            .catch(function (err) {
-              res.status(404).json({ error: "cannot fetch Ticket......" });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch Ticket..." });
-      });
-  },
-
-  // NB: validate email user for MOCKA test | Use ONLY for the test
-  validateEmailforTest: function (req, res) {
-    let email = req.params.email;
-
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-
-    models.User.findOne({
-      where: { email: email },
-    })
-      .then(function (user) {
-        if (user) {
-          models.User.findOne({
-            where: { email: email },
-          })
-            .then(function (user2) {
-              if (user2) {
-                return res.status(200).json({
-                  id: user2.id,
-                  email: user2.email,
-                  confToken: user2.confirmationToken,
-                });
-                //return res.status(200).json({user2});
-              } else {
-                return res.status(404).json({ error: "User not found" });
-              }
-            })
-            .catch(function (err) {
-              res.status(404).json({ error: "cannot fetch user." });
-            });
-        } else {
-          return res.status(404).json({ error: "User not found." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch User." });
-      });
-  },
 };
