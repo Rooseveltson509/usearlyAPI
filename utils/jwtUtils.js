@@ -34,19 +34,25 @@ module.exports = {
 
 
 // Imports
-import jwt from 'jsonwebtoken';
 
-const JWT_SIGN_SECRET = '0sjhfd6ggigb6ojds0ndbmetezfetvwzwzgegzz54dffefedfdzreerh0GHJGD';
+// import jwtToken from 'jsonwebtoken
+import jwt from 'jsonwebtoken';
+// import jwtToken from 'JSONwebtoken';
+import dotenv from 'dotenv';
+// Import environment variables from.env file
+dotenv.config();
+
+const JWT_SIGN_SECRET = process.env.JWT_SIGN_SECRET;
 
 // Exported functions
 export function generateTokenForUser(userData) {
     return jwt.sign({
-            userId: userData.id,
-            email: userData.email
-        },
+        userId: userData.id,
+        email: userData.email
+    },
         JWT_SIGN_SECRET, {
-            expiresIn: '24h'
-        }
+        expiresIn: '24h'
+    }
     );
 }
 
