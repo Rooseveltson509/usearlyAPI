@@ -143,7 +143,7 @@ corsOptionsDelegate: function (req, callback) {
     };
   } else {
     console.log(`Origine refusée : ${origin}`);
-    corsOptions = { origin: false };
+    corsOptions = { origin: true };
   }
 
   callback(null, corsOptions);

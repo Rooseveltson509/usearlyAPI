@@ -160,15 +160,6 @@ export const reporting = {
       if (capture) {
         console.log("Analyse de la capture :", capture);
         extractedBugLocation = await service.extractTextFromImage(capture);
-
-        // Si le texte extrait contient des mots-clés spécifiques, vous pouvez les utiliser pour déterminer l'emplacement
-        if (extractedBugLocation.includes('panier')) {
-          extractedBugLocation = 'panier';
-        } else if (extractedBugLocation.includes('connexion') || extractedBugLocation.includes('inscription')) {
-          extractedBugLocation = 'page connexion/inscription';
-        } else if (!extractedBugLocation.trim()) {
-          extractedBugLocation = 'emplacement inconnu';
-        }
       }
 
       // Trouver ou créer le siteTypeId correspondant

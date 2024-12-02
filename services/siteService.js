@@ -18,20 +18,8 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 
-
+// Vérification de la clé API
 export const service = {
-    // Utilisation de Tesseract pour extraire du texte depuis une image
-    extractTextFromImage: async function (imagePath) {
-        try {
-            const result = await Tesseract.recognize(imagePath, 'fra'); // Utilisez 'fra' pour le français ou 'eng' pour l'anglais
-            console.log("Texte extrait par Tesseract :", result.data.text);
-            return result.data.text; // Texte brut extrait
-        } catch (error) {
-            console.error("Erreur lors de l'extraction du texte avec Tesseract :", error);
-            return ''; // Retournez une chaîne vide en cas d'erreur
-        }
-    },
-
     // Méthode pour déterminer le bugLocation à partir du texte extrait
     determineBugLocation: async function (textExtracted) {
         if (!textExtracted) {
@@ -40,6 +28,25 @@ export const service = {
 
         // Logique de correspondance basée sur des mots-clés
         const textLower = textExtracted.toLowerCase();
+
+
+        // Si le texte extrait contient des mots-clés spécifiques, vous pouvez les utiliser pour déterminer l'emplacement
+        if (textLower.includes('panier')) {
+            return 'panier';
+          }
+          if (textLower.includes('Créer un compte')
+            || textLower.includes('Adresse e-mail')
+            || textLower.includes('inscription')
+            || textLower.includes('connexion')) {
+                return'page connexion/inscription';
+          }
+          else if (textLower.includes('connexion') || textLower.includes('inscription')) {
+            return'page connexion/inscription';
+          }
+          else if (!textLower.trim()) {
+            return 'emplacement inconnu';
+          }
+
         if (textLower.includes("panier") || textLower.includes("checkout")) {
             return "panier";
         }
@@ -76,7 +83,22 @@ export const service = {
 
         return "Emplacement inconnu";
     },
+    // Utilisation de Tesseract pour extraire du texte depuis une image
+    extractTextFromImage: async function (imagePath) {
+        try {
+            const { data: { text } } = await Tesseract.recognize(imagePath, 'fra'); // Utilisez 'fra' pour le français ou 'eng' pour l'anglais
+            console.log('Texte extrait :', text);
 
+            // Analyser le type de page
+            const pageType = await this.determineBugLocation(text);
+            console.log('Type de page détecté :', pageType);
+
+            return pageType; // Texte brut extrait
+        } catch (error) {
+            console.error("Erreur lors de l'extraction du texte avec Tesseract :", error);
+            return ''; // Retournez une chaîne vide en cas d'erreur
+        }
+    },
     // Récupération des métadonnées du site
     getCategories: async function (description) {
         try {
