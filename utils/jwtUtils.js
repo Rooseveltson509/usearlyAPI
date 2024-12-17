@@ -14,7 +14,7 @@ export function generateAccessToken(userData) {
     },
     JWT_SIGN_SECRET,
     {
-      expiresIn: "5h", // Plus courte durée pour le token d'accès
+      expiresIn: "24h", // Plus courte durée pour le token d'accès
     }
   );
 }

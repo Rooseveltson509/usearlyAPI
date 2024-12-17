@@ -194,58 +194,6 @@ export const user = {
   },
 
   // Login
-  /*   login: async function (req, res) {
-      const { email, password, rememberMe } = req.body;
-  
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Les paramètres email et mot de passe sont requis." });
-      }
-  
-      try {
-        // Étape 1 : Vérifiez si l'utilisateur existe
-        const user = await User.findOne({ where: { email } });
-        if (!user || user.confirmedAt === null) {
-          return res
-            .status(404)
-            .json({ error: "Utilisateur introuvable ou non confirmé." });
-        }
-  
-        // Étape 2 : Comparez le mot de passe
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-          return res
-            .status(401)
-            .json({ error: "Email ou mot de passe invalide." });
-        }
-  
-        // Étape 3 : Générer les tokens
-        const accessToken = generateAccessToken(user);
-        let refreshToken = null;
-  
-        if (rememberMe) {
-          refreshToken = generateRefreshToken(user);
-          // Optionnel : Enregistrez le Refresh Token dans la base de données ou un cache sécurisé
-          user.refreshToken = refreshToken; // Exemple : Si votre modèle User le permet
-          await user.save();
-        }
-  
-        // Étape 4 : Répondre avec les tokens
-        return res.status(200).json({
-          success: true,
-          message: "Connexion réussie.",
-          accessToken,
-          refreshToken, // Null si `rememberMe` n'est pas activé
-        });
-      } catch (error) {
-        console.error("Erreur lors de la connexion :", error);
-        return res
-          .status(500)
-          .json({ error: "Une erreur est survenue lors de la connexion." });
-      }
-    }, */
-
   login: async (req, res) => {
     const { email, password, rememberMe } = req.body;
 
