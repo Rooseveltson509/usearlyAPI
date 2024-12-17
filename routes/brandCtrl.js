@@ -1,19 +1,7 @@
-/* require("dotenv").config();
-let bcrypt = require("bcryptjs");
-let jwtUtils = require("../utils/jwt.utils");
-let models = require("../models");
-var asyncLib = require("async"); */
-import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import bcrypt from "bcryptjs";
-//import jwtUtils from "../utils/jwtUtils.js";
-import { generateTokenForUser, parseAuthorization, getUserId } from '../utils/jwtUtils.js';
-
-// Exemple d'utilisation dans votre fichier :
-//const token = generateTokenForUser(userFound);
-
-//import models from "../models/index.js";
-// Récupération des modèles nécessaires
-const {Marque } = db;
+import { generateRefreshToken } from "../utils/jwtUtils.js";
+const { Marque } = db;
 import asyncLib from "async";
 
 // Méthodes exportées
@@ -66,7 +54,7 @@ export const brandCtrl = {
       function (userFound) {
         if (userFound) {
           return res.status(200).json({
-            token: generateTokenForUser(userFound),
+            token: generateRefreshToken(userFound),
           });
         } else {
           return res.status(500).json({ error: "cannot log on user" });

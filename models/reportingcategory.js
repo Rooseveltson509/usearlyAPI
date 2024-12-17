@@ -1,5 +1,5 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class ReportingCategory extends Model {
     /**
@@ -10,16 +10,16 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // Relation avec Reporting
       ReportingCategory.belongsTo(models.Reporting, {
-        foreignKey: 'reportingId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        foreignKey: "reportingId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
 
       // Relation avec Category
       ReportingCategory.belongsTo(models.Category, {
-        foreignKey: 'categoryId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        foreignKey: "categoryId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
     }
   }
@@ -30,7 +30,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4
+        defaultValue: DataTypes.UUIDV4,
       },
       reportingId: {
         type: DataTypes.UUID,
@@ -49,8 +49,8 @@ export default (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'ReportingCategory',
-      tableName: 'ReportingCategories', // Nom explicite pour la table
+      modelName: "ReportingCategory",
+      tableName: "ReportingCategories", // Nom explicite pour la table
       timestamps: true, // Inclut createdAt et updatedAt
     }
   );

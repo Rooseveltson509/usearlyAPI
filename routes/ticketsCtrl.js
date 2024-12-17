@@ -5,12 +5,12 @@ var asyncLib = require("async");
 
 let Os = require("os"); */
 
-import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import Os from "os";
-const {User, Reporting,Ticket } = db;
+const { User, Reporting, Ticket } = db;
 import asyncLib from "async";
-import { getUserId } from '../utils/jwtUtils.js';
-import dotenv from 'dotenv';
+import { getUserId } from "../utils/jwtUtils.js";
+import dotenv from "dotenv";
 dotenv.config();
 
 export const ticket = {
@@ -55,23 +55,24 @@ export const ticket = {
               done(null, userFound);
             })
             .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user ..." });
+              return res
+                .status(500)
+                .json({ error: "unable to verify user ...", err });
             });
         },
         function (userFound, done) {
           if (userFound) {
-
             Reporting.findOne({
-              where: { id: idReporting }
+              where: { id: idReporting },
             })
               .then(function (report) {
                 done(null, userFound, report);
               })
               .catch(function (err) {
-                return res.status(500).json({ error: "unable to verify ticket." });
+                return res
+                  .status(500)
+                  .json({ error: "unable to verify ticket.", err });
               });
-
-
           } else {
             res.status(403).json({ error: "ACCESS DENIED." });
           }
@@ -97,7 +98,7 @@ export const ticket = {
             .catch(function (err) {
               return res.status(500).json({ err });
             });
-        }
+        },
       ],
       function (newTicket) {
         if (newTicket) {
@@ -107,7 +108,5 @@ export const ticket = {
         }
       }
     );
-
   },
-
 };

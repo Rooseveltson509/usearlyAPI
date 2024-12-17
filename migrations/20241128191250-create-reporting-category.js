@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
-  await queryInterface.createTable('ReportingCategories', {
+  await queryInterface.createTable("ReportingCategories", {
     id: {
       allowNull: false,
       primaryKey: true,
@@ -12,21 +12,21 @@ export async function up(queryInterface, Sequelize) {
       type: Sequelize.UUID,
       allowNull: false,
       references: {
-        model: 'Reportings', // Nom exact de la table référencée
-        key: 'id',
+        model: "Reportings", // Nom exact de la table référencée
+        key: "id",
       },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE',
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
     categoryId: {
       type: Sequelize.UUID,
       allowNull: false,
       references: {
-        model: 'Categories', // Nom exact de la table référencée
-        key: 'id',
+        model: "Categories", // Nom exact de la table référencée
+        key: "id",
       },
-      onDelete: 'CASCADE',
-      onUpdate: 'CASCADE',
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
     createdAt: {
       allowNull: false,
@@ -40,13 +40,13 @@ export async function up(queryInterface, Sequelize) {
     },
   });
 
-  await queryInterface.addConstraint('ReportingCategories', {
-    fields: ['reportingId', 'categoryId'],
-    type: 'unique',
-    name: 'unique_reporting_category',
+  await queryInterface.addConstraint("ReportingCategories", {
+    fields: ["reportingId", "categoryId"],
+    type: "unique",
+    name: "unique_reporting_category",
   });
 }
 
-export async function down(queryInterface, Sequelize) {
-  await queryInterface.dropTable('ReportingCategories');
+export async function down(queryInterface) {
+  await queryInterface.dropTable("ReportingCategories");
 }

@@ -101,7 +101,7 @@
     }
   },
 
-  "schemes":["https","http"],
+  "schemes": ["https", "http"],
   "paths": {
     "/": {
       "get": {
@@ -190,7 +190,7 @@
           }
         },
         "tags": ["members"],
-        
+
         "security": [
           {
             "bearer": []

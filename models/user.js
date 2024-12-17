@@ -1,5 +1,6 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
+
 export default (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -8,50 +9,119 @@ export default (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
-      models.User.hasMany(models.Marque); // Association correcte
-      models.User.hasMany(models.Reporting); // Association correcte
+      // Associations avec alias et clés étrangères explicites
+      User.hasMany(models.Marque, {
+        foreignKey: "userId", // Clé étrangère dans Marque
+        as: "marques", // Alias pour accéder aux Marques
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
 
-      User.associate = (models) => {
-        Users.hasMany(models.CoupDeCoeur, {
-          foreignKey: 'userId',
-          as: 'coupsDeCoeur',
-          onDelete: 'CASCADE',
-        });
-      
-        User.hasMany(models.Suggestion, {
-          foreignKey: 'userId',
-          as: 'suggestions',
-          onDelete: 'CASCADE',
-        });
-      };
-      
+      User.hasMany(models.Reporting, {
+        foreignKey: "userId", // Clé étrangère dans Reporting
+        as: "reportings", // Alias pour accéder aux Reportings
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
 
+      User.hasMany(models.CoupDeCoeur, {
+        foreignKey: "userId", // Clé étrangère dans CoupDeCoeur
+        as: "coupsDeCoeur", // Alias pour accéder aux Coups de Cœur
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
+
+      User.hasMany(models.Suggestion, {
+        foreignKey: "userId", // Clé étrangère dans Suggestion
+        as: "suggestions", // Alias pour accéder aux Suggestions
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
-  };
-  User.init({
-    id: {
-      allowNull: false,
-      primaryKey: true,
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4
+  }
+
+  User.init(
+    {
+      id: {
+        allowNull: false,
+        primaryKey: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+      },
+      gender: {
+        type: DataTypes.ENUM("monsieur", "madame", "N/A"),
+        allowNull: false,
+        validate: {
+          isIn: [["monsieur", "madame", "N/A"]],
+        },
+      },
+      pseudo: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        validate: {
+          len: [3, 50], // Pseudo entre 3 et 50 caractères
+        },
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        validate: {
+          isEmail: true, // Valide les emails
+        },
+      },
+      password: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          len: [8, 255], // Longueur minimale de 8 caractères
+        },
+      },
+      born: {
+        type: DataTypes.DATE,
+        allowNull: true, // Facultatif
+        validate: {
+          isDate: true, // Valide les dates
+        },
+      },
+      role: {
+        type: DataTypes.ENUM("user", "admin"),
+        defaultValue: "user",
+        validate: {
+          isIn: [["user", "admin"]],
+        },
+      },
+      confirmationToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      confirmedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      resetToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      resetAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      expiredAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      rememberToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
-    gender: DataTypes.ENUM('monsieur', 'madame', 'N/A'),
-    pseudo: DataTypes.STRING,
-    email: DataTypes.STRING,
-    password: DataTypes.STRING,
-    born: DataTypes.DATE,
-    role: DataTypes.ENUM('user', 'admin'),
-    confirmationToken: DataTypes.STRING,
-    confirmedAt: DataTypes.DATE,
-    resetToken: DataTypes.STRING,
-    resetAt: DataTypes.DATE,
-    expiredAt: DataTypes.DATE,
-    rememberToken: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'User',
-  });
+    {
+      sequelize,
+      modelName: "User",
+    }
+  );
 
   return User;
 };

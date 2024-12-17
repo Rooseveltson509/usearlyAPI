@@ -1,44 +1,59 @@
-'use strict';
+"use strict";
+
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
-    await queryInterface.createTable('SiteTypes', {
-      id: {
-        allowNull: false,
-        primaryKey: true,
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4, // Génère un UUID automatiquement
-      },
-      name: {
-        allowNull: false,
-        type: Sequelize.STRING,
-        unique: true, // Ajout de l'unicité directement dans la définition du champ
-      },
-      description: {
-        allowNull: true, // Permet un champ optionnel
-        type: Sequelize.TEXT, // Utilisé pour des descriptions longues
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'), // Valeur par défaut pour la création
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), // Valeur mise à jour automatiquement
-      },
+  await queryInterface.createTable("SiteTypes", {
+    id: {
+      allowNull: false,
+      primaryKey: true,
+      type: Sequelize.UUID,
+      defaultValue: Sequelize.UUIDV4,
+    },
+    name: {
+      allowNull: false,
+      type: Sequelize.STRING,
+      unique: true, // Unicité au niveau de la colonne
+    },
+    description: {
+      allowNull: true,
+      type: Sequelize.TEXT,
+    },
+    createdAt: {
+      allowNull: false,
+      type: Sequelize.DATE,
+      defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+    },
+    updatedAt: {
+      allowNull: false,
+      type: Sequelize.DATE,
+      defaultValue: Sequelize.literal(
+        "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+      ),
+    },
+  });
+
+  // Supprimer l'index existant s'il y en a un
+  await queryInterface.sequelize
+    .query("DROP INDEX IF EXISTS `unique_siteType_name` ON `SiteTypes`")
+    .catch(() => {
+      console.warn("Index `unique_siteType_name` inexistant, aucune action.");
     });
 
-    // Ajout d'un index unique explicite (optionnel si `unique: true` suffit)
-    await queryInterface.addIndex('SiteTypes', ['name'], {
-      unique: true,
-      name: 'unique_siteType_name',
+  // Ajouter un index unique pour `name`
+  await queryInterface.addIndex("SiteTypes", ["name"], {
+    unique: true,
+    name: "unique_siteType_name",
+  });
+}
+
+export async function down(queryInterface) {
+  // Supprimer l'index unique avant de supprimer la table
+  await queryInterface
+    .removeIndex("SiteTypes", "unique_siteType_name")
+    .catch(() => {
+      console.warn("Index `unique_siteType_name` déjà supprimé ou inexistant.");
     });
-  }
 
-  export async function down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('SiteTypes');
-    await queryInterface.removeIndex('SiteTypes', 'unique_siteType_name');
-
-
-  }
+  // Supprimer la table SiteTypes
+  await queryInterface.dropTable("SiteTypes");
+}

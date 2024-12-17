@@ -1,5 +1,5 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class SuggestionCategory extends Model {
     /**
@@ -10,15 +10,15 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // Définir les associations ici
       SuggestionCategory.belongsTo(models.Suggestion, {
-        foreignKey: 'suggestionId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        foreignKey: "suggestionId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
 
       SuggestionCategory.belongsTo(models.Category, {
-        foreignKey: 'categoryId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        foreignKey: "categoryId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
     }
   }
@@ -36,8 +36,8 @@ export default (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'SuggestionCategory',
-      tableName: 'SuggestionCategories', // S'assurer que le nom correspond à la table créée par la migration
+      modelName: "SuggestionCategory",
+      tableName: "SuggestionCategories", // S'assurer que le nom correspond à la table créée par la migration
       timestamps: true, // Inclut `createdAt` et `updatedAt` dans les enregistrements
     }
   );
