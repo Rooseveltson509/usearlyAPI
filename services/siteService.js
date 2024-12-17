@@ -185,20 +185,23 @@ export const service = {
     return "Emplacement inconnu";
   },
   // Utilisation de Tesseract pour extraire du texte depuis une image
-  extractTextFromImage: async function (imagePath, language = "fra") {
+  extractTextFromImage: async function (base64Image, language = "fra") {
     try {
+      // Passe directement l'image en base64 à Tesseract.js
       const {
         data: { text },
-      } = await Tesseract.recognize(imagePath, language);
+      } = await Tesseract.recognize(base64Image, language);
+  
       console.log("Texte extrait :", text);
+  
+      // Détermine le type de bug/location à partir du texte extrait
       const pageType = await this.determineBugLocation(text);
       console.log("Type de page détecté :", pageType);
+      console.log("Capture reçue :", base64Image);
+  
       return pageType;
     } catch (error) {
-      console.error(
-        `Erreur lors de l'extraction du texte pour ${language} :`,
-        error
-      );
+      console.error(`Erreur lors de l'extraction du texte pour ${language} :`, error);
       return "Erreur lors de l'extraction du texte";
     }
   },
