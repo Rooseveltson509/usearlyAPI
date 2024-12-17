@@ -8,11 +8,11 @@
   ],
   "routes": [
     {
-      "src": "/tesseract/(.*)", 
+      "src": "^/tesseract/(.*)$",
       "dest": "/public/tesseract/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "index.js"
     }
   ]
