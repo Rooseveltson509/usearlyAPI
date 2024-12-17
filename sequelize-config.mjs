@@ -1,46 +1,42 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename)
 
 export default {
   development: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    dialect: process.env.DB_DIALECT || 'mysql', // Default à mysql si non défini
-    migrationStorage: 'sequelize',
-    migrationStorageTableName: 'sequelize_meta',
-    seederStorage: 'sequelize',
-    seederStorageTableName: 'sequelize_data',
-    useImport: true, // Permet à Sequelize d'utiliser import() au lieu de require()
+    username: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || null,
+    database: process.env.DB_NAME || "development_database",
+    host: process.env.DB_HOST || "127.0.0.1",
+    dialect: process.env.DB_DIALECT || "mysql",
+    migrationStorage: "sequelize",
+    migrationStorageTableName: "sequelize_meta",
+    seederStorage: "sequelize",
+    seederStorageTableName: "sequelize_data",
+    useImport: true,
   },
   test: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    dialect: process.env.DB_DIALECT || 'mysql',
-    migrationStorage: 'sequelize',
-    migrationStorageTableName: 'sequelize_meta',
-    seederStorage: 'sequelize',
-    seederStorageTableName: 'sequelize_data',
-    useImport: true, // Permet à Sequelize d'utiliser import() au lieu de require()
+    username: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || null,
+    database: process.env.DB_NAME || "test_database",
+    host: process.env.DB_HOST || "127.0.0.1",
+    dialect: "sqlite", // Utilise SQLite pour les tests
+    storage: "./database_test.sqlite", // Fichier SQLite
+    migrationStorage: "sequelize",
+    migrationStorageTableName: "sequelize_meta",
+    seederStorage: "sequelize",
+    seederStorageTableName: "sequelize_data",
+    useImport: true,
   },
   production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    dialect: process.env.DB_DIALECT || 'mysql',
-    migrationStorage: 'sequelize',
-    migrationStorageTableName: 'sequelize_meta',
-    seederStorage: 'sequelize',
-    seederStorageTableName: 'sequelize_data',
-    useImport: true, // Permet à Sequelize d'utiliser import() au lieu de require()
+    username: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || null,
+    database: process.env.DB_NAME || "production_database",
+    host: process.env.DB_HOST || "127.0.0.1",
+    dialect: process.env.DB_DIALECT || "mysql",
+    migrationStorage: "sequelize",
+    migrationStorageTableName: "sequelize_meta",
+    seederStorage: "sequelize",
+    seederStorageTableName: "sequelize_data",
+    useImport: true,
   },
 };

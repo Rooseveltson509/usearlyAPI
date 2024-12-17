@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi from "joi";
 
 export const coupDeCoeurSchema = Joi.object({
   marque: Joi.string().trim().required(),

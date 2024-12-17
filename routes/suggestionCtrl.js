@@ -1,10 +1,7 @@
-
-import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
+import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import { suggestionSchema } from "../validation/SuggestionSchema.js";
-import { getUserId } from '../utils/jwtUtils.js';
+import { getUserId } from "../utils/jwtUtils.js";
 const { User, Suggestion } = db;
-
-
 
 export const suggestion = {
   create: async function (req, res) {
@@ -41,13 +38,16 @@ export const suggestion = {
       });
 
       return res.status(201).json({
+        status: 201,
         success: true,
         message: "Suggestion créée avec succès.",
         suggestionId: suggestion.id,
       });
     } catch (err) {
       console.error("Erreur lors de la création de la suggestion :", err);
-      return res.status(500).json({ error: "An error occurred", details: err.message });
+      return res
+        .status(500)
+        .json({ error: "An error occurred", details: err.message });
     }
   },
 };

@@ -1,5 +1,5 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class CoupDeCoeur extends Model {
     /**
@@ -10,31 +10,34 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       CoupDeCoeur.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'user',
-        onDelete: 'CASCADE',
+        foreignKey: "userId",
+        as: "user",
+        onDelete: "CASCADE",
       });
     }
   }
-  CoupDeCoeur.init({
-    id: {
-      allowNull: false,
-      primaryKey: true,
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4
+  CoupDeCoeur.init(
+    {
+      id: {
+        allowNull: false,
+        primaryKey: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+      },
+      userId: DataTypes.UUID,
+      marque: DataTypes.STRING,
+      description: DataTypes.TEXT("long"),
+      emplacement: DataTypes.STRING,
+      emoji: DataTypes.STRING,
+      likes: DataTypes.INTEGER,
+      validated: DataTypes.BOOLEAN,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE,
     },
-    userId: DataTypes.UUID,
-    marque: DataTypes.STRING,
-    description: DataTypes.STRING,
-    emplacement: DataTypes.STRING,
-    emoji: DataTypes.STRING,
-    likes: DataTypes.INTEGER,
-    validated: DataTypes.BOOLEAN,
-    createdAt: DataTypes.DATE,
-    updatedAt: DataTypes.DATE
-  }, {
-    sequelize,
-    modelName: 'CoupDeCoeur',
-  });
+    {
+      sequelize,
+      modelName: "CoupDeCoeur",
+    }
+  );
   return CoupDeCoeur;
 };

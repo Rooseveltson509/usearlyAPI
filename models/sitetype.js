@@ -1,5 +1,5 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class SiteType extends Model {
     /**
@@ -10,8 +10,8 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // Association avec le modèle Category
       SiteType.hasMany(models.Category, {
-        foreignKey: 'siteTypeId',
-        as: 'categories', // Alias pour accéder aux catégories associées
+        foreignKey: "siteTypeId",
+        as: "categories", // Alias pour accéder aux catégories associées
       });
     }
   }
@@ -22,7 +22,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4
+        defaultValue: DataTypes.UUIDV4,
       },
       name: {
         type: DataTypes.STRING,
@@ -40,8 +40,8 @@ export default (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'SiteType',
-      tableName: 'SiteTypes', // Définit explicitement le nom de la table
+      modelName: "SiteType",
+      tableName: "SiteTypes", // Définit explicitement le nom de la table
       timestamps: true, // Inclut `createdAt` et `updatedAt`
     }
   );

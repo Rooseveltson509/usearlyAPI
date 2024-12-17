@@ -1,6 +1,6 @@
 //module.exports = {
-  export function validateMailAccount(token, domain, userId){
-    return `<!DOCTYPE html>
+export function validateMailAccount(token, domain, userId) {
+  return `<!DOCTYPE html>
   <html>
   
   <head>
@@ -189,10 +189,10 @@
   </body>
   
   </html>`;
-  }
+}
 
-  export function updatePassword(toUserName, domain, userId, resetToken) {
-    return `<!DOCTYPE html>
+export function updatePassword(toUserName, domain, userId, resetToken) {
+  return `<!DOCTYPE html>
   <html>
   
   <head>
@@ -373,12 +373,6 @@
   </body>
   
   </html>`;
-  }
+}
 
 //}
-
-
-
-
-
-

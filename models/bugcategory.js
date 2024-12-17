@@ -1,18 +1,18 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class BugCategory extends Model {
     static associate(models) {
       // Associer BugCategory à SiteTypes
       BugCategory.belongsTo(models.SiteType, {
-        foreignKey: 'siteTypeId',
-        as: 'siteType',
+        foreignKey: "siteTypeId",
+        as: "siteType",
       });
     }
   }
   BugCategory.init(
     {
-/*       id: {
+      /*       id: {
         allowNull: false,
         primaryKey: true,
         type: DataTypes.UUID,
@@ -23,9 +23,9 @@ export default (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'BugCategory',
+      modelName: "BugCategory",
     }
   );
-  
+
   return BugCategory;
 };

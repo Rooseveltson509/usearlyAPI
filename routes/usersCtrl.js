@@ -1,41 +1,22 @@
 // Imports
-import db from '../models/index.js'; // Import du fichier contenant les modèles Sequelize
-import dotenv from 'dotenv';
+import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
+import dotenv from "dotenv";
 dotenv.config();
 import bcrypt from "bcryptjs";
-import { generateTokenForUser, getUserId } from '../utils/jwtUtils.js';
-const { User } = db;
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  getUserId,
+  verifyRefreshToken,
+} from "../utils/jwtUtils.js";
+const { User, Marque } = db;
 import asyncLib from "async";
-
-//let bcrypt = require("bcryptjs");
-//let jwtUtils = require("../utils/jwtUtils");
-//let models = require("../models");
-//let asyncLib = require("async");
-import randToken from 'rand-token';
+import randToken from "rand-token";
 const { uid } = randToken;
-import validator from 'email-validator';
-//const validator = require("email-validator");
-/* const {
-  checkPassword,
-  checkPhoneNumber,
-  checkString,
-  sentEmail,
-  isValidDateFormat,
-  isOver16,
-  sendResetPasswordEmail,
-  getPagination,
-  getPagingData,
-} = require("../funcs/functions"); */
-
-
-import { func } from '../funcs/functions.js';
-
-/* const Sequelize = require("sequelize");
-const Op = Sequelize.Op; */
-
-import Sequelize from 'sequelize';
+import validator from "email-validator";
+import { func } from "../funcs/functions.js";
+import Sequelize from "sequelize";
 const { Op } = Sequelize;
-//import { randomCode } from "../funcs/functions";
 
 // Routers
 export const user = {
@@ -150,7 +131,6 @@ export const user = {
       }
     );
   },
-
   // Email sending to confirm account
   confirmEmail: function (req, res) {
     // Params
@@ -169,7 +149,9 @@ export const user = {
               done(null, userFound);
             })
             .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify the user" });
+              return res
+                .status(500)
+                .json({ error: "unable to verify the user" });
             });
         },
         function (userFound, done) {
@@ -212,61 +194,171 @@ export const user = {
   },
 
   // Login
-  login: function (req, res) {
-    // Params
-    var email = req.body.email;
-    var password = req.body.password;
+  /*   login: async function (req, res) {
+      const { email, password, rememberMe } = req.body;
+  
+      if (!email || !password) {
+        return res
+          .status(400)
+          .json({ error: "Les paramètres email et mot de passe sont requis." });
+      }
+  
+      try {
+        // Étape 1 : Vérifiez si l'utilisateur existe
+        const user = await User.findOne({ where: { email } });
+        if (!user || user.confirmedAt === null) {
+          return res
+            .status(404)
+            .json({ error: "Utilisateur introuvable ou non confirmé." });
+        }
+  
+        // Étape 2 : Comparez le mot de passe
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+          return res
+            .status(401)
+            .json({ error: "Email ou mot de passe invalide." });
+        }
+  
+        // Étape 3 : Générer les tokens
+        const accessToken = generateAccessToken(user);
+        let refreshToken = null;
+  
+        if (rememberMe) {
+          refreshToken = generateRefreshToken(user);
+          // Optionnel : Enregistrez le Refresh Token dans la base de données ou un cache sécurisé
+          user.refreshToken = refreshToken; // Exemple : Si votre modèle User le permet
+          await user.save();
+        }
+  
+        // Étape 4 : Répondre avec les tokens
+        return res.status(200).json({
+          success: true,
+          message: "Connexion réussie.",
+          accessToken,
+          refreshToken, // Null si `rememberMe` n'est pas activé
+        });
+      } catch (error) {
+        console.error("Erreur lors de la connexion :", error);
+        return res
+          .status(500)
+          .json({ error: "Une erreur est survenue lors de la connexion." });
+      }
+    }, */
 
-    if (email == null || password == null) {
-      return res.status(400).json({ error: "missing parameters" });
+  login: async (req, res) => {
+    const { email, password, rememberMe } = req.body;
+
+    try {
+      const user = await User.findOne({ where: { email } });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid credentials" });
+      }
+
+      const accessToken = generateAccessToken(user); // Génère un access token
+      let refreshToken = null; // Initialise le refresh token à null
+
+      if (rememberMe) {
+        // Génère un refresh token uniquement si `rememberMe` est true
+        refreshToken = generateRefreshToken(user);
+
+        // Stocke le refresh token dans un cookie sécurisé
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true, // Empêche l'accès via JavaScript (protection XSS)
+          secure: true, // Requis pour HTTPS (les cookies ne transitent que sur HTTPS)
+          sameSite: "strict", // Empêche le partage du cookie entre sites (CSRF)
+          maxAge: 30 * 24 * 60 * 60 * 1000, // Définit une expiration
+        });
+      } else {
+        // Supprime le cookie contenant le refresh token si `rememberMe` est false
+        res.clearCookie("refreshToken");
+      }
+
+      // Réponse JSON
+      const response = {
+        success: true,
+        message: "Connexion réussie.",
+        accessToken, // Toujours renvoyé
+      };
+
+      // Ajoute le refreshToken dans la réponse seulement si `rememberMe` est true
+      if (rememberMe && refreshToken) {
+        response.refreshToken = refreshToken;
+      }
+
+      return res.status(200).json(response);
+    } catch (error) {
+      console.error("Erreur lors de la connexion :", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur interne." });
+    }
+  },
+
+  refreshToken: async (req, res) => {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Refresh Token missing" });
     }
 
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { email: email },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound && userFound.confirmedAt !== null) {
-            bcrypt.compare(
-              password,
-              userFound.password,
-              function (errBycrypt, resBycrypt) {
-                done(null, userFound, resBycrypt);
-              }
-            );
-          } else {
-            return res.status(404).json({ error: "Utilisateur introuvable." });
-          }
-        },
-        function (userFound, resBycrypt, done) {
-          if (resBycrypt) {
-            done(userFound);
-          } else {
-            return res
-              .status(400)
-              .json({ error: "Email ou mot de passe INVALIDE..." });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(200).json({
-            token: generateTokenForUser(userFound),
-          });
-        } else {
-          return res.status(500).json({ error: "cannot log on user" });
-        }
+    try {
+      const decoded = verifyRefreshToken(refreshToken); // Vérifie et décode le Refresh Token
+      const user = await User.findByPk(decoded.userId);
+
+      if (!user) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Invalid Refresh Token" });
       }
-    );
+
+      const newAccessToken = generateAccessToken(user); // Génère un nouvel Access Token
+      return res.status(200).json({
+        success: true,
+        accessToken: newAccessToken,
+      });
+    } catch (error) {
+      console.error("Erreur lors du rafraîchissement :", error);
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid Refresh Token" });
+    }
+  },
+
+  logout: (req, res) => {
+    res.clearCookie("refreshToken"); // Supprimez le cookie contenant le Refresh Token
+    return res
+      .status(200)
+      .json({ success: true, message: "Déconnexion réussie." });
+  },
+
+  verifyToken: (req, res) => {
+    try {
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+
+      if (userId !== -1) {
+        return res.status(200).json({
+          success: true,
+          userId,
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: "Token invalide ou expiré",
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification du token:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erreur serveur lors de la vérification du token",
+      });
+    }
   },
 
   // Email sending to confirm account
@@ -435,7 +527,6 @@ export const user = {
     }
 
     let page = parseInt(req.params.page);
-    let size = parseInt(req.params.page);
 
     const { limit, offset } = func.getPagination(page, 10);
 
@@ -498,45 +589,54 @@ export const user = {
       });
   },
   // Find User By EMAIL from admin
-  getUserByEmail: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = getUserId(headerAuth);
-    var email = req.params.email;
+  findByEmail: async function (req, res) {
+    try {
+      // Récupérer le token d'authentification
+      const headerAuth = req.headers["authorization"];
+      const adminId = getUserId(headerAuth);
 
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-    User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          User.findAll({
-            where: { email: email },
-          })
-            .then(function (user2) {
-              if (user2) {
-                return res.status(200).json(user2);
-              } else {
-                return res.status(404).json({ error: "User not found" });
-              }
-            })
-            .catch(function (err) {
-              res
-                .status(404)
-                .json({ error: "cannot fetch user......" + email });
-            });
-        } else {
-          return res.status(404).json({ error: "Accès non autorisé....." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch user..." });
+      // Vérification des droits d'accès
+      const adminUser = await User.findOne({
+        where: { id: adminId, role: "admin" },
       });
+      if (!adminUser) {
+        return res
+          .status(403)
+          .json({ error: "Access denied. Admin role required." });
+      }
+
+      // Validation des paramètres (par exemple, vérifier si l'email est fourni)
+      const { email } = req.params;
+      if (!email) {
+        return res.status(400).json({ error: "Missing email parameter." });
+      }
+
+      // Rechercher l'utilisateur par email
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res
+          .status(404)
+          .json({ error: `User with email ${email} not found.` });
+      }
+
+      // Retourner les détails de l'utilisateur trouvé
+      return res.status(200).json({
+        status: 200,
+        success: true,
+        message: "User found successfully.",
+        data: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+      });
+    } catch (err) {
+      console.error("Error finding user by email:", err);
+      return res
+        .status(500)
+        .json({ error: "An error occurred", details: err.message });
+    }
   },
 
   // user account after login
@@ -641,188 +741,73 @@ export const user = {
   },
 
   // update user password
-  updateUserPassword: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = getUserId(headerAuth);
+  updateUserPassword: async function (req, res) {
+    try {
+      // Récupérer l'en-tête d'authentification
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
 
-    // Params
-    let password = req.body.password;
-    let password_confirm = req.body.password_confirm;
+      // Paramètres
+      const { old_password, password, password_confirm } = req.body;
 
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-
-    if (!func.checkPassword(password)) {
-      return res.status(304).json({
-        error:
-          "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
-      });
-    }
-
-    if (password !== password_confirm) {
-      return res.status(400).json({ error: "passwords do not match." });
-    }
-
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { id: userId },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            bcrypt.hash(password, 5, function (err, bcryptedPassword) {
-              done(null, userFound, bcryptedPassword);
-            });
-          } else {
-            return res.status(409).json({ error: "user not exist" });
-          }
-        },
-        function (userFound, bcryptedPassword, done) {
-          if (userFound) {
-            userFound
-              .update({
-                password: bcryptedPassword,
-              })
-              .then(function () {
-                done(userFound);
-              })
-              .catch(function (err) {
-                res.status(500).json({ error: "cannot update user" });
-              });
-          } else {
-            res.status(404).json({ error: "user not found" });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(201).json(userFound);
-        } else {
-          return res.status(500).json({ error: "cannot update user pwd" });
-        }
+      // Vérifications initiales
+      if (userId <= 0) {
+        return res.status(400).json({ error: "Missing parameters." });
       }
-    );
+
+      if (!old_password || !password || !password_confirm) {
+        return res.status(400).json({
+          error:
+            "All fields are required (old_password, password, password_confirm).",
+        });
+      }
+
+      if (!func.checkPassword(password)) {
+        return res.status(400).json({
+          error:
+            "Password invalid (Min 1 special character - Min 1 number - Min 8 characters or more).",
+        });
+      }
+
+      if (password !== password_confirm) {
+        return res.status(400).json({ error: "Passwords do not match." });
+      }
+
+      // Trouver l'utilisateur dans la base de données
+      const userFound = await User.findOne({ where: { id: userId } });
+      if (!userFound) {
+        return res.status(404).json({ error: "User not found." });
+      }
+
+      // Vérifier si l'ancien mot de passe correspond
+      const validPassword = await bcrypt.compare(
+        old_password,
+        userFound.password
+      );
+      if (!validPassword) {
+        return res.status(403).json({ error: "Old password is incorrect." });
+      }
+
+      // Hasher le nouveau mot de passe
+      const bcryptedPassword = await bcrypt.hash(password, 5);
+
+      // Mettre à jour le mot de passe de l'utilisateur
+      await userFound.update({ password: bcryptedPassword });
+
+      // Réponse
+      return res.status(200).json({
+        status: 200,
+        success: true,
+        message: "Password updated successfully.",
+      });
+    } catch (err) {
+      console.error("Error updating user password:", err);
+      return res
+        .status(500)
+        .json({ error: "An error occurred", details: err.message });
+    }
   },
 
-  // update user profile by admin
-  updateUserProfileByAdmin: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = getUserId(headerAuth);
-
-    // Params
-    let email = req.params.email;
-    let nom = req.body.nom;
-    let prenom = req.body.prenom;
-    var address = req.body.address;
-    var city = req.body.city;
-    var zipCode = req.body.zipCode;
-    let phone = req.body.phone;
-
-    if (!func.checkString(nom)) {
-      return res.status(400).json({
-        error:
-          "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-
-    if (!func.checkString(prenom)) {
-      return res.status(400).json({
-        error:
-          "firstname invalid (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-    if (!checkZipcode(zipCode)) {
-      return res.status(400).json({
-        error: "Invalid ZipCode (Must be Numerate with 5 characters)",
-      });
-    }
-    if (!checkCity(city)) {
-      return res.status(400).json({ error: "Invalid City (Only alphabetic)" });
-    }
-    if (!checkAddress(address)) {
-      return res.status(400).json({
-        error: "Invalid Address (Must be alphaNumerate with (space))",
-      });
-    }
-
-    if (!func.checkPhoneNumber(phone)) {
-      return res.status(400).json({
-        error:
-          "Phone Number invalid (example : 06 01 02 03 04 | 06-01-02-03-04 | +33 6 01 02 03 04 |  0033 6 01 02 03 04)",
-      });
-    }
-
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { id: userId, role: "admin" },
-          })
-            .then(function (userAdmin) {
-              done(null, userAdmin);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userAdmin, done) {
-          if (userAdmin) {
-            User.findOne({
-              where: { email: email },
-            })
-              .then(function (userFound) {
-                done(null, userFound);
-              })
-              .catch(function (err) {
-                return res.status(500).json({ error: "unable to verify user" });
-              });
-          } else {
-            res.status(500).json({ error: "Acces denied" });
-          }
-        },
-        function (userFound, done) {
-          if (userFound) {
-            userFound
-              .update({
-                last_name: nom ? nom : userFound.nom,
-                first_name: prenom ? prenom : userFound.prenom,
-                address: address ? address : userFound.address,
-                city: city ? city : userFound.city,
-                zipCode: zipCode ? zipCode : userFound.zipCode,
-                phoneNumber: phone ? phone : userFound.phoneNumber,
-              })
-              .then(function () {
-                done(userFound);
-              })
-              .catch(function (err) {
-                res.status(500).json({ error: "cannot update user" });
-              });
-          } else {
-            res.status(404).json({ error: "user not found" });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(201).json(userFound);
-        } else {
-          return res.status(500).json({ error: "cannot update user profile" });
-        }
-      }
-    );
-  },
-  // delete user by admin
   // delete user profile by admin
   destroyUserProfileByAdmin: function (req, res) {
     // Getting auth header
@@ -940,7 +925,6 @@ export const user = {
       }
     );
   },
-
   // delete employee profile by admin
   destroyUserProfileByAdmins: function (req, res) {
     // Getting auth header
@@ -1000,7 +984,9 @@ export const user = {
       ],
       function (userFound) {
         if (userFound) {
-          return res.status(200).json({ msg: "User has been deleted successfully" });
+          return res
+            .status(200)
+            .json({ msg: "User has been deleted successfully" });
         } else {
           return res.status(500).json({ error: "cannot delete user profile" });
         }
@@ -1020,7 +1006,8 @@ export const user = {
     if (
       name.trim().length === 0 ||
       email.trim().length === 0 ||
-      mdp.trim().length === 0) {
+      mdp.trim().length === 0
+    ) {
       return res.status(400).json({ error: "all fields must be filled in." });
     }
 
@@ -1090,7 +1077,7 @@ export const user = {
         },
 
         function (userFound, bcryptedPassword, done) {
-          let newBrand = Marque.create({
+          Marque.create({
             userId: userId,
             name: name,
             email: email,
@@ -1143,5 +1130,4 @@ export const user = {
         res.status(500).json({ error: "cannot fetch user" });
       });
   },
-
 };

@@ -1,5 +1,5 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class CoupDeCoeurCategory extends Model {
     /**
@@ -10,16 +10,16 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // Relation avec la table CoupDeCoeurs
       CoupDeCoeurCategory.belongsTo(models.CoupDeCoeur, {
-        foreignKey: 'coupDeCoeurId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        foreignKey: "coupDeCoeurId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
 
       // Relation avec la table Categories
       CoupDeCoeurCategory.belongsTo(models.Category, {
-        foreignKey: 'categoryId',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        foreignKey: "categoryId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
     }
   }
@@ -37,7 +37,7 @@ export default (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'CoupDeCoeurCategory',
+      modelName: "CoupDeCoeurCategory",
     }
   );
 

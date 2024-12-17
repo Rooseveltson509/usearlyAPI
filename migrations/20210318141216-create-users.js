@@ -1,48 +1,41 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
-  await queryInterface.createTable('Users', {
+  await queryInterface.createTable("Users", {
     unique: true,
-    fields: 'email',
+    fields: "email",
     id: {
       allowNull: false,
       primaryKey: true,
       type: Sequelize.UUID,
-      defaultValue: Sequelize.UUIDV4
+      defaultValue: Sequelize.UUIDV4,
     },
     gender: {
       type: Sequelize.ENUM,
-      values: [
-        'monsieur',
-        'madame',
-        'N/A'
-      ],
-      defaultValue: 'N/A'
+      values: ["monsieur", "madame", "N/A"],
+      defaultValue: "N/A",
     },
     pseudo: {
       allowNull: false,
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     email: {
       allowNull: false,
       type: Sequelize.STRING,
-      unique: true // Ajout de l'unicité pour garantir qu'un email ne soit pas dupliqué
+      unique: true, // Ajout de l'unicité pour garantir qu'un email ne soit pas dupliqué
     },
     password: {
       allowNull: false,
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     role: {
       type: Sequelize.ENUM,
-      values: [
-        'user',
-        'admin'
-      ],
-      defaultValue: 'user'
+      values: ["user", "admin"],
+      defaultValue: "user",
     },
     born: {
       allowNull: true,
-      type: Sequelize.DATE
+      type: Sequelize.DATE,
     },
     createdAt: {
       allowNull: false,
@@ -56,43 +49,48 @@ export async function up(queryInterface, Sequelize) {
     },
     confirmationToken: {
       allowNull: true,
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     confirmedAt: {
       allowNull: true,
-      type: Sequelize.DATE
+      type: Sequelize.DATE,
     },
     resetToken: {
       allowNull: true,
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     resetAt: {
       allowNull: true,
-      type: Sequelize.DATE
+      type: Sequelize.DATE,
     },
     expiredAt: {
       allowNull: true,
-      type: Sequelize.DATE
+      type: Sequelize.DATE,
     },
     rememberToken: {
       allowNull: true,
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     optin: {
       type: Sequelize.ENUM,
-      values: [
-        'yes',
-        'no'
-      ],
-      defaultValue: 'no'
-    }
+      values: ["yes", "no"],
+      defaultValue: "no",
+    },
   });
 }
 
-export async function down(queryInterface, Sequelize) {
-  await queryInterface.dropTable('Users');
-  await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_Users_gender";');
-  await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_Users_role";');
-  await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_Users_optin";');
+export async function down(queryInterface) {
+  await queryInterface.dropTable("Users");
+  await queryInterface.sequelize.query(
+    // prettier-ignore
+    "DROP TYPE IF EXISTS \"enum_Users_gender\";"
+  );
+  await queryInterface.sequelize.query(
+    // prettier-ignore
+    "DROP TYPE IF EXISTS \"enum_Users_role\";"
+  );
+  await queryInterface.sequelize.query(
+    // prettier-ignore
+    "DROP TYPE IF EXISTS \"enum_Users_optin\";"
+  );
 }
-

@@ -1,5 +1,6 @@
-'use strict';
-import { Model } from 'sequelize';
+"use strict";
+import { Model } from "sequelize";
+
 export default (sequelize, DataTypes) => {
   class Ticket extends Model {
     /**
@@ -8,40 +9,65 @@ export default (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      // Association avec Reporting
       models.Ticket.belongsTo(models.Reporting, {
-        foreignKey: "reportingId", // Utilisez uniquement le nom de la colonne
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
+        foreignKey: "reportingId",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
-    
-      // Association avec le modèle TicketMarque
+
+      // Association avec TicketMarque
       models.Ticket.hasMany(models.TicketMarque);
     }
-  };
-  Ticket.init({
-    id: {
-      allowNull: false,
-      primaryKey: true,
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4
+  }
+
+  Ticket.init(
+    {
+      id: {
+        allowNull: false,
+        primaryKey: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+      },
+      // La colonne reportingId sera générée automatiquement par Sequelize grâce à l'association belongsTo
+      email: {
+        type: DataTypes.STRING,
+        validate: {
+          isEmail: true,
+        },
+      },
+      marque: DataTypes.STRING,
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      category: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      blocking: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      emojis: DataTypes.STRING,
+      bugLocation: DataTypes.STRING,
+      tips: DataTypes.TEXT,
+      response: DataTypes.TEXT,
+      ticketStatus: {
+        type: DataTypes.ENUM("open", "in_progress", "resolved", "closed"),
+        defaultValue: "open",
+      },
+      configuration: DataTypes.TEXT,
+      criticality: {
+        type: DataTypes.ENUM("mineur", "majeur", "critique"),
+        allowNull: false,
+      },
     },
-    reportingId: DataTypes.UUID,
-    email: DataTypes.STRING,
-    marque: DataTypes.STRING,
-    title: DataTypes.STRING,
-    category: DataTypes.STRING,
-    blocking: DataTypes.BOOLEAN,
-    emojis: DataTypes.STRING,
-    bugLocation: DataTypes.STRING,
-    tips: DataTypes.STRING,
-    response: DataTypes.STRING,
-    ticketStatus: DataTypes.STRING,
-    configuration: DataTypes.STRING,
-    criticality: DataTypes.ENUM('mineur', 'majeur', 'critique')
-  }, {
-    sequelize,
-    modelName: 'Ticket',
-  });
+    {
+      sequelize,
+      modelName: "Ticket",
+    }
+  );
+
   return Ticket;
 };

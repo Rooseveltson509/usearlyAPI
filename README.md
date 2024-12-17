@@ -1,41 +1,44 @@
-# api rest full - ThéTipTop
+# api rest full - USEARLY_API
+
 _(des badges sympatiques)_
 
-[![forthebadge](https://forthebadge.com/images/badges/made-with-crayons.svg)](http://forthebadge.com)  [![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](http://forthebadge.com) [![forthebadge](https://forthebadge.com/images/badges/powered-by-electricity.svg)](https://forthebadge.com) 
-
-
+[![forthebadge](https://forthebadge.com/images/badges/made-with-crayons.svg)](http://forthebadge.com) [![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](http://forthebadge.com) [![forthebadge](https://forthebadge.com/images/badges/powered-by-electricity.svg)](https://forthebadge.com)
 
 ## Pour commencer
 
-Pour bien débuter avec le projet veuillez mettre à jour votre poste de travail.
+# API Node.js pour le Reporting
 
-### Pré-requis
+## Description
 
-Ce qui ait requis pour commencer le projet...
+Ce projet est une API RESTful construite avec **Node.js**, **Express**, et **Sequelize**. L'objectif principal est de permettre aux utilisateurs de créer, gérer et enrichir des signalements (**"Reportings"**). L'API utilise l'intégration avec OpenAI pour analyser et enrichir les descriptions fournies par les utilisateurs.
 
-- installer [NODEJS](https://nodejs.org/en/)
-- installer un editeur de texte [(vscode)](https://code.visualstudio.com/)
-- clone le repo
-### Optionnel
-- installer [POSTMAN](https://www.postman.com/downloads/) pour pouvoir tester [l'API](http://localhost:3000/api/v1/api-docs/)
+## Fonctionnalités Principales
 
-### Installation
+- **Gestion des utilisateurs :**
+  - Création, authentification, mise à jour des mots de passe.
+- **Signalements (Reportings) :**
+  - Création de signalements avec détection de similarité via OpenAI.
+  - Association de signalements existants à des descriptions multiples.
+- **Suggestions et Coups de Cœur :**
+  - Gestion des suggestions et coups de cœur pour chaque utilisateur.
+- **Documentation :**
+  - Swagger pour documenter l'API.
+- **Tests :**
+  - Tests unitaires et d'intégration avec Mocha, Chai, et Sinon.
 
-Se positionner dans le dossier du projet.
+## Prérequis
 
-```sh
-cd project_name
+Avant de commencer, assurez-vous que votre machine a les éléments suivants :
 
-npm i
-```
+- **Node.js** (v16 ou supérieur)
+- **NPM** ou **Yarn**
+- **MySQL** ou **SQLite** pour la base de données
+- Fichier `.env` correctement configuré (voir [Configuration](#configuration))
 
-## Démarrage
+## Installation
 
-Lancer le projet en executant la commande suivante:
-``npm start``
-
-## Auteurs et documentation
-Listez le(s) auteur(s) du projet ici !
-* **Rooseveltson**
-
-Lisez la doc et tester les urls de l'api [Api-doc](http://localhost:3000/api/v1/api-docs/)
+1. Clonez ce dépôt :
+   ```bash
+   git clone https://github.com/votre-utilisateur/projet-api.git
+   cd projet-api
+   ```

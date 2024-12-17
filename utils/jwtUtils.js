@@ -1,77 +1,67 @@
-/* // Imports
-//var jwt = require('jsonwebtoken');
-import jwt from 'jsonwebtoken';
-
-const JWT_SIGN_SECRET = '0sjhfd6ggigb6ojds0ndbmetezfetvwzwzgegzz54dffefedfdzreerh0GHJGD';
-
-// Exported function
-module.exports = {
-    generateTokenForUser: function(userData) {
-        return jwt.sign({
-                userId: userData.id,
-                email: userData.email
-            },
-            JWT_SIGN_SECRET, {
-                expiresIn: '24h'
-            })
-    },
-    parseAuthorization: function(authorization) {
-        return (authorization != null) ? authorization.replace('Bearer ', '') : null;
-    },
-    getUserId: function(authorization) {
-        var userId = -1;
-        var token = module.exports.parseAuthorization(authorization);
-        if (token != null) {
-            try {
-                var jwtToken = jwt.verify(token, JWT_SIGN_SECRET);
-                if (jwtToken != null)
-                    userId = jwtToken.userId;
-            } catch (err) {}
-        }
-        return userId;
-    }
-} */
-
-
-// Imports
-
-// import jwtToken from 'jsonwebtoken
-import jwt from 'jsonwebtoken';
-// import jwtToken from 'JSONwebtoken';
-import dotenv from 'dotenv';
-// Import environment variables from.env file
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 dotenv.config();
 
 const JWT_SIGN_SECRET = process.env.JWT_SIGN_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
-// Exported functions
-export function generateTokenForUser(userData) {
-    return jwt.sign({
-        userId: userData.id,
-        email: userData.email
+// Générer un token d'accès (courte durée)
+export function generateAccessToken(userData) {
+  return jwt.sign(
+    {
+      userId: userData.id,
+      email: userData.email,
     },
-        JWT_SIGN_SECRET, {
-        expiresIn: '24h'
+    JWT_SIGN_SECRET,
+    {
+      expiresIn: "5h", // Plus courte durée pour le token d'accès
     }
-    );
+  );
 }
 
-export function parseAuthorization(authorization) {
-    return (authorization != null) ? authorization.replace('Bearer ', '') : null;
+// Générer un refresh token (longue durée)
+export function generateRefreshToken(userData) {
+  return jwt.sign(
+    {
+      userId: userData.id,
+    },
+    JWT_REFRESH_SECRET,
+    {
+      expiresIn: "30d", // Longue durée pour le token de rafraîchissement
+    }
+  );
 }
 
+// Vérifier un token d'accès
+export function verifyAccessToken(token) {
+  try {
+    return jwt.verify(token, JWT_SIGN_SECRET);
+  } catch (err) {
+    console.error("Erreur lors de la vérification du token d'accès:", err);
+    throw new Error("Access Token invalide ou expiré.");
+  }
+}
+
+export function verifyRefreshToken(token) {
+  try {
+    return jwt.verify(token, JWT_REFRESH_SECRET);
+  } catch (err) {
+    console.error("Erreur lors de la vérification du refresh token:", err);
+    throw new Error("Refresh Token invalide ou expiré.");
+  }
+}
+
+// Extraire l'utilisateur à partir de l'autorisation
 export function getUserId(authorization) {
-    let userId = -1;
-    const token = parseAuthorization(authorization);
-    if (token != null) {
-        try {
-            const jwtToken = jwt.verify(token, JWT_SIGN_SECRET);
-            if (jwtToken != null) {
-                userId = jwtToken.userId;
-            }
-        } catch (err) {
-            console.error("Error verifying token:", err);
-        }
+  const token = authorization ? authorization.replace("Bearer ", "") : null;
+  if (token) {
+    try {
+      const jwtToken = verifyAccessToken(token);
+      return jwtToken ? jwtToken.userId : -1;
+    } catch (err) {
+      console.error("Erreur lors de l'extraction de l'utilisateur:", err);
+      return -1;
     }
-    return userId;
+  }
+  return -1;
 }
