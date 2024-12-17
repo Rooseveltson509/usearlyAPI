@@ -187,21 +187,34 @@ export const service = {
   // Utilisation de Tesseract pour extraire du texte depuis une image
   extractTextFromImage: async function (base64Image, language = "fra") {
     try {
-      // Passe directement l'image en base64 à Tesseract.js
+      // Configuration pour Tesseract.js avec le chemin correct
+      const worker = await Tesseract.createWorker({
+        corePath: "/tesseract/tesseract-core-simd.wasm", // Chemin du fichier WASM dans public
+        logger: (m) => console.log(m), // Logger pour le débogage
+      });
+
+      await worker.loadLanguage(language);
+      await worker.reinitialize(language);
+
+      // Passe directement l'image en base64
       const {
         data: { text },
-      } = await Tesseract.recognize(base64Image, language);
-  
+      } = await worker.recognize(base64Image);
+
       console.log("Texte extrait :", text);
-  
+
       // Détermine le type de bug/location à partir du texte extrait
       const pageType = await this.determineBugLocation(text);
       console.log("Type de page détecté :", pageType);
       console.log("Capture reçue :", base64Image);
-  
+
+      await worker.terminate();
       return pageType;
     } catch (error) {
-      console.error(`Erreur lors de l'extraction du texte pour ${language} :`, error);
+      console.error(
+        `Erreur lors de l'extraction du texte pour ${language} :`,
+        error
+      );
       return "Erreur lors de l'extraction du texte";
     }
   },

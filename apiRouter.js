@@ -22,7 +22,8 @@ import rateLimit from "express-rate-limit";
 const refreshTokenLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limite à 10 requêtes par fenêtre
-  message: "Trop de requêtes de rafraîchissement de token, veuillez réessayer plus tard.",
+  message:
+    "Trop de requêtes de rafraîchissement de token, veuillez réessayer plus tard.",
   headers: true, // Renvoie des en-têtes d'information sur le taux
 });
 
@@ -45,7 +46,7 @@ apiRouter
 apiRouter
   .route("/user/refresh-token")
   .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
-  .post(cors(permissiveCors),refreshTokenLimiter, user.refreshToken);
+  .post(cors(permissiveCors), refreshTokenLimiter, user.refreshToken);
 
 apiRouter
   .route("/user/verify")
