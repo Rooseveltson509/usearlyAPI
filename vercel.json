@@ -10,6 +10,10 @@
     {
       "src": "/api/(.*)",
       "dest": "index.js"
+    },
+    {
+      "src": "/tesseract/(.*)",
+      "dest": "/public/tesseract/$1"
     }
   ]
 }
