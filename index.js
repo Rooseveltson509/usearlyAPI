@@ -6,6 +6,13 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 //import fs from "fs/promises";
 import path from "path";
+dotenv.config();
+import bodyParser from "body-parser";
+import apiRouter from "./apiRouter.js";
+// PromBundle pour monitoring des métriques
+import promBundle from "express-prom-bundle";
+import cors from "cors";
+import { func } from "./funcs/functions.js";
 
 // Résolution des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -14,15 +21,10 @@ const __dirname = path.dirname(__filename);
 // Charger config.json
 const configPath = path.resolve(__dirname, "./config/config.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+// Servir les fichiers statiques depuis le dossier public
 
 //console.log("Config chargé avec succès :", config);
 
-dotenv.config();
-import bodyParser from "body-parser";
-import apiRouter from "./apiRouter.js";
-
-import cors from "cors";
-import { func } from "./funcs/functions.js";
 //import {corsOptions} from "./funcs/functions.js";
 //import config from "./config/config.json";
 //const configPath = path.resolve(__dirname, '../config/config.json');
@@ -37,8 +39,6 @@ try {
   process.exit(1); // Quitte si le fichier de config n'est pas valide
 } */
 
-// PromBundle pour monitoring des métriques
-import promBundle from "express-prom-bundle";
 
 //var express = require("express");
 //const swaggerUi = require("swagger-ui-express");
@@ -59,6 +59,13 @@ const server = express();
 
 //const swaggerDocument = await loadSwaggerDocument();
 
+
+
+server.use('/tesseract', express.static(path.join(__dirname, 'public/tesseract')));
+server.get('/list-tesseract-files', (req, res) => {
+  const files = fs.readdirSync(path.join(__dirname, 'public/tesseract'));
+  res.json(files);
+});
 // Global middleware for CORS in index.js
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
