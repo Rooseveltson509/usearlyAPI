@@ -6,7 +6,7 @@ import Tesseract from "tesseract.js";
 import path from "path";
 import { fileURLToPath } from "url";
 const { createWorker } = Tesseract; // Déstructurez createWorker depuis le module
-const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const BASE_URL = process.env.BASE_URL || "https://usearly-api.vercel.app";
 
 // Définir __dirname en ES Module
 const __filename = fileURLToPath(import.meta.url);
