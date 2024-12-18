@@ -223,37 +223,38 @@ export const service = {
 }, */
 
 extractTextFromImage: async function (base64Image, language = "fra") {
-    try {
-        if (!base64Image.startsWith("data:image")) {
-            throw new Error("L'image fournie n'est pas une image encodée en Base64 valide.");
-        }
+  try {
+      if (!base64Image.startsWith("data:image")) {
+          throw new Error("L'image fournie n'est pas une image encodée en Base64 valide.");
+      }
 
-        // Configuration des chemins pour les fichiers nécessaires
-        const worker = await createWorker({
-            corePath: `${BASE_URL}/tesseract/tesseract-core-simd.wasm`, // Chemin vers le fichier WASM
-            workerPath: `${BASE_URL}/tesseract/worker.min.js`,         // Chemin vers le worker
-            langPath: `${BASE_URL}/tesseract`,                        // Chemin vers les fichiers de langues
-            logger: (m) => console.log(m), // Activer les logs pour déboguer
-        });
+      // Configuration pour pointer vers les fichiers locaux
+      const worker = await createWorker({
+          corePath: "/tesseract/tesseract-core-simd.wasm", // Chemin vers le fichier WASM
+          workerPath: "/tesseract/worker.min.js",          // Chemin vers le worker
+          langPath: "/tesseract",                         // Chemin vers les fichiers de langues
+          logger: (m) => console.log(m), // Activer les logs pour déboguer
+      });
 
-        console.log("Langue chargée :", language);
+      console.log("Langue chargée :", language);
 
-        await worker.loadLanguage(language);
-        await worker.reinitialize(language);
+      await worker.loadLanguage(language);
+      await worker.initialize(language);
 
-        const {
-            data: { text },
-        } = await worker.recognize(base64Image);
+      const {
+          data: { text },
+      } = await worker.recognize(base64Image);
 
-        console.log("Texte extrait :", text);
+      console.log("Texte extrait :", text);
 
-        await worker.terminate(); // Terminez le worker après utilisation
-        return text;
-    } catch (error) {
-        console.error(`Erreur lors de l'extraction du texte pour ${language} :`, error);
-        return "Erreur lors de l'extraction du texte";
-    }
+      await worker.terminate(); // Terminer le worker après utilisation
+      return text;
+  } catch (error) {
+      console.error(`Erreur lors de l'extraction du texte pour ${language} :`, error);
+      return "Erreur lors de l'extraction du texte";
+  }
 },
+
 
   // Récupération des métadonnées du site
   getCategories: async function (description) {
