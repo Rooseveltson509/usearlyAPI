@@ -4,7 +4,7 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import fs from "fs";
-//import fs from "fs/promises";
+import rateLimit from "express-rate-limit";
 import path from "path";
 dotenv.config();
 import bodyParser from "body-parser";
@@ -23,21 +23,12 @@ const configPath = path.resolve(__dirname, "./config/config.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 // Servir les fichiers statiques depuis le dossier public
 
-//console.log("Config chargé avec succès :", config);
-
-//import {corsOptions} from "./funcs/functions.js";
-//import config from "./config/config.json";
-//const configPath = path.resolve(__dirname, '../config/config.json');
-
-// Charger la configuration en fonction de l'environnement
-/* let config = {};
-try {
-  const jsonConfig = JSON.parse(fs.readFileSync(configPath));
-  config = jsonConfig[env] || {};
-} catch (error) {
-  console.error('Erreur lors du chargement de config.json :', error);
-  process.exit(1); // Quitte si le fichier de config n'est pas valide
-} */
+// Configuration du rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // Fenêtre de 15 minutes
+  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
+  message: "Trop de requêtes provenant de cette IP. Veuillez réessayer plus tard.",
+});
 
 
 //var express = require("express");
@@ -62,7 +53,8 @@ const server = express();
 
 
 server.use('/tesseract', express.static(path.join(__dirname, 'public/tesseract')));
-server.get('/list-tesseract-files', (req, res) => {
+server.get('/list-tesseract-files',limiter, // Appliquer la limitation sur cette route
+   (req, res) => {
   const files = fs.readdirSync(path.join(__dirname, 'public/tesseract'));
   res.json(files);
 });
