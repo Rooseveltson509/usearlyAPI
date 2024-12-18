@@ -20,116 +20,94 @@ const { Op } = Sequelize;
 
 // Routers
 export const user = {
-  register: function (req, res) {
-    //let gender = req.body.gender;
-    let pseudo = req.body.pseudo;
-    let born = req.body.born;
-    let email = req.body.email;
-    let password = req.body.password;
-    let password_confirm = req.body.password_confirm;
-    let token = func.randomCode(6, "0123456789");
-
-    if (pseudo == null || email == null || password == null) {
-      return res.status(400).json({ error: "all fields must be filled in." });
-    }
-
-    if (!func.checkString(pseudo)) {
-      return res.status(400).json({
-        error:
-          "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-
-    if (func.isValidDateFormat(born)) {
-      if (func.isOver16(born) < 16) {
+  register: async function (req, res) {
+    const { pseudo, born, email, password, password_confirm } = req.body;
+  
+    try {
+      // Vérifiez si tous les champs obligatoires sont remplis
+      if (!pseudo || !born || !email || !password) {
+        return res.status(400).json({ error: "Tous les champs doivent être remplis." });
+      }
+  
+      // Validez et transformez la date de naissance
+      const validation = func.validateAndCheckAdult(born);
+      if (!validation.isValid) {
+        return res.status(400).json({ error: validation.message });
+      }
+      const dateOfBirth = validation.date; // La date transformée en objet Date
+  
+      // Vérifiez si l'utilisateur est majeur
+      if (!validation.isAdult) {
         return res.status(400).json({
-          error: "born (You should be 16 years of age or older)",
+          error: "Vous devez être majeur pour vous inscrire.",
         });
       }
-    }
-    if (!func.isValidDateFormat(born)) {
-      return res.status(400).json({
-        error: "Wrong format (Format accepted: dd/mm/yyyy or dd-mm-yyyy)",
-      });
-    }
-
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-
-    if (!func.checkPassword(password)) {
-      return res.status(400).json({
-        error:
-          "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
-      });
-    }
-
-    if (password !== password_confirm) {
-      return res.status(400).json({ error: "passwords do not match." });
-    }
-
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            attributes: ["email"],
-            where: { email: email },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res
-                .status(500)
-                .json({ error: "Impossible de verifier cet utilisateur" });
-            });
-        },
-        function (userFound, done) {
-          if (!userFound) {
-            bcrypt.hash(password, 5, function (err, bcryptedPassword) {
-              done(null, userFound, bcryptedPassword);
-            });
-          } else {
-            return res.status(409).json({ error: "Cet utilisateur existe" });
-          }
-        },
-        function (userFound, bcryptedPassword, done) {
-          User.create({
-            pseudo: pseudo,
-            born: born,
-            email: email,
-            password: bcryptedPassword,
-            confirmationToken: token,
-          })
-            .then(function (newUser) {
-              done(newUser);
-            })
-            .catch(function (err) {
-              return res
-                .status(500)
-                .json({ error: "Impossible d'ajouter cet utilisateur", err });
-            });
-        },
-      ],
-      function (newUser) {
-        if (newUser) {
-          func.sentEmail(
-            newUser.email,
-            token,
-            "https://usearly-api.vercel.app",
-            newUser.id
-          );
-          return res.status(201).json({
-            msg: "un mail de confirmation vous a été envoyé afin de valider votre compte à l'adresse : ",
-            email: newUser.email,
-          });
-        } else {
-          return res
-            .status(500)
-            .json({ error: "Impossible d'ajouter cet utilisateur" });
-        }
+  
+      // Vérifiez le format du pseudo
+      if (!func.checkString(pseudo)) {
+        return res.status(400).json({
+          error:
+            "Pseudo invalide (doit être alphanumérique, 3 à 50 caractères maximum).",
+        });
       }
-    );
+  
+      // Vérifiez si l'email est valide
+      if (!validator.validate(email)) {
+        return res.status(400).json({ error: "L'email fourni est invalide." });
+      }
+  
+      // Vérifiez si le mot de passe est valide
+      if (!func.checkPassword(password)) {
+        return res.status(400).json({
+          error:
+            "Le mot de passe doit contenir au moins 1 caractère spécial, 1 chiffre, et être d'au moins 8 caractères.",
+        });
+      }
+  
+      // Vérifiez si les mots de passe correspondent
+      if (password !== password_confirm) {
+        return res.status(400).json({ error: "Les mots de passe ne correspondent pas." });
+      }
+  
+      // Vérifiez si l'email existe déjà dans la base de données
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(409).json({ error: "Cet utilisateur existe déjà." });
+      }
+  
+      // Hashage du mot de passe
+      const hashedPassword = await bcrypt.hash(password, 5);
+  
+      // Génération du token de confirmation
+      const confirmationToken = func.randomCode(6, "0123456789");
+  
+      // Créez un nouvel utilisateur
+      const newUser = await User.create({
+        pseudo,
+        born: dateOfBirth, // Insérez la date transformée ici
+        email,
+        password: hashedPassword,
+        confirmationToken,
+      });
+  
+      // Envoyez l'email de confirmation
+      const confirmationUrl = `https://your-frontend-domain.com/confirm?token=${confirmationToken}`;
+      func.sentEmail(
+        email,
+        confirmationToken,
+        confirmationUrl,
+        newUser.id
+      );
+  
+      // Répondez avec un succès
+      return res.status(201).json({
+        message: `Un mail de confirmation vous a été envoyé à l'adresse ${email}.`,
+        email,
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'inscription :", error);
+      return res.status(500).json({ error: "Une erreur interne s'est produite." });
+    }
   },
   // Email sending to confirm account
   confirmEmail: function (req, res) {
