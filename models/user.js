@@ -50,7 +50,7 @@ export default (sequelize, DataTypes) => {
       },
       gender: {
         type: DataTypes.ENUM("monsieur", "madame", "N/A"),
-        allowNull: false,
+        allowNull: true,
         validate: {
           isIn: [["monsieur", "madame", "N/A"]],
         },

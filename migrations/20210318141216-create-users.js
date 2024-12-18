@@ -12,6 +12,7 @@ export async function up(queryInterface, Sequelize) {
     },
     gender: {
       type: Sequelize.ENUM,
+      allowNull: true,
       values: ["monsieur", "madame", "N/A"],
       defaultValue: "N/A",
     },
