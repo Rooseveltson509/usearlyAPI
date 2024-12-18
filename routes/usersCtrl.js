@@ -107,7 +107,7 @@ export const user = {
             .catch(function (err) {
               return res
                 .status(500)
-                .json({ error: "Impossible d'ajouter cet utilisateur" });
+                .json({ error: "Impossible d'ajouter cet utilisateur", err });
             });
         },
       ],
