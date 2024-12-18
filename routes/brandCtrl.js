@@ -3,8 +3,7 @@ import bcrypt from "bcryptjs";
 import {
   generateAccessToken
 } from "../utils/jwtUtils.js";
-const { User, Marque } = db;
-import asyncLib from "async";
+const { Marque } = db;
 
 
 

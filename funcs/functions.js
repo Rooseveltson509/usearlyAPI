@@ -54,31 +54,63 @@ export const func = {
     );
   },
 
-  isOver16: function (dateString) {
-    if (!this.isValidDateFormat(dateString)) {
-      return false;
+  validateAndCheckAdult: function (dateString) {
+    // Expression régulière pour vérifier le format "dd-mm-yyyy" ou "dd/mm/yyyy"
+    const regex = /^(\d{2})([-/])(\d{2})\2(\d{4})$/;
+
+    const match = dateString.match(regex);
+
+    if (!match) {
+      // Affiche un message d'erreur clair pour l'utilisateur
+      return {
+        isValid: false,
+        message:
+          "Format de date incorrect. Veuillez utiliser le format 'dd-mm-yyyy' ou 'dd/mm/yyyy'.",
+      };
     }
 
-    const today = new Date();
-    const [day, month, year] = dateString.includes("/")
-      ? dateString.split("/")
-      : dateString.split("-");
+    // Extraire les parties de la date
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[3], 10);
+    const year = parseInt(match[4], 10);
 
-    const birthDate = new Date(year, month - 1, day);
-
-    // Calculer l'âge en comparant avec la date actuelle
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
+    // Vérifier si la date est valide
+    const date = new Date(year, month - 1, day); // month - 1 car les mois commencent à 0 en JS
     if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
     ) {
-      age--;
+      return {
+        isValid: false,
+        message: "La date est invalide. Vérifiez les valeurs fournies. format accepté: (mm-dd-yyyy or mm/dd/yyyy)",
+      };
     }
 
-    return age;
+    // Calculer l'âge de l'utilisateur
+    const today = new Date();
+    const age =
+      today.getFullYear() -
+      year -
+      (today.getMonth() < month - 1 ||
+        (today.getMonth() === month - 1 && today.getDate() < day)
+        ? 1
+        : 0);
+
+    // Vérifier si l'utilisateur est adulte (18 ans ou plus)
+    const isAdult = age >= 18;
+
+    return {
+      isValid: true,
+      isAdult,
+      age,
+      message: isAdult
+        ? "L'utilisateur est adulte."
+        : "L'utilisateur doit être majeur pour continuer.",
+    };
   },
+
+
 
   checkString: function (text) {
     return ALPHANUMERIC_NUMBER.test(text);
