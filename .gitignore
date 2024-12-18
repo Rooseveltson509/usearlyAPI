@@ -18,11 +18,14 @@ package-lock.json
 # Ignorer les fichiers temporaires dans public
 public/*.tmp
 public/*.log
-public/tesseract/*
 
-# Inclure spécifiquement le fichier tesseract-core-simd.wasm
+# Mais inclure spécifiquement les fichiers du dossier public/tesseract
 !public/tesseract/tesseract-core-simd.wasm
+!public/tesseract/tesseract-core.wasm.js
+!public/tesseract/tesseract-core-lstm.wasm
+!public/tesseract/tesseract-core-simd-lstm.wasm
 !public/tesseract/worker.min.js
+!public/tesseract/fra.traineddata
 
 # misc
 .DS_Store
