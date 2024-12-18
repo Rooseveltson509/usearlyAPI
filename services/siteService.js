@@ -6,6 +6,7 @@ import Tesseract from "tesseract.js";
 import path from "path";
 import { fileURLToPath } from "url";
 const { createWorker } = Tesseract; // Déstructurez createWorker depuis le module
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 // Définir __dirname en ES Module
 const __filename = fileURLToPath(import.meta.url);
@@ -193,7 +194,7 @@ export const service = {
   },
   // Utilisation de Tesseract pour extraire du texte depuis une image
 
-  extractTextFromImage: async function (base64Image, language = "fra") {
+/*   extractTextFromImage: async function (base64Image, language = "fra") {
     try {
         if (!base64Image.startsWith("data:image")) {
             throw new Error("L'image fournie n'est pas une image encodée en Base64 valide.");
@@ -204,6 +205,39 @@ export const service = {
         });
 
         console.log("Langue chargée :", language);
+        await worker.loadLanguage(language);
+        await worker.reinitialize(language);
+
+        const {
+            data: { text },
+        } = await worker.recognize(base64Image);
+
+        console.log("Texte extrait :", text);
+
+        await worker.terminate(); // Terminez le worker après utilisation
+        return text;
+    } catch (error) {
+        console.error(`Erreur lors de l'extraction du texte pour ${language} :`, error);
+        return "Erreur lors de l'extraction du texte";
+    }
+}, */
+
+extractTextFromImage: async function (base64Image, language = "fra") {
+    try {
+        if (!base64Image.startsWith("data:image")) {
+            throw new Error("L'image fournie n'est pas une image encodée en Base64 valide.");
+        }
+
+        // Configuration des chemins pour les fichiers nécessaires
+        const worker = await createWorker({
+            corePath: `${BASE_URL}/tesseract/tesseract-core-simd.wasm`, // Chemin vers le fichier WASM
+            workerPath: `${BASE_URL}/tesseract/worker.min.js`,         // Chemin vers le worker
+            langPath: `${BASE_URL}/tesseract`,                        // Chemin vers les fichiers de langues
+            logger: (m) => console.log(m), // Activer les logs pour déboguer
+        });
+
+        console.log("Langue chargée :", language);
+
         await worker.loadLanguage(language);
         await worker.reinitialize(language);
 
