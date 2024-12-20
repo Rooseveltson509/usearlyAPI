@@ -13,6 +13,7 @@ import apiRouter from "./apiRouter.js";
 import promBundle from "express-prom-bundle";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
+import { service } from "./services/siteService.js";
 
 // Résolution des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -30,21 +31,9 @@ const limiter = rateLimit({
   message: "Trop de requêtes provenant de cette IP. Veuillez réessayer plus tard.",
 });
 
-
-//var express = require("express");
 //const swaggerUi = require("swagger-ui-express");
 const swaggerPath = path.resolve("./config/swagger.json");
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
-
-/* var bodyParser = require("body-parser");
-let apiRouter = require("./apiRouter").router;
-let cors = require("cors");
-const corsOptions = require("./funcs/functions");
-let config = require("./config/config");
-const promBundle = require("express-prom-bundle"); */
-
-//const swaggerJSDoc = require("swagger-jsdoc");
-
 // Instanciate server
 const server = express();
 
@@ -101,5 +90,4 @@ server.listen(config.port, function () {
   console.log(
     `API disponible à : http://localhost:${config.port}${config.rootAPI}`
   );
-  //console.log("Similarity description: "+  service.getSimilarityDescription(description, description2));
 });
