@@ -22,27 +22,27 @@ const { Op } = Sequelize;
 export const user = {
   register: async function (req, res) {
     const { pseudo, born, email, password, password_confirm } = req.body;
-
+  
     try {
       // Vérifiez si tous les champs obligatoires sont remplis
       if (!pseudo || !born || !email || !password) {
         return res.status(400).json({ error: "Tous les champs doivent être remplis." });
       }
-
+  
       // Validez et transformez la date de naissance
       const validation = func.validateAndCheckAdult(born);
       if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
       }
       const dateOfBirth = validation.date; // La date transformée en objet Date
-
+  
       // Vérifiez si l'utilisateur est majeur
       if (!validation.isAdult) {
         return res.status(400).json({
           error: "Vous devez être majeur pour vous inscrire.",
         });
       }
-
+  
       // Vérifiez le format du pseudo
       if (!func.checkString(pseudo)) {
         return res.status(400).json({
@@ -50,12 +50,12 @@ export const user = {
             "Pseudo invalide (doit être alphanumérique, 3 à 50 caractères maximum).",
         });
       }
-
+  
       // Vérifiez si l'email est valide
       if (!validator.validate(email)) {
         return res.status(400).json({ error: "L'email fourni est invalide." });
       }
-
+  
       // Vérifiez si le mot de passe est valide
       if (!func.checkPassword(password)) {
         return res.status(400).json({
@@ -63,24 +63,24 @@ export const user = {
             "Le mot de passe doit contenir au moins 1 caractère spécial, 1 chiffre, et être d'au moins 8 caractères.",
         });
       }
-
+  
       // Vérifiez si les mots de passe correspondent
       if (password !== password_confirm) {
         return res.status(400).json({ error: "Les mots de passe ne correspondent pas." });
       }
-
+  
       // Vérifiez si l'email existe déjà dans la base de données
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(409).json({ error: "Cet utilisateur existe déjà." });
       }
-
+  
       // Hashage du mot de passe
       const hashedPassword = await bcrypt.hash(password, 5);
-
+  
       // Génération du token de confirmation
       const confirmationToken = func.randomCode(6, "0123456789");
-
+  
       // Créez un nouvel utilisateur
       const newUser = await User.create({
         pseudo,
@@ -89,7 +89,7 @@ export const user = {
         password: hashedPassword,
         confirmationToken,
       });
-
+  
       // Envoyez l'email de confirmation
       const confirmationUrl = `https://your-frontend-domain.com/confirm?token=${confirmationToken}`;
       func.sentEmail(
@@ -98,7 +98,7 @@ export const user = {
         confirmationUrl,
         newUser.id
       );
-
+  
       // Répondez avec un succès
       return res.status(201).json({
         message: `Un mail de confirmation vous a été envoyé à l'adresse ${email}.`,
@@ -189,17 +189,11 @@ export const user = {
       if (rememberMe) {
         // Génère un refresh token uniquement si `rememberMe` est true
         refreshToken = generateRefreshToken(user);
-        // Vérifie l'environnement (production ou développement)
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!isProduction) {
-          console.warn(
-            "Attention : Le cookie est configuré pour fonctionner sur HTTP (mode développement)."
-          );
-        }
+
         // Stocke le refresh token dans un cookie sécurisé
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true, // Empêche l'accès via JavaScript (protection XSS)
-          secure: process.env.NODE_ENV === "production", // Requis pour HTTPS (les cookies ne transitent que sur HTTPS)
+          secure: true, // Requis pour HTTPS (les cookies ne transitent que sur HTTPS)
           sameSite: "strict", // Empêche le partage du cookie entre sites (CSRF)
           maxAge: 30 * 24 * 60 * 60 * 1000, // Définit une expiration
         });
