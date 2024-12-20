@@ -46,6 +46,7 @@
     "mailgen": "^2.0.28",
     "mysql2": "^3.11.5",
     "node-abort-controller": "^3.1.1",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.13",
     "nodemon": "^2.0.22",
     "npm": "^7.6.3",

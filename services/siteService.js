@@ -360,17 +360,18 @@ export const service = {
   extractTextFromImage: async function (imagePath, language = 'fra') {
     try {
           // Crée un worker avec des chemins personnalisés
-    const worker = await Tesseract.createWorker({
-      logger: (info) => console.log(info), // Activer la journalisation (facultatif)
-      corePath: '/tesseract/tesseract-core-simd.wasm', // Chemin vers le fichier .wasm
-      langPath: '/tesseract/', // Chemin vers les fichiers de langue
-      workerPath: '/tesseract/worker.min.js', // Chemin vers le fichier worker
+    const worker = Tesseract.createWorker({
+      langs: Array.isArray(language) ? language : [language], // S'assurer que "langs" est un tableau
+      //logger: (info) => console.log(info), // Activer la journalisation (facultatif)
+      corePath: '/tesseract-core-simd.wasm', // Chemin vers le fichier .wasm
+      //langPath: '/', // Chemin vers les fichiers de langue
+      workerPath: './worker.min.js', // Chemin vers le fichier worker
     });
 
     // Charge et configure le worker
     await worker.load();
-    await worker.loadLanguage(language);
-    await worker.reinitialize(language);
+    await worker.loadLanguage('fra');
+    await worker.initialize('fra');
       // Lancer la reconnaissance avec Tesseract.js
       const result = await Tesseract.recognize(
         imagePath, // Chemin ou URL de l'image
