@@ -8,7 +8,7 @@ import logger from "../utils/logger.js";
 
 export const reporting = {
   // Créer un rapport
-  createReport: async function (req, res) {
+/*   createReport: async function (req, res) {
     try {
       const userId = getUserId(req.headers["authorization"]);
       if (userId <= 0) {
@@ -54,6 +54,71 @@ export const reporting = {
       );
 
       // Retourner la réponse appropriée en cas de doublon ou de création
+      return res.status(reportResult.status).json(reportResult);
+    } catch (error) {
+      logger.error("Erreur lors de la création du signalement :", error);
+      return res.status(500).json({
+        error: "Une erreur est survenue lors de la création du signalement.",
+      });
+    }
+  }, */
+  createReport: async function (req, res) {
+    try {
+      const userId = getUserId(req.headers["authorization"]);
+      if (userId <= 0) {
+        return res.status(400).json({ error: "missing parameters..." });
+      }
+  
+      const { siteUrl, description } = req.body;
+      const normalizedUrl = service.normalizeUrl(siteUrl);
+  
+      if (!service.isValidUrl(normalizedUrl)) {
+        return res
+          .status(400)
+          .json({ error: "URL invalide ou non approuvée.", siteUrl });
+      }
+  
+      // Vérification de doublon rapide avant traitements lourds
+      const duplicate = await reportService.findDuplicateReporting(
+        normalizedUrl,
+        description
+      );
+      if (duplicate) {
+        return res.status(200).json({
+          isDuplicate: true,
+          message: `Un problème similaire a déjà été signalé. Vous êtes la ${
+            duplicate.ReportingDescriptions?.length || 1
+          }ᵉ personne à signaler ce problème.`,
+        });
+      }
+  
+      // Appels parallèles pour réduire le temps d'attente
+      const [existingCategories, siteMetadata] = await Promise.all([
+        Category.findAll({ attributes: ["name"] }),
+        service.getSiteMetadata(normalizedUrl),
+      ]);
+  
+      const categoryNames = existingCategories.map((cat) => cat.name);
+  
+      // Génération des catégories et du type de site
+      const { siteType, categories: generatedCategories } =
+        await service.getCategoriesAndSiteType(
+          description,
+          siteMetadata,
+          categoryNames,
+          []
+        );
+  
+      const siteTypeObject = await service.findOrCreateSiteType(siteType);
+  
+      // Création du signalement
+      const reportResult = await reportService.createReporting(
+        userId,
+        req.body,
+        generatedCategories,
+        siteTypeObject.id
+      );
+  
       return res.status(reportResult.status).json(reportResult);
     } catch (error) {
       logger.error("Erreur lors de la création du signalement :", error);

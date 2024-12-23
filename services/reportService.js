@@ -9,7 +9,7 @@ dotenv.config();
 const similarityThreshold = process.env.SIMILARITY_THRESHOLD || 0.7;
 
 export const reportService = {
-  async findSimilarReporting(siteUrl, bugLocation, description) {
+/*   async findSimilarReportinggg(siteUrl, bugLocation, description) {
     // Normalisation des données
     const normalizedSiteUrl = siteUrl.trim().toLowerCase();
     const normalizedBugLocation = bugLocation.trim().toLowerCase();
@@ -42,7 +42,7 @@ export const reportService = {
     }
 
     return null;
-  },
+  }, */
 
   async checkExistingDescription(reportingId, userId, description) {
     const existingDescriptions = await ReportingDescription.findAll({
@@ -62,7 +62,7 @@ export const reportService = {
     return false;
   },
 
-  async createReporting(userId, data, categories, siteTypeId) {
+ /*  async createReporting(userId, data, categories, siteTypeId) {
     let bugLocation = data.bugLocation;
 
     // Extraction du texte depuis une capture, si fourni
@@ -150,7 +150,139 @@ export const reportService = {
       reporting: newReporting,
       categories,
     };
+  }, */
+
+  async findSimilarReporting(siteUrl, bugLocation, description) {
+    // Normalisation des données
+    const normalizedSiteUrl = siteUrl.trim().toLowerCase();
+    const normalizedBugLocation = bugLocation.trim().toLowerCase();
+    const normalizedDescription = description.trim().toLowerCase();
+
+    // Limitation des résultats pour éviter de surcharger la comparaison
+    const similarReportings = await Reporting.findAll({
+      where: {
+        siteUrl: normalizedSiteUrl,
+        bugLocation: normalizedBugLocation,
+        description: normalizedDescription,
+      },
+      limit: 10, // Limite des résultats pour des performances accrues
+    });
+
+    console.log(`Comparaison pour ${similarReportings.length} signalements.`);
+
+    // Comparaison par similarité
+    for (const reporting of similarReportings) {
+      const similarity = await service.compareDescriptions(
+        normalizedDescription,
+        reporting.description.trim().toLowerCase()
+      );
+
+      console.log("Similarité calculée :", similarity);
+      if (similarity >= similarityThreshold) {
+        return reporting;
+      }
+    }
+
+    return null;
   },
+
+  async createReporting(userId, data, categories, siteTypeId) {
+    let bugLocation = data.bugLocation;
+
+    // Extraction de texte depuis une image (décalée en tâche asynchrone si nécessaire)
+    if (data.capture) {
+      console.log("Extraction de texte depuis l’image...");
+      try {
+        const extractedLocation = await service.extractTextFromImage(data.capture);
+
+        if (extractedLocation) {
+          bugLocation = await service.determineBugLocation(extractedLocation);
+        }
+      } catch (error) {
+        console.error("Erreur lors de l’extraction de texte :", error);
+      }
+    }
+
+    // Vérification des doublons
+    const duplicate = await this.findSimilarReporting(
+      data.siteUrl,
+      bugLocation,
+      data.description
+    );
+
+    if (duplicate) {
+      return {
+        isDuplicate: true,
+        status: 200,
+        success: true,
+        message: `Un problème similaire a déjà été signalé. Vous êtes la ${
+          duplicate.ReportingDescriptions?.length || 1
+        }ᵉ personne à signaler ce problème.`,
+        reportingId: duplicate.id,
+        totalReports: duplicate.ReportingDescriptions?.length || 1,
+      };
+    }
+
+    // Création d’un nouveau signalement
+    const newReporting = await Reporting.create({
+      userId,
+      marque: data.marque,
+      siteUrl: data.siteUrl,
+      blocking: data.blocking,
+      description: data.description,
+      bugLocation,
+      emojis: data.emojis,
+      capture: data.capture,
+      tips: data.tips,
+    });
+
+    // Chargement ou création des catégories (en mémoire pour minimiser les appels DB)
+    const categoryInstances = await this.findOrCreateCategories(
+      categories,
+      siteTypeId
+    );
+
+    await newReporting.addCategories(categoryInstances);
+
+    // Ajout de la description associée
+    await ReportingDescription.create({
+      reportingId: newReporting.id,
+      userId,
+      description: data.description,
+    });
+
+    return {
+      isDuplicate: false,
+      status: 201,
+      success: true,
+      message: "Signalement créé avec succès.",
+      reporting: newReporting,
+      categories,
+    };
+  },
+
+  async findOrCreateCategories(categories, siteTypeId) {
+    const existingCategories = await Category.findAll({
+      where: { name: categories },
+      attributes: ["id", "name"],
+    });
+
+    const existingCategoryNames = existingCategories.map((cat) => cat.name);
+
+    // Créer seulement les catégories qui n'existent pas déjà
+    const newCategories = categories.filter(
+      (cat) => !existingCategoryNames.includes(cat)
+    );
+
+    const newCategoryInstances = await Promise.all(
+      newCategories.map((categoryName) =>
+        Category.create({ name: categoryName, siteTypeId })
+      )
+    );
+
+    return [...existingCategories, ...newCategoryInstances];
+  },
+
   async validateUser(userId) {
     const user = await db.User.findOne({ where: { id: userId } });
     if (!user) {
