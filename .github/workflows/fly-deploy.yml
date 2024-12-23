@@ -1,33 +1,40 @@
-name: Fly Deploy
+name: Deploy to Fly.io
 
 on:
   push:
     branches:
-      - master
+      - master # Changez "master" si votre branche principale a un autre nom.
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # Étape 1 : Vérifie le code depuis le dépôt GitHub
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Étape 2 : Installe Flyctl et ajoute son chemin au PATH
       - name: Install Flyctl
         run: |
           curl -L https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> $GITHUB_PATH
+          echo "Flyctl installé et ajouté au PATH"
+      
+      # Étape 3 : Vérifie l'installation et le chemin de Flyctl
+      - name: Debug PATH et Flyctl
+        run: |
+          echo "Current PATH: $PATH"
+          fly --help
 
+      # Étape 4 : Authentifie Fly.io avec le token secret
       - name: Authenticate with Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: fly auth login --access-token $FLY_API_TOKEN
+        run: fly auth token $FLY_API_TOKEN
 
-      - name: Validate Fly.io Authentication
-        run: fly auth whoami
-
-      - name: Check Flyctl version
-        run: fly version
-
+      # Étape 5 : Déploie l'application sur Fly.io
       - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: fly deploy
