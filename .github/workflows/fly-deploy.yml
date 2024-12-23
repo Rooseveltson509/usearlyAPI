@@ -26,6 +26,9 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: fly auth -t $FLY_API_TOKEN
 
+      - name: Check Flyctl version
+        run: fly version
+
       # Déploie sur Fly.io
       - name: Deploy to Fly.io
         run: fly deploy
