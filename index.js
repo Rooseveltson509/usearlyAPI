@@ -13,7 +13,6 @@ import apiRouter from "./apiRouter.js";
 import promBundle from "express-prom-bundle";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
-import { service } from "./services/siteService.js";
 
 // Résolution des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +27,8 @@ const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // Fenêtre de 15 minutes
   max: 100, // Limite chaque IP à 100 requêtes par fenêtre
-  message: "Trop de requêtes provenant de cette IP. Veuillez réessayer plus tard.",
+  message:
+    "Trop de requêtes provenant de cette IP. Veuillez réessayer plus tard.",
 });
 
 //const swaggerUi = require("swagger-ui-express");
@@ -39,14 +39,18 @@ const server = express();
 
 //const swaggerDocument = await loadSwaggerDocument();
 
-
-
-server.use('/tesseract', express.static(path.join(__dirname, 'public/tesseract')));
-server.get('/list-tesseract-files',limiter, // Appliquer la limitation sur cette route
-   (req, res) => {
-  const files = fs.readdirSync(path.join(__dirname, 'public/tesseract'));
-  res.json(files);
-});
+server.use(
+  "/tesseract",
+  express.static(path.join(__dirname, "public/tesseract"))
+);
+server.get(
+  "/list-tesseract-files",
+  limiter, // Appliquer la limitation sur cette route
+  (req, res) => {
+    const files = fs.readdirSync(path.join(__dirname, "public/tesseract"));
+    res.json(files);
+  }
+);
 // Global middleware for CORS in index.js
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));

@@ -1,5 +1,4 @@
 import db from "../models/index.js";
-import stringSimilarity from "string-similarity";
 const { Reporting, ReportingDescription, Category } = db;
 import { service } from "../services/siteService.js";
 import dotenv from "dotenv";
@@ -15,7 +14,6 @@ export const reportService = {
     const normalizedSiteUrl = siteUrl.trim().toLowerCase();
     const normalizedBugLocation = bugLocation.trim().toLowerCase();
     const normalizedDescription = description.trim().toLowerCase();
-
 
     const similarReportings = await Reporting.findAll({
       where: {
@@ -66,32 +64,39 @@ export const reportService = {
 
   async createReporting(userId, data, categories, siteTypeId) {
     let bugLocation = data.bugLocation;
-  
+
     // Extraction du texte depuis une capture, si fourni
     if (data.capture) {
       try {
         console.log("Extraction de texte depuis l’image...");
-        const extractedLocation = await service.extractTextFromImage(data.capture);
-  
+        const extractedLocation = await service.extractTextFromImage(
+          data.capture
+        );
+
         if (extractedLocation) {
           bugLocation = await service.determineBugLocation(extractedLocation);
         } else {
           console.warn("Aucune correspondance trouvée pour bugLocation.");
         }
       } catch (error) {
-        console.error("Erreur lors de l’extraction de texte depuis la capture :", error);
+        console.error(
+          "Erreur lors de l’extraction de texte depuis la capture :",
+          error
+        );
       }
     }
-  
+
     // Vérification de doublon
     const duplicate = await this.findSimilarReporting(
       data.siteUrl,
       bugLocation,
       data.description
     );
-  
+
     if (duplicate) {
-      console.log("Signalement en doublon détecté pour le site " + data.siteUrl);
+      console.log(
+        "Signalement en doublon détecté pour le site " + data.siteUrl
+      );
       return {
         isDuplicate: true,
         status: 200,
@@ -103,7 +108,7 @@ export const reportService = {
         totalReports: duplicate.ReportingDescriptions?.length || 1,
       };
     }
-  
+
     // Création d’un nouveau signalement s’il n’y a pas de doublon
     const newReporting = await Reporting.create({
       userId,
@@ -116,7 +121,7 @@ export const reportService = {
       capture: data.capture,
       tips: data.tips,
     });
-  
+
     // Ajout des catégories
     const categoryInstances = await Promise.all(
       categories.map(async (categoryName) => {
@@ -127,16 +132,16 @@ export const reportService = {
         return category;
       })
     );
-  
+
     await newReporting.addCategories(categoryInstances);
-  
+
     // Ajout de la description associée
     await ReportingDescription.create({
       reportingId: newReporting.id,
       userId,
       description: data.description,
     });
-  
+
     return {
       isDuplicate: false,
       status: 201,
@@ -145,10 +150,7 @@ export const reportService = {
       reporting: newReporting,
       categories,
     };
-  }
-  ,
-  
-
+  },
   async validateUser(userId) {
     const user = await db.User.findOne({ where: { id: userId } });
     if (!user) {
@@ -156,5 +158,4 @@ export const reportService = {
     }
     return user;
   },
-
 };

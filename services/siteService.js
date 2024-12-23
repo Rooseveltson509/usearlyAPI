@@ -2,19 +2,11 @@ import * as cheerio from "cheerio";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
-import Tesseract from "tesseract.js";
-import path from "path";
-import { fileURLToPath } from "url";
 import { AbortController } from "node-abort-controller"; // Pour gérer les timeouts
 import axios from "axios";
-//const { createWorker } = Tesseract; // Déstructurez createWorker depuis le module
-//import { createWorker } from 'tesseract.js';
-const BASE_URL = process.env.BASE_URL || "https://usearly-api.vercel.app";
- // Cache pour les résultats d'OpenAI (clé : texte extrait, valeur : bugLocation)
- const bugLocationCache = new Map();
-// Définir __dirname en ES Module
-const __filename = fileURLToPath(import.meta.url);
-const currentDir = path.dirname(__filename);
+import fetch from "node-fetch";
+// Cache pour les résultats d'OpenAI (clé : texte extrait, valeur : bugLocation)
+const bugLocationCache = new Map();
 
 const { SiteType } = db;
 
@@ -34,7 +26,6 @@ if (!process.env.OPENAI_API_KEY) {
 
 // Vérification de la clé API
 export const service = {
-
   /**
    * Compare deux descriptions via OpenAI Embeddings
    * @param {string} desc1 - Première description
@@ -47,20 +38,26 @@ export const service = {
     // Obtenir les embeddings pour les deux descriptions
     const getEmbedding = async (text) => {
       const response = await axios.post(
-        'https://api.openai.com/v1/embeddings',
-        { input: text, model: 'text-embedding-ada-002' },
+        "https://api.openai.com/v1/embeddings",
+        { input: text, model: "text-embedding-ada-002" },
         { headers: { Authorization: `Bearer ${API_KEY}` } }
       );
       return response.data.data[0].embedding;
     };
 
-    const [embedding1, embedding2] = await Promise.all([getEmbedding(desc1), getEmbedding(desc2)]);
+    const [embedding1, embedding2] = await Promise.all([
+      getEmbedding(desc1),
+      getEmbedding(desc2),
+    ]);
 
     // Calculer la similarité cosinus
     const dotProduct = (a, b) => a.reduce((sum, ai, i) => sum + ai * b[i], 0);
-    const magnitude = (vec) => Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
+    const magnitude = (vec) =>
+      Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
 
-    const similarity = dotProduct(embedding1, embedding2) / (magnitude(embedding1) * magnitude(embedding2));
+    const similarity =
+      dotProduct(embedding1, embedding2) /
+      (magnitude(embedding1) * magnitude(embedding2));
     return similarity;
   },
 
@@ -127,12 +124,6 @@ export const service = {
         return false;
       }
 
-      // Vérifiez le domaine contre une liste blanche
-      /*       const allowedDomains = ['example.com', 'nike.com'];
-      if (!allowedDomains.some((domain) => parsedUrl.hostname.endsWith(domain))) {
-        return false;
-      } */
-
       return true;
     } catch (error) {
       console.error("Erreur lors de la validation de l'URL :", error);
@@ -164,7 +155,7 @@ export const service = {
     }
   },
 
-  // Méthode pour déterminer le bugLocation à partir du texte extrait
+  // Détecter la page web à partir d'une URL
   determineBugLocation: async function (textExtracted) {
     if (!textExtracted?.trim()) {
       console.warn("Aucun texte n'a été extrait.");
@@ -225,7 +216,10 @@ export const service = {
           bugLocationCache.set(textLower, location); // Stockez dans le cache
           return location;
         } else {
-          console.warn("Réponse OpenAI dans un format inattendu :", gptResponse);
+          console.warn(
+            "Réponse OpenAI dans un format inattendu :",
+            gptResponse
+          );
         }
       }
     } catch (error) {
@@ -236,156 +230,32 @@ export const service = {
     return "emplacement inconnu";
   },
 
-  // Utilisation de Tesseract pour extraire du texte depuis une image
-
-  /*   extractTextFromImage: async function (base64Image, language = "fra") {
-      try {
-          if (!base64Image.startsWith("data:image")) {
-              throw new Error("L'image fournie n'est pas une image encodée en Base64 valide.");
-          }
-  
-          const worker = await createWorker({
-              logger: (m) => console.log(m), // Activer les logs pour déboguer
-          });
-  
-          console.log("Langue chargée :", language);
-          await worker.loadLanguage(language);
-          await worker.reinitialize(language);
-  
-          const {
-              data: { text },
-          } = await worker.recognize(base64Image);
-  
-          console.log("Texte extrait :", text);
-  
-          await worker.terminate(); // Terminez le worker après utilisation
-          return text;
-      } catch (error) {
-          console.error(`Erreur lors de l'extraction du texte pour ${language} :`, error);
-          return "Erreur lors de l'extraction du texte";
-      }
-  }, */
-
-  /*   extractTextFromImage: async function (base64Image) {
-      try {
-        if (!base64Image.startsWith("data:image")) {
-          throw new Error("L'image fournie n'est pas une image encodée en Base64 valide.");
-        }
-  
-        const language = "fra"; // Langue à utiliser
-        console.log("Langue utilisée :", language);
-  
-        const worker = await Tesseract.createWorker({
-          corePath: "/tesseract/tesseract-core-simd.wasm",
-          workerPath: "/tesseract/worker.min.js",
-          langPath: "/tesseract",
-        });
-  
-        try {
-          await worker.reinitialize("fra");
-          const { data: { text } } = await worker.recognize(base64Image);
-          await worker.terminate();
-          return text;
-        } catch (err) {
-          console.error("Erreur : ", err.message);
-          throw err;
-        }
-  
-        console.log("Reconnaissance de texte en cours...");
-  
-        const { data: { text } } = await worker.recognize(base64Image);
-  
-        console.log("Texte extrait avec succès :", text);
-  
-        await worker.terminate();
-        return text;
-      } catch (error) {
-        console.error("Erreur lors de l'extraction du texte :", error);
-        return "Erreur lors de l'extraction du texte";
-      }
-  
-    }, */
-
-  /* extractTextFromImage: async function (base64Image) {
-    try {
-      // Configuration pour Tesseract.js avec le chemin correct
-      const worker = await Tesseract.createWorker({
-        corePath: "/tesseract/tesseract-core-simd.wasm", // Chemin du fichier WASM dans public
-        //logger: (m) => console.log(m), // Logger pour le débogage
-      });
-
-      //await worker.loadLanguage(language);
-      //await worker.reinitialize(language);
-
-      // Passe directement l'image en base64
-      const {
-        data: { text },
-      } = await worker.recognize(base64Image);
-
-      console.log("Texte extrait :", text);
-
-      // Détermine le type de bug/location à partir du texte extrait
-      const pageType = await this.determineBugLocation(text);
-      console.log("Type de page détecté :", pageType);
-      console.log("Capture reçue :", base64Image);
-
-      await worker.terminate();
-      return pageType;
-    } catch (error) {
-      console.error(
-        `Erreur lors de l'extraction du texte pour ${language} :`,
-        error
-      );
-      return "Erreur lors de l'extraction du texte";
-    }
-  }, */
-
-  /*   extractTextFromImage: async function (imagePath) {
-      try {
-          const result = await Tesseract.recognize(imagePath, 'fra'); // Utilisez 'fra' pour le français ou 'eng' pour l'anglais
-          console.log("Texte extrait par Tesseract :", result.data.text);
-          return result.data.text; // Texte brut extrait
-      } catch (error) {
-          console.error("Erreur lors de l'extraction du texte avec Tesseract :", error);
-          return ''; // Retournez une chaîne vide en cas d'erreur
-      }
-  }, */
-
   /**
    * Extrait le texte d'une image en utilisant Tesseract.js
    * @param {string} imagePath - Le chemin ou l'URL de l'image à analyser
-   * @param {string} [language='eng'] - La langue du texte à reconnaître (par exemple 'fra' pour le français)
    * @returns {Promise<string>} - Le texte extrait de l'image
    */
-  extractTextFromImage: async function (imagePath, language = 'fra') {
+  extractTextFromImage: async function (base64Image) {
     try {
-          // Crée un worker avec des chemins personnalisés
-    const worker = await Tesseract.createWorker({
-      logger: (info) => console.log(info), // Activer la journalisation (facultatif)
-      corePath: '/tesseract/tesseract-core-simd.wasm', // Chemin vers le fichier .wasm
-      langPath: '/tesseract/', // Chemin vers les fichiers de langue
-      workerPath: '/tesseract/worker.min.js', // Chemin vers le fichier worker
-    });
+      const cleanedBase64 = base64Image.replace(/^data:image\/\w+;base64,/, ""); // Supprime le préfixe
+      const response = await fetch("https://api-python.fly.dev/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: cleanedBase64 }),
+      });
 
-    // Charge et configure le worker
-    await worker.load();
-    await worker.loadLanguage(language);
-    await worker.reinitialize(language);
-      // Lancer la reconnaissance avec Tesseract.js
-      const result = await Tesseract.recognize(
-        imagePath, // Chemin ou URL de l'image
-        language,  // Langue OCR (par défaut : anglais)
-        {
-          logger: (info) => console.log(info) // Journalisation des étapes (facultatif)
-        }
-      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          `Erreur lors de l'appel à l'API EasyOCR : ${errorData.error}`
+        );
+      }
 
-      // Retourner le texte extrait
-      return result.data.text;
+      const data = await response.json();
+      return data.text;
     } catch (error) {
-
-      console.error("Erreur lors de l'extraction du texte :', error");
-      throw new Error('Impossible d\'extraire le texte de l\'image.');
+      console.error("Erreur lors de l'extraction du texte :", error);
+      throw new Error("Impossible d'extraire le texte de l'image.");
     }
   },
   // Récupération des métadonnées du site
