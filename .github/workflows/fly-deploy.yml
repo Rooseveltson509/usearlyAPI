@@ -10,25 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Vérifie le code depuis la branche
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Installe Flyctl
       - name: Install Flyctl
         run: |
           curl -L https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> $GITHUB_PATH
+          echo "Flyctl installé et ajouté au PATH"
 
-      # Authentifie Fly.io
+      - name: Check Flyctl path
+        run: which fly
+
       - name: Authenticate with Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: fly auth -t $FLY_API_TOKEN
 
+      - name: Validate Fly.io Authentication
+        run: fly auth whoami
+
       - name: Check Flyctl version
         run: fly version
 
-      # Déploie sur Fly.io
       - name: Deploy to Fly.io
-        run: fly deploy
+        run: fly deploy --verbose
