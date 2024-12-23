@@ -53,6 +53,15 @@ export default (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Reporting",
+    },
+    {
+      indexes: [
+        {
+          fields: ['siteUrl', 'bugLocation', 'description'], // Colonnes de l'index
+          name: 'idx_reportings_search', // Nom de l'index
+          using: 'BTREE', // Type d'index
+        },
+      ],
     }
   );
   return Reporting;
