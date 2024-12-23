@@ -17,15 +17,11 @@ jobs:
         run: |
           curl -L https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> $GITHUB_PATH
-          echo "Flyctl installé et ajouté au PATH"
-
-      - name: Check Flyctl path
-        run: which fly
 
       - name: Authenticate with Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: fly auth -t $FLY_API_TOKEN
+        run: fly auth login --access-token $FLY_API_TOKEN
 
       - name: Validate Fly.io Authentication
         run: fly auth whoami
@@ -34,4 +30,4 @@ jobs:
         run: fly version
 
       - name: Deploy to Fly.io
-        run: fly deploy --verbose
+        run: fly deploy
