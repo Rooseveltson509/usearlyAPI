@@ -5,6 +5,8 @@ import db from "../models/index.js"; // Import du fichier contenant les modèles
 import { AbortController } from "node-abort-controller"; // Pour gérer les timeouts
 import axios from "axios";
 import fetch from "node-fetch";
+import sharp from "sharp";
+import crypto from "crypto";
 // Cache pour les résultats d'OpenAI (clé : texte extrait, valeur : bugLocation)
 const bugLocationCache = new Map();
 
@@ -33,24 +35,44 @@ export const service = {
    * @returns {Promise<number>} - Similarité (0 à 1)
    */
   compareDescriptions: async function (desc1, desc2) {
-    const API_KEY = process.env.OPENAI_API_KEY; // Remplacez par votre clé API
+    const API_KEY = process.env.OPENAI_API_KEY; // Votre clé API OpenAI
 
-    // Obtenir les embeddings pour les deux descriptions
-    const getEmbedding = async (text) => {
-      const response = await axios.post(
-        "https://api.openai.com/v1/embeddings",
-        { input: text, model: "text-embedding-ada-002" },
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
-      );
-      return response.data.data[0].embedding;
+    // Fonction pour nettoyer les descriptions
+    const cleanText = (text) =>
+      text
+        .toLowerCase()
+        .replace(/[.,!?;:]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const cleanedDesc1 = cleanText(desc1);
+    const cleanedDesc2 = cleanText(desc2);
+
+    // Fonction pour récupérer les embeddings
+    const getEmbeddings = async (texts) => {
+      try {
+        const response = await axios.post(
+          "https://api.openai.com/v1/embeddings",
+          { input: texts, model: "text-embedding-ada-002" },
+          { headers: { Authorization: `Bearer ${API_KEY}` } }
+        );
+        return response.data.data.map((item) => item.embedding);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des embeddings :", error);
+        throw new Error("Impossible de récupérer les embeddings.");
+      }
     };
 
-    const [embedding1, embedding2] = await Promise.all([
-      getEmbedding(desc1),
-      getEmbedding(desc2),
+    const [embedding1, embedding2] = await getEmbeddings([
+      cleanedDesc1,
+      cleanedDesc2,
     ]);
 
-    // Calculer la similarité cosinus
+    if (!embedding1 || !embedding2 || embedding1.length !== embedding2.length) {
+      throw new Error("Les embeddings retournés sont invalides.");
+    }
+
+    // Calcul de la similarité cosinus
     const dotProduct = (a, b) => a.reduce((sum, ai, i) => sum + ai * b[i], 0);
     const magnitude = (vec) =>
       Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
@@ -58,7 +80,12 @@ export const service = {
     const similarity =
       dotProduct(embedding1, embedding2) /
       (magnitude(embedding1) * magnitude(embedding2));
-    return similarity;
+
+    console.log("Similarité calculée :", similarity);
+
+    // Définir un seuil de similarité
+    const similarityThreshold = 0.85;
+    return similarity >= similarityThreshold;
   },
 
   getEmbeddings: async function (text) {
@@ -135,24 +162,6 @@ export const service = {
       return `https://${url}`;
     }
     return url;
-  },
-
-  getSimilarityDescription: async function (text1, text2) {
-    try {
-      const embedding1 = await this.getEmbeddings(text1);
-      const embedding2 = await this.getEmbeddings(text2);
-
-      console.log("Embeddings texte 1 :", embedding1);
-      console.log("Embeddings texte 2 :", embedding2);
-
-      // Calculez la similarité cosine entre les embeddings
-      const similarity = await this.cosineSimilarity(embedding1, embedding2);
-      console.log("Similarité entre les descriptions :", similarity);
-      return similarity;
-    } catch (error) {
-      console.error("Erreur lors du calcul de la similarité :", error);
-      throw error;
-    }
   },
 
   // Détecter la page web à partir d'une URL

@@ -5,102 +5,96 @@ const { User, Category, SiteType, Reporting } = db;
 import { service } from "../services/siteService.js";
 import { reportService } from "../services/reportService.js";
 import logger from "../utils/logger.js";
+import { performance } from "perf_hooks";
 
 export const reporting = {
   // Créer un rapport
-/*   createReport: async function (req, res) {
-    try {
-      const userId = getUserId(req.headers["authorization"]);
-      if (userId <= 0) {
-        return res.status(400).json({ error: "missing parameters..." });
-      }
-
-      const { siteUrl, description } = req.body;
-      const normalizedUrl = service.normalizeUrl(siteUrl);
-
-      if (!service.isValidUrl(normalizedUrl)) {
-        return res
-          .status(400)
-          .json({ error: "URL invalide ou non approuvée.", siteUrl });
-      }
-
-      await reportService.validateUser(userId);
-
-      // Chargement des catégories existantes
-      const existingCategories = await Category.findAll({
-        attributes: ["name"],
-      });
-      const categoryNames = existingCategories.map((cat) => cat.name);
-
-      const siteMetadata = await service.getSiteMetadata(normalizedUrl);
-
-      const { siteType, categories: generatedCategories } =
-        await service.getCategoriesAndSiteType(
-          description,
-          siteMetadata,
-          categoryNames,
-          []
+  /*   createReport: async function (req, res) {
+      try {
+        const userId = getUserId(req.headers["authorization"]);
+        if (userId <= 0) {
+          return res.status(400).json({ error: "missing parameters..." });
+        }
+  
+        const { siteUrl, description } = req.body;
+        const normalizedUrl = service.normalizeUrl(siteUrl);
+  
+        if (!service.isValidUrl(normalizedUrl)) {
+          return res
+            .status(400)
+            .json({ error: "URL invalide ou non approuvée.", siteUrl });
+        }
+  
+        await reportService.validateUser(userId);
+  
+        // Chargement des catégories existantes
+        const existingCategories = await Category.findAll({
+          attributes: ["name"],
+        });
+        const categoryNames = existingCategories.map((cat) => cat.name);
+  
+        const siteMetadata = await service.getSiteMetadata(normalizedUrl);
+  
+        const { siteType, categories: generatedCategories } =
+          await service.getCategoriesAndSiteType(
+            description,
+            siteMetadata,
+            categoryNames,
+            []
+          );
+  
+        const siteTypeObject = await service.findOrCreateSiteType(siteType);
+        const siteTypeId = siteTypeObject.id;
+  
+        // Création d’un nouveau signalement ou détection de doublon
+        const reportResult = await reportService.createReporting(
+          userId,
+          req.body,
+          generatedCategories,
+          siteTypeId
         );
-
-      const siteTypeObject = await service.findOrCreateSiteType(siteType);
-      const siteTypeId = siteTypeObject.id;
-
-      // Création d’un nouveau signalement ou détection de doublon
-      const reportResult = await reportService.createReporting(
-        userId,
-        req.body,
-        generatedCategories,
-        siteTypeId
-      );
-
-      // Retourner la réponse appropriée en cas de doublon ou de création
-      return res.status(reportResult.status).json(reportResult);
-    } catch (error) {
-      logger.error("Erreur lors de la création du signalement :", error);
-      return res.status(500).json({
-        error: "Une erreur est survenue lors de la création du signalement.",
-      });
-    }
-  }, */
-  createReport: async function (req, res) {
-    try {
-      const userId = getUserId(req.headers["authorization"]);
-      if (userId <= 0) {
-        return res.status(400).json({ error: "missing parameters..." });
-      }
   
-      const { siteUrl, description } = req.body;
-      const normalizedUrl = service.normalizeUrl(siteUrl);
-  
-      if (!service.isValidUrl(normalizedUrl)) {
-        return res
-          .status(400)
-          .json({ error: "URL invalide ou non approuvée.", siteUrl });
-      }
-  
-      // Vérification de doublon rapide avant traitements lourds
-      const duplicate = await reportService.findDuplicateReporting(
-        normalizedUrl,
-        description
-      );
-      if (duplicate) {
-        return res.status(200).json({
-          isDuplicate: true,
-          message: `Un problème similaire a déjà été signalé. Vous êtes la ${
-            duplicate.ReportingDescriptions?.length || 1
-          }ᵉ personne à signaler ce problème.`,
+        // Retourner la réponse appropriée en cas de doublon ou de création
+        return res.status(reportResult.status).json(reportResult);
+      } catch (error) {
+        logger.error("Erreur lors de la création du signalement :", error);
+        return res.status(500).json({
+          error: "Une erreur est survenue lors de la création du signalement.",
         });
       }
-  
+    }, */
+  createReport: async function (req, res) {
+    try {
+      const startTotal = performance.now(); // Démarrage
+      const userId = getUserId(req.headers["authorization"]);
+      if (userId <= 0) {
+        const endTotal = performance.now();
+        console.log(`Total execution time: ${(endTotal - startTotal).toFixed(2)}ms`);
+        return res.status(400).json({ error: "missing parameters..." });
+      }
+
+      const { siteUrl, description, bugLocation } = req.body;
+      const normalizedUrl = service.normalizeUrl(siteUrl);
+
+      const startValidation = performance.now();
+      if (!service.isValidUrl(normalizedUrl)) {
+        console.log(`Validation executed in ${(performance.now() - startValidation).toFixed(2)}ms`);
+        return res
+          .status(400)
+          .json({ error: "URL invalide ou non approuvée.", siteUrl });
+      }
       // Appels parallèles pour réduire le temps d'attente
+      const startCategories = performance.now();
       const [existingCategories, siteMetadata] = await Promise.all([
+        //await reportService.getCategories(),
         Category.findAll({ attributes: ["name"] }),
         service.getSiteMetadata(normalizedUrl),
       ]);
-  
+      console.log(`Category retrieval executed in ${(performance.now() - startCategories).toFixed(2)}ms`);
       const categoryNames = existingCategories.map((cat) => cat.name);
-  
+
       // Génération des catégories et du type de site
+      const startSiteType = performance.now();
       const { siteType, categories: generatedCategories } =
         await service.getCategoriesAndSiteType(
           description,
@@ -108,19 +102,27 @@ export const reporting = {
           categoryNames,
           []
         );
-  
+      console.log(`SiteType generation executed in ${(performance.now() - startSiteType).toFixed(2)}ms`);
+
       const siteTypeObject = await service.findOrCreateSiteType(siteType);
-  
+
       // Création du signalement
+      const startDuplicationCheck = performance.now();
       const reportResult = await reportService.createReporting(
         userId,
         req.body,
         generatedCategories,
         siteTypeObject.id
       );
-  
+      console.log(`Duplication check executed in ${(performance.now() - startDuplicationCheck).toFixed(2)}ms`);
+
+      const endTotal = performance.now();
+      console.log(`Total execution time: ${(endTotal - startTotal).toFixed(2)}ms`);
+
       return res.status(reportResult.status).json(reportResult);
     } catch (error) {
+      const endTotal = performance.now();
+      console.log(`Total execution time (with error): ${(endTotal - startTotal).toFixed(2)}ms`);
       logger.error("Erreur lors de la création du signalement :", error);
       return res.status(500).json({
         error: "Une erreur est survenue lors de la création du signalement.",
