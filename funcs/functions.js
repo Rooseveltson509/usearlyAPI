@@ -83,7 +83,8 @@ export const func = {
     ) {
       return {
         isValid: false,
-        message: "La date est invalide. Vérifiez les valeurs fournies. format accepté: (mm-dd-yyyy or mm/dd/yyyy)",
+        message:
+          "La date est invalide. Vérifiez les valeurs fournies. format accepté: (mm-dd-yyyy or mm/dd/yyyy)",
       };
     }
 
@@ -93,7 +94,7 @@ export const func = {
       today.getFullYear() -
       year -
       (today.getMonth() < month - 1 ||
-        (today.getMonth() === month - 1 && today.getDate() < day)
+      (today.getMonth() === month - 1 && today.getDate() < day)
         ? 1
         : 0);
 
@@ -109,8 +110,6 @@ export const func = {
         : "L'utilisateur doit être majeur pour continuer.",
     };
   },
-
-
 
   checkString: function (text) {
     return ALPHANUMERIC_NUMBER.test(text);

@@ -45,3 +45,16 @@ yarn-error.log*
 .env.production.local
 .env
 .vercel
+
+
+# Ignorer l'environnement virtuel
+env/
+
+# Ignorer les fichiers de cache Python
+__pycache__/
+
+# Ignorer les fichiers de log
+*.log
+
+# Ignorer les fichiers de configuration spécifiques au système
+*.env

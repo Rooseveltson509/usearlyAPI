@@ -22,27 +22,29 @@ const { Op } = Sequelize;
 export const user = {
   register: async function (req, res) {
     const { pseudo, born, email, password, password_confirm } = req.body;
-  
+
     try {
       // Vérifiez si tous les champs obligatoires sont remplis
       if (!pseudo || !born || !email || !password) {
-        return res.status(400).json({ error: "Tous les champs doivent être remplis." });
+        return res
+          .status(400)
+          .json({ error: "Tous les champs doivent être remplis." });
       }
-  
+
       // Validez et transformez la date de naissance
       const validation = func.validateAndCheckAdult(born);
       if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
       }
       const dateOfBirth = validation.date; // La date transformée en objet Date
-  
+
       // Vérifiez si l'utilisateur est majeur
       if (!validation.isAdult) {
         return res.status(400).json({
           error: "Vous devez être majeur pour vous inscrire.",
         });
       }
-  
+
       // Vérifiez le format du pseudo
       if (!func.checkString(pseudo)) {
         return res.status(400).json({
@@ -50,12 +52,12 @@ export const user = {
             "Pseudo invalide (doit être alphanumérique, 3 à 50 caractères maximum).",
         });
       }
-  
+
       // Vérifiez si l'email est valide
       if (!validator.validate(email)) {
         return res.status(400).json({ error: "L'email fourni est invalide." });
       }
-  
+
       // Vérifiez si le mot de passe est valide
       if (!func.checkPassword(password)) {
         return res.status(400).json({
@@ -63,24 +65,26 @@ export const user = {
             "Le mot de passe doit contenir au moins 1 caractère spécial, 1 chiffre, et être d'au moins 8 caractères.",
         });
       }
-  
+
       // Vérifiez si les mots de passe correspondent
       if (password !== password_confirm) {
-        return res.status(400).json({ error: "Les mots de passe ne correspondent pas." });
+        return res
+          .status(400)
+          .json({ error: "Les mots de passe ne correspondent pas." });
       }
-  
+
       // Vérifiez si l'email existe déjà dans la base de données
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(409).json({ error: "Cet utilisateur existe déjà." });
       }
-  
+
       // Hashage du mot de passe
       const hashedPassword = await bcrypt.hash(password, 5);
-  
+
       // Génération du token de confirmation
       const confirmationToken = func.randomCode(6, "0123456789");
-  
+
       // Créez un nouvel utilisateur
       const newUser = await User.create({
         pseudo,
@@ -89,16 +93,11 @@ export const user = {
         password: hashedPassword,
         confirmationToken,
       });
-  
+
       // Envoyez l'email de confirmation
       const confirmationUrl = `https://your-frontend-domain.com/confirm?token=${confirmationToken}`;
-      func.sentEmail(
-        email,
-        confirmationToken,
-        confirmationUrl,
-        newUser.id
-      );
-  
+      func.sentEmail(email, confirmationToken, confirmationUrl, newUser.id);
+
       // Répondez avec un succès
       return res.status(201).json({
         message: `Un mail de confirmation vous a été envoyé à l'adresse ${email}.`,
@@ -106,7 +105,9 @@ export const user = {
       });
     } catch (error) {
       console.error("Erreur lors de l'inscription :", error);
-      return res.status(500).json({ error: "Une erreur interne s'est produite." });
+      return res
+        .status(500)
+        .json({ error: "Une erreur interne s'est produite." });
     }
   },
   // Email sending to confirm account

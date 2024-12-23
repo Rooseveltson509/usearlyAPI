@@ -1,37 +1,44 @@
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import bcrypt from "bcryptjs";
 import {
-  generateAccessToken
+  generateAccessToken,
+  generateRefreshToken,
 } from "../utils/jwtUtils.js";
 const { Marque } = db;
-
-
-
 
 // Méthodes exportées
 export const brandCtrl = {
   login: async (req, res) => {
-    const { email, mdp ,rememberMe} = req.body;
+    const { email, mdp, rememberMe } = req.body;
 
     if (!email || !mdp) {
-      return res.status(400).json({ success: false, message: "Email et mot de passe requis." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email et mot de passe requis." });
     }
 
     try {
       const user = await Marque.findOne({ where: { email } });
 
       if (!user) {
-        return res.status(404).json({ success: false, message: "Utilisateur introuvable." });
+        return res
+          .status(404)
+          .json({ success: false, message: "Utilisateur introuvable." });
       }
 
       if (!user.mdp) {
-        return res.status(500).json({ success: false, message: "Mot de passe manquant pour cet utilisateur." });
+        return res.status(500).json({
+          success: false,
+          message: "Mot de passe manquant pour cet utilisateur.",
+        });
       }
 
       const passwordMatch = await bcrypt.compare(mdp, user.mdp);
 
       if (!passwordMatch) {
-        return res.status(401).json({ success: false, message: "Mot de passe incorrect." });
+        return res
+          .status(401)
+          .json({ success: false, message: "Mot de passe incorrect." });
       }
 
       // Génération des tokens
@@ -63,8 +70,9 @@ export const brandCtrl = {
       return res.status(200).json(response);
     } catch (error) {
       console.error("Erreur lors de la connexion :", error);
-      return res.status(500).json({ success: false, message: "Erreur interne." });
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur interne." });
     }
   },
-
 };
