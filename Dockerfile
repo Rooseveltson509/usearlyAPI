@@ -33,7 +33,7 @@ FROM base
 COPY --from=build /app /app
 
 # Expose the application port
-EXPOSE 8080
+EXPOSE 3000
 
 # Start the server by default, this can be overwritten at runtime
 CMD [ "npm", "run", "start" ]
