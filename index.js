@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 const configPath = path.resolve(__dirname, "./config/config.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 // Servir les fichiers statiques depuis le dossier public
-const port = process.env.PORT || 3000; // Valeur par défaut pour l'environnement local
+const PORT = process.env.PORT || 3000; // Valeur par défaut pour l'environnement local
 
 // Configuration du rate limiter
 const limiter = rateLimit({
@@ -76,7 +76,7 @@ process.on("unhandledRejection", (reason) => {
 });
 
 // launch server
-server.listen(port, function () {
-  console.log("Server en écoute sur le port : ", port);
-  console.log(`API disponible à : http://localhost:${port}${config.rootAPI}`);
+server.listen(PORT, function () {
+  console.log("Server en écoute sur le port : ", PORT);
+  console.log(`API disponible à : http://localhost:${PORT}${config.rootAPI}`);
 });
