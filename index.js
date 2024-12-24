@@ -22,6 +22,7 @@ const __dirname = path.dirname(__filename);
 const configPath = path.resolve(__dirname, "./config/config.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 // Servir les fichiers statiques depuis le dossier public
+const port = process.env.PORT || 3000; // Valeur par défaut pour l'environnement local
 
 // Configuration du rate limiter
 const limiter = rateLimit({
@@ -37,20 +38,6 @@ const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
 // Instanciate server
 const server = express();
 
-//const swaggerDocument = await loadSwaggerDocument();
-
-server.use(
-  "/tesseract",
-  express.static(path.join(__dirname, "public/tesseract"))
-);
-server.get(
-  "/list-tesseract-files",
-  limiter, // Appliquer la limitation sur cette route
-  (req, res) => {
-    const files = fs.readdirSync(path.join(__dirname, "public/tesseract"));
-    res.json(files);
-  }
-);
 // Global middleware for CORS in index.js
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
@@ -89,9 +76,7 @@ process.on("unhandledRejection", (reason) => {
 });
 
 // launch server
-server.listen(config.port, function () {
-  console.log("Server en écoute sur le port : ", config.port);
-  console.log(
-    `API disponible à : http://localhost:${config.port}${config.rootAPI}`
-  );
+server.listen(port, function () {
+  console.log("Server en écoute sur le port : ", port);
+  console.log(`API disponible à : http://localhost:${port}${config.rootAPI}`);
 });

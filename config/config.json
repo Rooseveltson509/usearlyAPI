@@ -1,6 +1,6 @@
 {
   "rootAPI": "/api/v1/",
-  "port": 3000,
+  "port": "${PORT}",
   "logging": true,
   "development": {
     "username": "${DB_USER}",
