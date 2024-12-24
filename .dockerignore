@@ -1,59 +1,22 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-/test/*.xml
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-# Ignorer les fichiers temporaires dans public
-public/*.tmp
-public/*.log
-
-# Mais inclure spécifiquement les fichiers du dossier public/tesseract
-!public/tesseract/tesseract-core-simd.wasm
-!public/tesseract/tesseract-core.wasm.js
-!public/tesseract/tesseract-core-lstm.wasm
-!public/tesseract/tesseract-core-simd-lstm.wasm
-!public/tesseract/worker.min.js
-!public/tesseract/fra.traineddata
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Dépendances
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# Next.js et fichiers de build
+.next/
+.out/
+build/
+
+# Configurations locales
 .env
 .env.*
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env
 .vercel
 
-
-# Ignorer l'environnement virtuel
-env/
-
-# Ignorer les fichiers de cache Python
+# Fichiers temporaires ou spécifiques à l'environnement
 __pycache__/
-
-# Ignorer les fichiers de log
+.DS_Store
 *.log
-
-# Ignorer les fichiers de configuration spécifiques au système
-*.env
+*.pem
+env/
