@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 const configPath = path.resolve(__dirname, "./config/config.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 // Servir les fichiers statiques depuis le dossier public
-const PORT = process.env.PORT || 3000; // Valeur par défaut pour l'environnement local
+const PORT = process.env.PORT || config.port; // Valeur par défaut pour l'environnement local
 
 // Configuration du rate limiter
 const limiter = rateLimit({
@@ -64,7 +64,11 @@ server.get(config.rootAPI, function (req, res) {
   res.status(200).send("<h1>Welcom to Usearly ApiRestFull.</h1>");
 });
 
-server.use(config.rootAPI, apiRouter);
+try {
+  server.use(config.rootAPI, apiRouter);
+} catch (err) {
+  console.error("Erreur lors du chargement des routes :", err);
+}
 //let apiRouter = express.Router();
 
 process.on("uncaughtException", (err) => {
@@ -76,7 +80,7 @@ process.on("unhandledRejection", (reason) => {
 });
 
 // launch server
-server.listen(PORT, function () {
+server.listen(PORT, "0.0.0.0", function () {
   console.log("Server en écoute sur le port : ", PORT);
   console.log(`API disponible à : http://localhost:${PORT}${config.rootAPI}`);
 });
