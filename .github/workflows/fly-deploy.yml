@@ -20,7 +20,7 @@ jobs:
           curl -L https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> $GITHUB_PATH
           echo "Flyctl installé et ajouté au PATH"
-      
+
       # Étape 3 : Vérifie l'installation et le chemin de Flyctl
       - name: Debug PATH et Flyctl
         run: |

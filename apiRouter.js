@@ -18,7 +18,7 @@ import {
   validateSuggest,
 } from "./middleware/validateReport.js";
 import rateLimit from "express-rate-limit";
-import upload from "./config/multer.js"
+import upload from "./config/multer.js";
 
 const refreshTokenLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -65,7 +65,7 @@ apiRouter
 /* apiRouter
   .route("/user/me", cors(func.corsOptionsDelegate))
   .put(user.updateUserProfile); */
-  apiRouter
+apiRouter
   .route("/user/me", cors(func.corsOptionsDelegate))
   .put(upload.single("avatar"), user.updateUserProfile); // Ajouter Multer comme middleware
 
@@ -75,7 +75,7 @@ apiRouter
 /* apiRouter
   .route("/user/mailValidation/:userId/", cors(func.corsOptionsDelegate))
   .get(user.confirmEmail); */
-  apiRouter
+apiRouter
   .route("/user/mailValidation", cors(func.corsOptionsDelegate))
   .post(user.confirmEmail);
 
@@ -145,7 +145,7 @@ apiRouter
   .route("/user/admin/reports", cors(func.corsOptionsDelegate))
   .get(reporting.getAllReports); */
 
-  apiRouter
+apiRouter
   .route("/user/reports", cors(func.corsOptionsDelegate))
   .get(reporting.getAllReports);
 

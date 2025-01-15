@@ -1,6 +1,6 @@
 "use strict";
 
-export async function up(queryInterface, Sequelize) {
+export async function up(queryInterface) {
   // Ajout de l'index avec des longueurs spécifiées pour les colonnes TEXT
   await queryInterface.addIndex(
     "Reportings",

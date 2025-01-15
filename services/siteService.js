@@ -5,8 +5,7 @@ import db from "../models/index.js"; // Import du fichier contenant les modèles
 import { AbortController } from "node-abort-controller"; // Pour gérer les timeouts
 import axios from "axios";
 import fetch from "node-fetch";
-import sharp from "sharp";
-import crypto from "crypto";
+
 // Cache pour les résultats d'OpenAI (clé : texte extrait, valeur : bugLocation)
 const bugLocationCache = new Map();
 

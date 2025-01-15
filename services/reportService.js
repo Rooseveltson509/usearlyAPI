@@ -1,7 +1,6 @@
 import db from "../models/index.js";
 const { Reporting, ReportingDescription, Category } = db;
 import { service } from "../services/siteService.js";
-const transaction = await db.sequelize.transaction();
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -10,14 +9,13 @@ dotenv.config();
 const similarityThreshold = process.env.SIMILARITY_THRESHOLD || 0.7;
 
 export const reportService = {
-
-  getCategories: async function () {
+  /*   getCategories: async function () {
     if (!cachedCategories) {
       console.log("Fetching categories from database...");
       cachedCategories = await Category.findAll({ attributes: ["name"] });
     }
     return cachedCategories;
-  },
+  }, */
   async findSimilarReporting(siteUrl, bugLocation, description) {
     // Normalisation des données
     const normalizedSiteUrl = siteUrl.trim().toLowerCase();
@@ -39,7 +37,9 @@ export const reportService = {
         offset,
       });
 
-      console.log(`Recherche paginée - Offset: ${offset}, Résultats récupérés: ${similarReportings.length}`);
+      console.log(
+        `Recherche paginée - Offset: ${offset}, Résultats récupérés: ${similarReportings.length}`
+      );
 
       // Parcourir les résultats récupérés
       for (const reporting of similarReportings) {
@@ -68,7 +68,6 @@ export const reportService = {
     // Retourner le doublon trouvé ou null
     return duplicate;
   },
-
 
   /*  async findSimilarReporting(siteUrl, bugLocation, description) {
      // Normalisation des données
@@ -100,12 +99,12 @@ export const reportService = {
    }, */
 
   /**
-  * Vérifie si une description similaire existe déjà pour un signalement donné.
-  * 
-  * @param {number} reportingId - ID du signalement.
-  * @param {number} userId - ID de l'utilisateur.
-  * @param {string} description - La description à vérifier.
-  */
+   * Vérifie si une description similaire existe déjà pour un signalement donné.
+   *
+   * @param {number} reportingId - ID du signalement.
+   * @param {number} userId - ID de l'utilisateur.
+   * @param {string} description - La description à vérifier.
+   */
   async checkExistingDescription(reportingId, userId, description) {
     const existingDescriptions = await ReportingDescription.findAll({
       where: { reportingId, userId },
@@ -132,7 +131,9 @@ export const reportService = {
     if (data.capture) {
       console.log("Extraction de texte depuis l’image...");
       try {
-        const extractedLocation = await service.extractTextFromImage(data.capture);
+        const extractedLocation = await service.extractTextFromImage(
+          data.capture
+        );
 
         if (extractedLocation) {
           bugLocation = await service.determineBugLocation(extractedLocation);
@@ -161,8 +162,9 @@ export const reportService = {
           isDuplicate: true,
           status: 200,
           success: true,
-          message: `Un problème similaire a déjà été signalé. Vous êtes la ${duplicate.ReportingDescriptions?.length || 1
-            }ᵉ personne à signaler ce problème.`,
+          message: `Un problème similaire a déjà été signalé. Vous êtes la ${
+            duplicate.ReportingDescriptions?.length || 1
+          }ᵉ personne à signaler ce problème.`,
           reportingId: duplicate.id,
           totalReports: duplicate.ReportingDescriptions?.length || 1,
         };

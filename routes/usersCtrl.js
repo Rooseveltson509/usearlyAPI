@@ -16,16 +16,16 @@ const { uid } = randToken;
 import validator from "email-validator";
 import { func } from "../funcs/functions.js";
 import Sequelize from "sequelize";
-import fs from "fs";
 const { Op } = Sequelize;
-import { moveFileToFinalDestination, deleteFileIfExists } from "../config/multer.js";
+import {
+  moveFileToFinalDestination,
+  deleteFileIfExists,
+} from "../config/multer.js";
 
 import path from "path";
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+/* const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename); */
 
 // Routers
 export const user = {
@@ -142,15 +142,14 @@ export const user = {
       });
 
       return res.status(200).json({
-        message: "Votre compte a bien été validé, veuillez à présent vous connecter.",
+        message:
+          "Votre compte a bien été validé, veuillez à présent vous connecter.",
       });
     } catch (error) {
       console.error("Erreur lors de la confirmation :", error);
       return res.status(500).json({ error: "Erreur interne." });
     }
   },
-
-
 
   // Login
   login: async (req, res) => {
@@ -271,35 +270,35 @@ export const user = {
   // Email sending to confirm account
   forgotPassword: async (req, res) => {
     const { email } = req.body;
-  
+
     // Vérification des paramètres
     if (!email) {
       return res.status(400).json({ success: false, message: "Email requis." });
     }
-  
+
     if (!validator.validate(email)) {
       return res
         .status(400)
         .json({ success: false, message: "Format de l'email invalide." });
     }
-  
+
     try {
       // Vérification si l'utilisateur existe
       const user = await User.findOne({ where: { email } });
-  
+
       if (!user) {
         return res
           .status(404)
           .json({ success: false, message: "Utilisateur introuvable." });
       }
-  
+
       if (!user.confirmedAt) {
         return res.status(400).json({
           success: false,
           message: "L'utilisateur n'a pas encore confirmé son compte.",
         });
       }
-  
+
       // Génération et mise à jour des informations de réinitialisation
       const resetToken = uid(64);
       await user.update({
@@ -307,7 +306,7 @@ export const user = {
         resetAt: new Date(),
         expiredAt: new Date(Date.now() + 60 * 60 * 1000), // Expiration dans 1 heure
       });
-  
+
       // Envoi de l'email de réinitialisation
       await func.sendResetPasswordEmail(
         user.email,
@@ -316,15 +315,18 @@ export const user = {
         user.id,
         resetToken
       );
-  
+
       // Réponse en cas de succès
       return res.status(200).json({
         success: true,
         message: `Un email de réinitialisation a été envoyé à l'adresse : ${user.email}.`,
       });
     } catch (error) {
-      console.error("Erreur lors de la réinitialisation du mot de passe :", error);
-  
+      console.error(
+        "Erreur lors de la réinitialisation du mot de passe :",
+        error
+      );
+
       return res.status(500).json({
         success: false,
         message: "Erreur interne. Veuillez réessayer plus tard.",
@@ -569,51 +571,56 @@ export const user = {
     try {
       let headerAuth = req.headers["authorization"];
       let userId = getUserId(headerAuth);
-  
+
       if (userId < 0) {
         return res.status(400).json({ error: "missing parameters" });
       }
-  
+
       if (!userId) {
         if (avatarFile) await deleteFileIfExists(avatarFile.path);
         return res.status(401).json({ error: "Utilisateur non authentifié." });
       }
-  
+
       const { pseudo, born, gender } = req.body;
-  
+
       // Validation des données
       if (!pseudo || pseudo.length < 3 || pseudo.length > 50) {
         if (avatarFile) await deleteFileIfExists(avatarFile.path);
         return res.status(400).json({
-          error: "Pseudo invalide. Minimum 3 caractères, maximum 50 caractères.",
+          error:
+            "Pseudo invalide. Minimum 3 caractères, maximum 50 caractères.",
         });
       }
-  
+
       const user = await User.findByPk(userId);
       if (!user) {
         if (avatarFile) await deleteFileIfExists(avatarFile.path);
         return res.status(404).json({ error: "Utilisateur non trouvé." });
       }
-  
+
       // Gestion de l'avatar
       let finalAvatarPath = user.avatar;
       if (avatarFile) {
         const finalDir = "uploads/avatars";
         const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
         const finalPath = path.join(finalDir, finalName);
-  
+
         // Déplacer le fichier temporaire à son emplacement final
         await moveFileToFinalDestination(avatarFile.path, finalPath);
-  
+
         // Supprimer l'ancien avatar s'il existe
         if (user.avatar) {
-          const oldAvatarPath = path.join("uploads", "avatars", path.basename(user.avatar));
+          const oldAvatarPath = path.join(
+            "uploads",
+            "avatars",
+            path.basename(user.avatar)
+          );
           await deleteFileIfExists(oldAvatarPath);
         }
-  
+
         finalAvatarPath = finalPath;
       }
-  
+
       // Mettre à jour les informations de l'utilisateur
       await user.update({
         pseudo: pseudo || user.pseudo,
@@ -621,7 +628,7 @@ export const user = {
         gender: gender || user.gender,
         avatar: finalAvatarPath,
       });
-  
+
       return res.status(200).json({
         success: true,
         message: "Profil mis à jour avec succès.",
@@ -632,10 +639,7 @@ export const user = {
       if (avatarFile) await deleteFileIfExists(avatarFile.path); // Supprime le fichier temporaire en cas d'erreur
       return res.status(500).json({ error: "Erreur interne du serveur." });
     }
-  
   },
-
-
 
   // update user password
   updateUserPassword: async function (req, res) {

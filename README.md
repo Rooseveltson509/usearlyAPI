@@ -38,15 +38,16 @@ Avant de commencer, assurez-vous que votre machine a les éléments suivants :
 ## Installation
 
 1. Clonez ce dépôt :
+
    ```bash
    git clone https://github.com/votre-utilisateur/projet-api.git
    cd projet-api
    ```
 
    ## lint
-   ```bash 
-   npm run lint 
+
+   ```bash
+   npm run lint
    npm run format
    npx prettier --write routes/example.js
    ```
-  

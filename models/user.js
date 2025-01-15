@@ -88,7 +88,7 @@ export default (sequelize, DataTypes) => {
       avatar: {
         type: DataTypes.STRING,
         allowNull: true, // Facultatif
-/*         validate: {
+        /*         validate: {
           isDate: true, // Valide les dates
         }, */
       },
