@@ -20,6 +20,7 @@ const { Op } = Sequelize;
 import {
   moveFileToFinalDestination,
   deleteFileIfExists,
+  ensureDirectoryExists,
 } from "../config/multer.js";
 
 import path from "path";
@@ -568,12 +569,14 @@ export const user = {
   // update user profile
   updateUserProfile: async (req, res) => {
     const avatarFile = req.file; // Fichier temporaire
+
     try {
       let headerAuth = req.headers["authorization"];
       let userId = getUserId(headerAuth);
 
       if (userId < 0) {
-        return res.status(400).json({ error: "missing parameters" });
+        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        return res.status(400).json({ error: "Paramètres manquants." });
       }
 
       if (!userId) {
@@ -601,24 +604,29 @@ export const user = {
       // Gestion de l'avatar
       let finalAvatarPath = user.avatar;
       if (avatarFile) {
-        const finalDir = "uploads/avatars";
-        const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
+        // Correction ici
+        const finalDir = path.resolve("uploads/avatars"); // Résout le chemin absolu pour éviter les erreurs
+        const finalName = `avatar-${Date.now()}-${userId}${path.extname(
+          avatarFile.originalname
+        )}`;
         const finalPath = path.join(finalDir, finalName);
+
+        // Assurez-vous que le répertoire final existe
+        ensureDirectoryExists(finalDir);
 
         // Déplacer le fichier temporaire à son emplacement final
         await moveFileToFinalDestination(avatarFile.path, finalPath);
 
         // Supprimer l'ancien avatar s'il existe
         if (user.avatar) {
-          const oldAvatarPath = path.join(
-            "uploads",
-            "avatars",
+          const oldAvatarPath = path.resolve(
+            "uploads/avatars",
             path.basename(user.avatar)
           );
           await deleteFileIfExists(oldAvatarPath);
         }
 
-        finalAvatarPath = finalPath;
+        finalAvatarPath = `uploads/avatars/${finalName}`; // Correction : Chemin relatif pour l'enregistrement
       }
 
       // Mettre à jour les informations de l'utilisateur

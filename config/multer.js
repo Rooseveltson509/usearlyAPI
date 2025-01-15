@@ -9,12 +9,17 @@ const ensureDirectoryExists = (dir) => {
   }
 };
 
+// Répertoire temporaire autorisé
+const tempDirectory = path.resolve("uploads/temp");
+
+// Répertoire final autorisé
+const finalDirectoryBase = path.resolve("uploads/avatars");
+
 // Configuration de stockage temporaire
 const tempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const tempDir = "uploads/temp";
-    ensureDirectoryExists(tempDir); // Vérifie et crée le dossier temporaire
-    cb(null, tempDir);
+    ensureDirectoryExists(tempDirectory); // Vérifie et crée le dossier temporaire
+    cb(null, tempDirectory);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -44,12 +49,24 @@ const upload = multer({ storage: tempStorage, fileFilter, limits });
 // Fonction pour déplacer un fichier du répertoire temporaire à son emplacement final
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
   try {
+    // Résolution des chemins pour validation
+    const resolvedTempPath = path.resolve(tempPath);
+    const resolvedFinalPath = path.resolve(finalPath);
+
+    // Assurez-vous que les chemins appartiennent aux répertoires autorisés
+    if (!resolvedTempPath.startsWith(tempDirectory)) {
+      throw new Error("Chemin temporaire non autorisé.");
+    }
+    if (!resolvedFinalPath.startsWith(finalDirectoryBase)) {
+      throw new Error("Chemin final non autorisé.");
+    }
+
     // Assurez-vous que le répertoire final existe
-    const finalDir = path.dirname(finalPath);
+    const finalDir = path.dirname(resolvedFinalPath);
     ensureDirectoryExists(finalDir);
 
     // Déplacer le fichier
-    await fs.promises.rename(tempPath, finalPath);
+    await fs.promises.rename(resolvedTempPath, resolvedFinalPath);
   } catch (err) {
     console.error("Erreur lors du déplacement du fichier :", err);
     throw err;
@@ -59,8 +76,18 @@ const moveFileToFinalDestination = async (tempPath, finalPath) => {
 // Fonction pour supprimer un fichier inutilisé
 const deleteFileIfExists = async (filePath) => {
   try {
-    if (fs.existsSync(filePath)) {
-      await fs.promises.unlink(filePath);
+    const resolvedFilePath = path.resolve(filePath);
+
+    // Vérifiez que le chemin appartient à un répertoire autorisé
+    if (
+      !resolvedFilePath.startsWith(tempDirectory) &&
+      !resolvedFilePath.startsWith(finalDirectoryBase)
+    ) {
+      throw new Error("Tentative de suppression d'un fichier non autorisé.");
+    }
+
+    if (fs.existsSync(resolvedFilePath)) {
+      await fs.promises.unlink(resolvedFilePath);
     }
   } catch (err) {
     console.error("Erreur lors de la suppression du fichier :", err);
@@ -68,4 +95,5 @@ const deleteFileIfExists = async (filePath) => {
 };
 
 export default upload;
+export { ensureDirectoryExists };
 export { moveFileToFinalDestination, deleteFileIfExists };
