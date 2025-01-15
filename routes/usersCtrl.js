@@ -604,8 +604,18 @@ export const user = {
       // Gestion de l'avatar
       let finalAvatarPath = user.avatar;
       if (avatarFile) {
-        // Correction ici
-        const finalDir = path.resolve("uploads/avatars"); // Résout le chemin absolu pour éviter les erreurs
+        const tempPath = path.resolve(avatarFile.path);
+
+        // Validation du chemin temporaire
+        const tempBaseDir = path.resolve("uploads/temp");
+        if (!tempPath.startsWith(tempBaseDir)) {
+          await deleteFileIfExists(tempPath);
+          return res
+            .status(400)
+            .json({ error: "Chemin temporaire non autorisé." });
+        }
+
+        const finalDir = path.resolve("uploads/avatars");
         const finalName = `avatar-${Date.now()}-${userId}${path.extname(
           avatarFile.originalname
         )}`;
@@ -615,7 +625,7 @@ export const user = {
         ensureDirectoryExists(finalDir);
 
         // Déplacer le fichier temporaire à son emplacement final
-        await moveFileToFinalDestination(avatarFile.path, finalPath);
+        await moveFileToFinalDestination(tempPath, finalPath);
 
         // Supprimer l'ancien avatar s'il existe
         if (user.avatar) {
@@ -623,10 +633,14 @@ export const user = {
             "uploads/avatars",
             path.basename(user.avatar)
           );
-          await deleteFileIfExists(oldAvatarPath);
+
+          // Valider et supprimer l'ancien avatar
+          if (oldAvatarPath.startsWith(finalDir)) {
+            await deleteFileIfExists(oldAvatarPath);
+          }
         }
 
-        finalAvatarPath = `uploads/avatars/${finalName}`; // Correction : Chemin relatif pour l'enregistrement
+        finalAvatarPath = `uploads/avatars/${finalName}`; // Chemin relatif pour l'enregistrement dans la base de données
       }
 
       // Mettre à jour les informations de l'utilisateur

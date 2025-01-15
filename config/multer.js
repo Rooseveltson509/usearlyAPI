@@ -13,7 +13,7 @@ const ensureDirectoryExists = (dir) => {
 const tempDirectory = path.resolve("uploads/temp");
 
 // Répertoire final autorisé
-const finalDirectoryBase = path.resolve("uploads/avatars");
+//const finalDirectoryBase = path.resolve("uploads/avatars");
 
 // Configuration de stockage temporaire
 const tempStorage = multer.diskStorage({
@@ -49,6 +49,32 @@ const upload = multer({ storage: tempStorage, fileFilter, limits });
 // Fonction pour déplacer un fichier du répertoire temporaire à son emplacement final
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
   try {
+    const resolvedTempPath = path.resolve(tempPath);
+    const resolvedFinalPath = path.resolve(finalPath);
+
+    // Assurez-vous que les chemins restent dans le répertoire attendu
+    const baseDir = path.resolve("uploads");
+    if (
+      !resolvedTempPath.startsWith(baseDir) ||
+      !resolvedFinalPath.startsWith(baseDir)
+    ) {
+      throw new Error("Tentative d'accès à des chemins non autorisés");
+    }
+
+    // Assurez-vous que le répertoire final existe
+    const finalDir = path.dirname(resolvedFinalPath);
+    ensureDirectoryExists(finalDir);
+
+    // Déplacer le fichier
+    await fs.promises.rename(resolvedTempPath, resolvedFinalPath);
+  } catch (err) {
+    console.error("Erreur lors du déplacement du fichier :", err);
+    throw err;
+  }
+};
+
+/* const moveFileToFinalDestination = async (tempPath, finalPath) => {
+  try {
     // Résolution des chemins pour validation
     const resolvedTempPath = path.resolve(tempPath);
     const resolvedFinalPath = path.resolve(finalPath);
@@ -71,10 +97,30 @@ const moveFileToFinalDestination = async (tempPath, finalPath) => {
     console.error("Erreur lors du déplacement du fichier :", err);
     throw err;
   }
-};
+}; */
 
 // Fonction pour supprimer un fichier inutilisé
 const deleteFileIfExists = async (filePath) => {
+  try {
+    // Résoudre le chemin pour éviter les injections de chemin
+    const resolvedFilePath = path.resolve(filePath);
+
+    // Vérifiez que le chemin reste dans un répertoire sécurisé
+    const baseDir = path.resolve("uploads"); // Limite les actions dans ce répertoire
+    if (!resolvedFilePath.startsWith(baseDir)) {
+      throw new Error("Tentative d'accès à un chemin non autorisé");
+    }
+
+    if (fs.existsSync(resolvedFilePath)) {
+      await fs.promises.unlink(resolvedFilePath);
+    }
+  } catch (err) {
+    console.error("Erreur lors de la suppression du fichier :", err);
+    throw err;
+  }
+};
+
+/* const deleteFileIfExists = async (filePath) => {
   try {
     const resolvedFilePath = path.resolve(filePath);
 
@@ -92,7 +138,7 @@ const deleteFileIfExists = async (filePath) => {
   } catch (err) {
     console.error("Erreur lors de la suppression du fichier :", err);
   }
-};
+}; */
 
 export default upload;
 export { ensureDirectoryExists };
