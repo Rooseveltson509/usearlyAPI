@@ -9,60 +9,6 @@ import { performance } from "perf_hooks";
 
 export const reporting = {
   // Créer un rapport
-  /*   createReport: async function (req, res) {
-      try {
-        const userId = getUserId(req.headers["authorization"]);
-        if (userId <= 0) {
-          return res.status(400).json({ error: "missing parameters..." });
-        }
-  
-        const { siteUrl, description } = req.body;
-        const normalizedUrl = service.normalizeUrl(siteUrl);
-  
-        if (!service.isValidUrl(normalizedUrl)) {
-          return res
-            .status(400)
-            .json({ error: "URL invalide ou non approuvée.", siteUrl });
-        }
-  
-        await reportService.validateUser(userId);
-  
-        // Chargement des catégories existantes
-        const existingCategories = await Category.findAll({
-          attributes: ["name"],
-        });
-        const categoryNames = existingCategories.map((cat) => cat.name);
-  
-        const siteMetadata = await service.getSiteMetadata(normalizedUrl);
-  
-        const { siteType, categories: generatedCategories } =
-          await service.getCategoriesAndSiteType(
-            description,
-            siteMetadata,
-            categoryNames,
-            []
-          );
-  
-        const siteTypeObject = await service.findOrCreateSiteType(siteType);
-        const siteTypeId = siteTypeObject.id;
-  
-        // Création d’un nouveau signalement ou détection de doublon
-        const reportResult = await reportService.createReporting(
-          userId,
-          req.body,
-          generatedCategories,
-          siteTypeId
-        );
-  
-        // Retourner la réponse appropriée en cas de doublon ou de création
-        return res.status(reportResult.status).json(reportResult);
-      } catch (error) {
-        logger.error("Erreur lors de la création du signalement :", error);
-        return res.status(500).json({
-          error: "Une erreur est survenue lors de la création du signalement.",
-        });
-      }
-    }, */
   createReport: async function (req, res) {
     try {
       const startTotal = performance.now(); // Démarrage
@@ -138,7 +84,8 @@ export const reporting = {
 
       // Vérifier si l'utilisateur est un administrateur
       const admin = await User.findOne({
-        where: { id: adminId, role: "admin" },
+        where: { id: adminId },
+        //where: { id: adminId, role: "admin" },
       });
       if (!admin) {
         return res.status(403).json({ error: "Accès non autorisé." });
@@ -178,7 +125,8 @@ export const reporting = {
         offset: parseInt(offset),
         order: [["createdAt", "DESC"]],
       });
-
+      // Ajouter l'en-tête Content-Type
+      res.setHeader("Content-Type", "application/json");
       // Retourner les reportings avec pagination
       return res.status(200).json({
         totalReports: count,
@@ -188,6 +136,8 @@ export const reporting = {
       });
     } catch (err) {
       console.error("Erreur lors de la récupération des reportings :", err);
+      // Ajouter l'en-tête Content-Type
+      res.setHeader("Content-Type", "application/json");
       return res.status(500).json({
         error:
           "Une erreur est survenue lors de la récupération des signalements.",

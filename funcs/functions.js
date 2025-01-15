@@ -13,6 +13,7 @@ const ALPHANUMERIC_NUMBER = /^([a-zA-Z0-9_-]){2,50}$/;
 
 let allowlist = [
   "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
+  "http://localhost:5173",
   "https://www.nike.com",
   "https://www.zalando.fr",
   "https://www.laboutiqueofficielle.com",
@@ -27,9 +28,54 @@ export const func = {
     return result;
   },
 
+   validatePassword: function(password) {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return passwordRegex.test(password);
+  },
+  
   checkPassword: function (pwd) {
     return PASSWORD_REGEX.test(pwd);
   },
+
+  generatePassword: (length = 8) => {
+    if (length < 8) {
+      throw new Error("La longueur minimale du mot de passe est de 8 caractères.");
+    }
+  
+    const uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // Lettres majuscules
+    const lowercaseChars = "abcdefghijklmnopqrstuvwxyz"; // Lettres minuscules
+    const numberChars = "0123456789"; // Chiffres
+    const specialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?/"; // Caractères spéciaux
+    const allChars = uppercaseChars + lowercaseChars + numberChars + specialChars;
+  
+    const getRandomChar = (charset) => charset[Math.floor(Math.random() * charset.length)];
+  
+    // Assurer que le mot de passe contient au moins une majuscule, une minuscule, un chiffre et un caractère spécial
+    const passwordArray = [
+      getRandomChar(uppercaseChars),
+      getRandomChar(lowercaseChars),
+      getRandomChar(numberChars),
+      getRandomChar(specialChars),
+    ];
+  
+    // Remplir les caractères restants de manière aléatoire
+    for (let i = passwordArray.length; i < length; i++) {
+      passwordArray.push(getRandomChar(allChars));
+    }
+  
+    // Mélanger les caractères pour éviter une structure prévisible
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+    }
+  
+    return passwordArray.join("");
+  },
+  
+  // Exemple d'utilisation
+/*   const newPassword = generatePassword(12);
+  console.log("Mot de passe généré :", newPassword); */
+  
 
   isValidDateFormat: function (dateString) {
     // Vérifier si la date correspond à l'un des deux formats dd/mm/yyyy ou dd-mm-yyyy
@@ -55,27 +101,22 @@ export const func = {
   },
 
   validateAndCheckAdult: function (dateString) {
-    // Expression régulière pour vérifier le format "dd-mm-yyyy" ou "dd/mm/yyyy"
     const regex = /^(\d{2})([-/])(\d{2})\2(\d{4})$/;
-
+  
     const match = dateString.match(regex);
-
+  
     if (!match) {
-      // Affiche un message d'erreur clair pour l'utilisateur
       return {
         isValid: false,
-        message:
-          "Format de date incorrect. Veuillez utiliser le format 'dd-mm-yyyy' ou 'dd/mm/yyyy'.",
+        message: "Format de date incorrect. Veuillez utiliser le format 'dd-mm-yyyy' ou 'dd/mm/yyyy'.",
       };
     }
-
-    // Extraire les parties de la date
+  
     const day = parseInt(match[1], 10);
     const month = parseInt(match[3], 10);
     const year = parseInt(match[4], 10);
-
-    // Vérifier si la date est valide
-    const date = new Date(year, month - 1, day); // month - 1 car les mois commencent à 0 en JS
+  
+    const date = new Date(year, month - 1, day);
     if (
       date.getFullYear() !== year ||
       date.getMonth() !== month - 1 ||
@@ -83,33 +124,28 @@ export const func = {
     ) {
       return {
         isValid: false,
-        message:
-          "La date est invalide. Vérifiez les valeurs fournies. format accepté: (mm-dd-yyyy or mm/dd/yyyy)",
+        message: "La date est invalide. Vérifiez les valeurs fournies.",
       };
     }
-
-    // Calculer l'âge de l'utilisateur
+  
     const today = new Date();
     const age =
       today.getFullYear() -
       year -
-      (today.getMonth() < month - 1 ||
-      (today.getMonth() === month - 1 && today.getDate() < day)
-        ? 1
-        : 0);
-
-    // Vérifier si l'utilisateur est adulte (18 ans ou plus)
+      (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day) ? 1 : 0);
+  
     const isAdult = age >= 18;
-
+  
     return {
       isValid: true,
       isAdult,
       age,
+      date, // Inclure la date transformée ici
       message: isAdult
         ? "L'utilisateur est adulte."
         : "L'utilisateur doit être majeur pour continuer.",
     };
-  },
+  },  
 
   checkString: function (text) {
     return ALPHANUMERIC_NUMBER.test(text);

@@ -16,7 +16,16 @@ const { uid } = randToken;
 import validator from "email-validator";
 import { func } from "../funcs/functions.js";
 import Sequelize from "sequelize";
+import fs from "fs";
 const { Op } = Sequelize;
+import { moveFileToFinalDestination, deleteFileIfExists } from "../config/multer.js";
+
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 // Routers
 export const user = {
@@ -37,6 +46,9 @@ export const user = {
         return res.status(400).json({ error: validation.message });
       }
       const dateOfBirth = validation.date; // La date transformée en objet Date
+
+      console.log("Date reçue (born) :", born);
+      console.log("Date transformée :", dateOfBirth);
 
       // Vérifiez si l'utilisateur est majeur
       if (!validation.isAdult) {
@@ -59,7 +71,7 @@ export const user = {
       }
 
       // Vérifiez si le mot de passe est valide
-      if (!func.checkPassword(password)) {
+      if (!func.validatePassword(password)) {
         return res.status(400).json({
           error:
             "Le mot de passe doit contenir au moins 1 caractère spécial, 1 chiffre, et être d'au moins 8 caractères.",
@@ -102,6 +114,7 @@ export const user = {
       return res.status(201).json({
         message: `Un mail de confirmation vous a été envoyé à l'adresse ${email}.`,
         email,
+        userId: newUser.id,
       });
     } catch (error) {
       console.error("Erreur lors de l'inscription :", error);
@@ -111,66 +124,33 @@ export const user = {
     }
   },
   // Email sending to confirm account
-  confirmEmail: function (req, res) {
-    // Params
-    var userId = req.params.userId;
-    var token = req.body.token;
+  confirmEmail: async (req, res) => {
+    const { userId, token } = req.body;
 
-    //const { userId, token } = req.query;
+    try {
+      const user = await User.findOne({
+        where: { id: userId, confirmationToken: token },
+      });
 
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { id: userId, confirmationToken: token },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res
-                .status(500)
-                .json({ error: "unable to verify the user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            userFound
-              .update({
-                confirmationToken: null,
-                confirmedAt: new Date(Date.now()),
-              })
-              .then(function () {
-                done(userFound);
-              })
-              .catch(function (err) {
-                res
-                  .status(500)
-                  .json({ error: "Impossible de vérifier cet user" });
-              });
-          } else {
-            res.status(404).json({ error: "Utilisateur introuvable" });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          res.status(200).json({
-            msg: "Votre compte a bien été validé, veuillez à présent vous connecter.",
-          });
-
-          // decommente pour la prod
-          /* res.writeHead(302, {
-            Location: "/register",
-          }); */
-          return res.end();
-          // return
-        } else {
-          return res.status(500).json({ error: "INVALID TOKEN." });
-        }
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur introuvable" });
       }
-    );
+
+      await user.update({
+        confirmationToken: null,
+        confirmedAt: new Date(Date.now()),
+      });
+
+      return res.status(200).json({
+        message: "Votre compte a bien été validé, veuillez à présent vous connecter.",
+      });
+    } catch (error) {
+      console.error("Erreur lors de la confirmation :", error);
+      return res.status(500).json({ error: "Erreur interne." });
+    }
   },
+
+
 
   // Login
   login: async (req, res) => {
@@ -289,74 +269,67 @@ export const user = {
   },
 
   // Email sending to confirm account
-  forgotPassword: function (req, res) {
-    // Params
-    let email = req.body.email;
-
-    if (email == null) {
-      return res.status(400).json({ error: "Invalid credencials" });
+  forgotPassword: async (req, res) => {
+    const { email } = req.body;
+  
+    // Vérification des paramètres
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email requis." });
     }
-
+  
     if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Format de l'email invalide." });
     }
-
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { email: email },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res
-                .status(500)
-                .json({ error: "unable to verify user email" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound && userFound.confirmedAt !== null) {
-            const resetToken = uid(64);
-            userFound
-              .update({
-                resetToken: resetToken,
-                resetAt: new Date(Date.now()),
-                expiredAt: new Date(Date.now() + 60 * 60 * 1000),
-              })
-              .then(function (userFound) {
-                func.sendResetPasswordEmail(
-                  userFound.email,
-                  userFound.pseudo,
-                  "https://usearly-api.vercel.app",
-                  userFound.id,
-                  resetToken
-                );
-                done(userFound);
-              })
-              .catch(function (err) {
-                res.status(500).json({ error: "cannot update user password." });
-              });
-          } else {
-            res.status(404).json({ error: "user not found" });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(201).json({
-            msg:
-              "Pour réinitialiser votre mot de passe un mail vous a été envoyer l'adresse : " +
-              userFound.email +
-              " " +
-              new Date(Date.now()),
-          });
-        } else {
-          return res.status(500).json({ error: "cannot update user profile" });
-        }
+  
+    try {
+      // Vérification si l'utilisateur existe
+      const user = await User.findOne({ where: { email } });
+  
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Utilisateur introuvable." });
       }
-    );
+  
+      if (!user.confirmedAt) {
+        return res.status(400).json({
+          success: false,
+          message: "L'utilisateur n'a pas encore confirmé son compte.",
+        });
+      }
+  
+      // Génération et mise à jour des informations de réinitialisation
+      const resetToken = uid(64);
+      await user.update({
+        resetToken,
+        resetAt: new Date(),
+        expiredAt: new Date(Date.now() + 60 * 60 * 1000), // Expiration dans 1 heure
+      });
+  
+      // Envoi de l'email de réinitialisation
+      await func.sendResetPasswordEmail(
+        user.email,
+        user.pseudo,
+        "https://usearly-api.vercel.app",
+        user.id,
+        resetToken
+      );
+  
+      // Réponse en cas de succès
+      return res.status(200).json({
+        success: true,
+        message: `Un email de réinitialisation a été envoyé à l'adresse : ${user.email}.`,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la réinitialisation du mot de passe :", error);
+  
+      return res.status(500).json({
+        success: false,
+        message: "Erreur interne. Veuillez réessayer plus tard.",
+      });
+    }
   },
 
   // RESET PASSWORD
@@ -575,7 +548,7 @@ export const user = {
     if (userId < 0) return res.status(400).json({ error: "wrong token" });
 
     User.findOne({
-      attributes: ["gender", "pseudo", "born", "email"],
+      attributes: ["gender", "pseudo", "born", "email", "avatar"],
       where: { id: userId },
     })
       .then(function (user) {
@@ -591,81 +564,78 @@ export const user = {
   },
 
   // update user profile
-  updateUserProfile: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = getUserId(headerAuth);
-
-    // Params
-    let pseudo = req.body.pseudo;
-    let born = req.body.born;
-    let gender = req.body.gender;
-
-    const exactlyNYearsAgoDate = (yearsAgo) =>
-      new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));
-    const mockBirthday = new Date(born);
-    const isAdult = mockBirthday.getTime() < exactlyNYearsAgoDate(18).getTime();
-
-    if (!func.checkString(pseudo)) {
-      return res.status(400).json({
-        error:
-          "Invalid pseudo (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-
-    if (gender == null) {
-      return res
-        .status(400)
-        .json({ error: "Gender INVALID (must be (monsieur) - (madame))...." });
-    }
-
-    if (!isAdult) {
-      return res.status(400).json({
-        error: "born (You should be 18 years of age or older)",
-      });
-    }
-
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { id: userId },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "unable to verify user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            userFound
-              .update({
-                pseudo: pseudo ? pseudo : userFound.pseudo,
-                born: born ? born : userFound.born,
-                gender: gender ? gender : userFound.gender,
-              })
-              .then(function () {
-                done(userFound);
-              })
-              .catch(function (err) {
-                res.status(500).json({ error: "cannot update user" });
-              });
-          } else {
-            res.status(404).json({ error: "user not found" });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res.status(201).json(userFound);
-        } else {
-          return res.status(500).json({ error: "cannot update user profile" });
-        }
+  updateUserProfile: async (req, res) => {
+    const avatarFile = req.file; // Fichier temporaire
+    try {
+      let headerAuth = req.headers["authorization"];
+      let userId = getUserId(headerAuth);
+  
+      if (userId < 0) {
+        return res.status(400).json({ error: "missing parameters" });
       }
-    );
+  
+      if (!userId) {
+        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        return res.status(401).json({ error: "Utilisateur non authentifié." });
+      }
+  
+      const { pseudo, born, gender } = req.body;
+  
+      // Validation des données
+      if (!pseudo || pseudo.length < 3 || pseudo.length > 50) {
+        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        return res.status(400).json({
+          error: "Pseudo invalide. Minimum 3 caractères, maximum 50 caractères.",
+        });
+      }
+  
+      const user = await User.findByPk(userId);
+      if (!user) {
+        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        return res.status(404).json({ error: "Utilisateur non trouvé." });
+      }
+  
+      // Gestion de l'avatar
+      let finalAvatarPath = user.avatar;
+      if (avatarFile) {
+        const finalDir = "uploads/avatars";
+        const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
+        const finalPath = path.join(finalDir, finalName);
+  
+        // Déplacer le fichier temporaire à son emplacement final
+        await moveFileToFinalDestination(avatarFile.path, finalPath);
+  
+        // Supprimer l'ancien avatar s'il existe
+        if (user.avatar) {
+          const oldAvatarPath = path.join("uploads", "avatars", path.basename(user.avatar));
+          await deleteFileIfExists(oldAvatarPath);
+        }
+  
+        finalAvatarPath = finalPath;
+      }
+  
+      // Mettre à jour les informations de l'utilisateur
+      await user.update({
+        pseudo: pseudo || user.pseudo,
+        born: born || user.born,
+        gender: gender || user.gender,
+        avatar: finalAvatarPath,
+      });
+  
+      return res.status(200).json({
+        success: true,
+        message: "Profil mis à jour avec succès.",
+        user,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du profil :", error);
+      if (avatarFile) await deleteFileIfExists(avatarFile.path); // Supprime le fichier temporaire en cas d'erreur
+      return res.status(500).json({ error: "Erreur interne du serveur." });
+    }
+  
   },
+
+
 
   // update user password
   updateUserPassword: async function (req, res) {

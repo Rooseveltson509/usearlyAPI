@@ -85,6 +85,13 @@ export default (sequelize, DataTypes) => {
           isDate: true, // Valide les dates
         },
       },
+      avatar: {
+        type: DataTypes.STRING,
+        allowNull: true, // Facultatif
+/*         validate: {
+          isDate: true, // Valide les dates
+        }, */
+      },
       role: {
         type: DataTypes.ENUM("user", "admin"),
         defaultValue: "user",

@@ -35,7 +35,7 @@ export const service = {
    * @returns {Promise<number>} - Similarité (0 à 1)
    */
   compareDescriptions: async function (desc1, desc2) {
-    const API_KEY = process.env.OPENAI_API_KEY; // Votre clé API OpenAI
+    const API_KEY = process.env.OPENAI_API_KEY; // Ma clé API OpenAI
 
     // Fonction pour nettoyer les descriptions
     const cleanText = (text) =>

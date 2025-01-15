@@ -42,6 +42,10 @@ const server = express();
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
 
+// Configurez un chemin public pour servir les fichiers statiques
+server.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 // Body Parser configuration
 server.use(bodyParser.urlencoded({ extended: true, limit: "10mb" })); // Augmente la limite des requêtes URL-encoded
 server.use(bodyParser.json({ limit: "10mb" })); // Augmente la limite des requêtes JSON

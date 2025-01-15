@@ -18,6 +18,7 @@ import {
   validateSuggest,
 } from "./middleware/validateReport.js";
 import rateLimit from "express-rate-limit";
+import upload from "./config/multer.js"
 
 const refreshTokenLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -33,7 +34,7 @@ const apiRouter = express.Router();
 // Configuration CORS pour autoriser toutes les origines
 const permissiveCors = {
   origin: true, // Autoriser toutes les origines
-  methods: ["POST"], // Limiter aux méthodes nécessaires
+  methods: ["POST", "GET"], // Limiter aux méthodes nécessaires
   credentials: false, // Désactiver les cookies (optionnel)
 };
 // 1-a Users routes
@@ -60,17 +61,26 @@ apiRouter
 apiRouter
   .route("/user/me", cors(func.corsOptionsDelegate))
   .get(user.getUserProfile);
-apiRouter
+
+/* apiRouter
   .route("/user/me", cors(func.corsOptionsDelegate))
-  .put(user.updateUserProfile);
+  .put(user.updateUserProfile); */
+  apiRouter
+  .route("/user/me", cors(func.corsOptionsDelegate))
+  .put(upload.single("avatar"), user.updateUserProfile); // Ajouter Multer comme middleware
+
 apiRouter
   .route("/user/pwd/me", cors(func.corsOptionsDelegate))
   .put(user.updateUserPassword);
-apiRouter
+/* apiRouter
   .route("/user/mailValidation/:userId/", cors(func.corsOptionsDelegate))
-  .get(user.confirmEmail);
+  .get(user.confirmEmail); */
+  apiRouter
+  .route("/user/mailValidation", cors(func.corsOptionsDelegate))
+  .post(user.confirmEmail);
+
 apiRouter
-  .route("/user/forget", cors(func.corsOptionsDelegate))
+  .route("/user/forgot-password", cors(func.corsOptionsDelegate))
   .post(user.forgotPassword);
 apiRouter
   .route("/user/resetpwd/:userId/:token", cors(func.corsOptionsDelegate))
@@ -131,8 +141,12 @@ apiRouter
     coupDeCoeur.createCoupdeCoeur
   );
 
-apiRouter
+/* apiRouter
   .route("/user/admin/reports", cors(func.corsOptionsDelegate))
+  .get(reporting.getAllReports); */
+
+  apiRouter
+  .route("/user/reports", cors(func.corsOptionsDelegate))
   .get(reporting.getAllReports);
 
 apiRouter
