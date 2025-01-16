@@ -4,7 +4,6 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import rateLimit from "express-rate-limit";
 import path from "path";
 dotenv.config();
 import bodyParser from "body-parser";
@@ -24,14 +23,6 @@ const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 // Servir les fichiers statiques depuis le dossier public
 const PORT = process.env.PORT || config.port; // Valeur par défaut pour l'environnement local
 
-// Configuration du rate limiter
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // Fenêtre de 15 minutes
-  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
-  message:
-    "Trop de requêtes provenant de cette IP. Veuillez réessayer plus tard.",
-});
-
 //const swaggerUi = require("swagger-ui-express");
 const swaggerPath = path.resolve("./config/swagger.json");
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
@@ -41,6 +32,9 @@ const server = express();
 // Global middleware for CORS in index.js
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
+
+// Configurez un chemin public pour servir les fichiers statiques
+server.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Body Parser configuration
 server.use(bodyParser.urlencoded({ extended: true, limit: "10mb" })); // Augmente la limite des requêtes URL-encoded

@@ -38,6 +38,10 @@ export async function up(queryInterface, Sequelize) {
       allowNull: true,
       type: Sequelize.DATE,
     },
+    avatar: {
+      allowNull: true,
+      type: Sequelize.STRING,
+    },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,

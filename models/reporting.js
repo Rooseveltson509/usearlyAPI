@@ -57,9 +57,9 @@ export default (sequelize, DataTypes) => {
     {
       indexes: [
         {
-          fields: ['siteUrl', 'bugLocation', 'description'], // Colonnes de l'index
-          name: 'idx_reportings_search', // Nom de l'index
-          using: 'BTREE', // Type d'index
+          fields: ["siteUrl", "bugLocation", "description"], // Colonnes de l'index
+          name: "idx_reportings_search", // Nom de l'index
+          using: "BTREE", // Type d'index
         },
       ],
     }

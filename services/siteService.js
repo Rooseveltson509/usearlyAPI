@@ -5,8 +5,7 @@ import db from "../models/index.js"; // Import du fichier contenant les modèles
 import { AbortController } from "node-abort-controller"; // Pour gérer les timeouts
 import axios from "axios";
 import fetch from "node-fetch";
-import sharp from "sharp";
-import crypto from "crypto";
+
 // Cache pour les résultats d'OpenAI (clé : texte extrait, valeur : bugLocation)
 const bugLocationCache = new Map();
 
@@ -35,7 +34,7 @@ export const service = {
    * @returns {Promise<number>} - Similarité (0 à 1)
    */
   compareDescriptions: async function (desc1, desc2) {
-    const API_KEY = process.env.OPENAI_API_KEY; // Votre clé API OpenAI
+    const API_KEY = process.env.OPENAI_API_KEY; // Ma clé API OpenAI
 
     // Fonction pour nettoyer les descriptions
     const cleanText = (text) =>
