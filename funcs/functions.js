@@ -38,48 +38,6 @@ export const func = {
     return PASSWORD_REGEX.test(pwd);
   },
 
-  generatePassword: (length = 8) => {
-    if (length < 8) {
-      throw new Error(
-        "La longueur minimale du mot de passe est de 8 caractères."
-      );
-    }
-
-    const uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // Lettres majuscules
-    const lowercaseChars = "abcdefghijklmnopqrstuvwxyz"; // Lettres minuscules
-    const numberChars = "0123456789"; // Chiffres
-    const specialChars = "!@#$%^&*()-_=+[]{}|;:,.<>?/"; // Caractères spéciaux
-    const allChars =
-      uppercaseChars + lowercaseChars + numberChars + specialChars;
-
-    const getRandomChar = (charset) =>
-      charset[Math.floor(Math.random() * charset.length)];
-
-    // Assurer que le mot de passe contient au moins une majuscule, une minuscule, un chiffre et un caractère spécial
-    const passwordArray = [
-      getRandomChar(uppercaseChars),
-      getRandomChar(lowercaseChars),
-      getRandomChar(numberChars),
-      getRandomChar(specialChars),
-    ];
-
-    // Remplir les caractères restants de manière aléatoire
-    for (let i = passwordArray.length; i < length; i++) {
-      passwordArray.push(getRandomChar(allChars));
-    }
-
-    // Mélanger les caractères pour éviter une structure prévisible
-    for (let i = passwordArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [passwordArray[i], passwordArray[j]] = [
-        passwordArray[j],
-        passwordArray[i],
-      ];
-    }
-
-    return passwordArray.join("");
-  },
-
   // Exemple d'utilisation
   /*   const newPassword = generatePassword(12);
   console.log("Mot de passe généré :", newPassword); */
