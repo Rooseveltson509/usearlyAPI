@@ -10,9 +10,9 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       CoupDeCoeur.belongsTo(models.User, {
-        foreignKey: "userId",
-        as: "user",
+        foreignKey: "userId", // Utilisez simplement le nom de la colonne
         onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
     }
   }

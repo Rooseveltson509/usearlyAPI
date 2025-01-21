@@ -1,8 +1,3 @@
-/* let jwtUtils = require("../utils/jwtUtils");
-let models = require("../models");
-const Sequelize = require("sequelize");
-const { coupDeCoeurSchema } = require("../validation/CoupdeCoeurSchema");
-const Op = Sequelize.Op; */
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import { coupDeCoeurSchema } from "../validation/CoupdeCoeurSchema.js";
 const { CoupDeCoeur, User } = db;
@@ -63,6 +58,72 @@ export const coupDeCoeur = {
       return res
         .status(500)
         .json({ error: "An error occurred", details: err.message });
+    }
+  },
+  getAllCoupdeCoeur: async function (req, res) {
+    try {
+      // Récupérer l'authentification de l'admin
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+
+      // Vérifier si l'utilisateur est un administrateur
+      const userAuthorized = await User.findOne({
+        where: { id: userId },
+        //where: { id: userId, role: "admin" },
+      });
+      if (!userAuthorized) {
+        return res.status(403).json({ error: "Accès non autorisé." });
+      }
+
+      // Paramètres pour la pagination
+      const { page = 1, limit = 10 } = req.query;
+      const offset = (page - 1) * limit;
+
+      // Récupérer tous les reportings avec pagination
+      const { count, rows: coupdeCoeur } = await CoupDeCoeur.findAndCountAll({
+        attributes: [
+          "id",
+          "marque",
+          "emplacement",
+          "emoji",
+          "description",
+          "likes",
+          "createdAt",
+          "updatedAt",
+        ],
+        include: [
+          {
+            model: User,
+            as: "User",
+            attributes: ["pseudo", "email"],
+          },
+          /*           {
+            model: SiteType,
+            as: "siteType",
+            attributes: ["name", "description"],
+          }, */
+        ],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [["createdAt", "DESC"]],
+      });
+      // Ajouter l'en-tête Content-Type
+      res.setHeader("Content-Type", "application/json");
+      // Retourner les reportings avec pagination
+      return res.status(200).json({
+        totalCoupsdeCoeur: count,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(count / limit),
+        coupdeCoeur,
+      });
+    } catch (err) {
+      console.error("Erreur lors de la récupération des coups de coeur :", err);
+      // Ajouter l'en-tête Content-Type
+      res.setHeader("Content-Type", "application/json");
+      return res.status(500).json({
+        error:
+          "Une erreur est survenue lors de la récupération des coups de coeur.",
+      });
     }
   },
 };
