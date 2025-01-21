@@ -11,8 +11,8 @@ export default (sequelize, DataTypes) => {
       // define association here
       Suggestion.belongsTo(models.User, {
         foreignKey: "userId",
-        as: "user",
         onDelete: "CASCADE",
+        onUpdate: "CASCADE",
       });
     }
   }

@@ -150,6 +150,13 @@ apiRouter
   .get(reporting.getAllReports);
 
 apiRouter
+  .route("/user/coupsdecoeur", cors(func.corsOptionsDelegate))
+  .get(coupDeCoeur.getAllCoupdeCoeur);
+apiRouter
+  .route("/user/suggestion", cors(func.corsOptionsDelegate))
+  .get(suggestion.getAllSuggestions);
+
+apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))
   .get(reporting.getReportsByUser);
 
