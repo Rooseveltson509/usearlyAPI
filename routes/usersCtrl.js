@@ -1,4 +1,3 @@
-// Imports
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import dotenv from "dotenv";
 dotenv.config();
@@ -25,9 +24,6 @@ import {
 
 import path from "path";
 
-/* const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename); */
-
 // Routers
 export const user = {
   register: async function (req, res) {
@@ -47,9 +43,6 @@ export const user = {
         return res.status(400).json({ error: validation.message });
       }
       const dateOfBirth = validation.date; // La date transformée en objet Date
-
-      console.log("Date reçue (born) :", born);
-      console.log("Date transformée :", dateOfBirth);
 
       // Vérifiez si l'utilisateur est majeur
       if (!validation.isAdult) {
@@ -96,7 +89,7 @@ export const user = {
       const hashedPassword = await bcrypt.hash(password, 5);
 
       // Génération du token de confirmation
-      const confirmationToken = func.randomCode(6, "0123456789");
+      const token = func.randomCode(6, "0123456789");
 
       // Créez un nouvel utilisateur
       const newUser = await User.create({
@@ -104,12 +97,12 @@ export const user = {
         born: dateOfBirth, // Insérez la date transformée ici
         email,
         password: hashedPassword,
-        confirmationToken,
+        confirmationToken: token,
       });
 
       // Envoyez l'email de confirmation
-      const confirmationUrl = `https://your-frontend-domain.com/confirm?token=${confirmationToken}`;
-      func.sentEmail(email, confirmationToken, confirmationUrl, newUser.id);
+      const confirmationUrl = `ocalhost:5173/confirm?token=${token}`;
+      func.sentEmail(email, token, confirmationUrl, newUser.id);
 
       // Répondez avec un succès
       return res.status(201).json({
@@ -129,26 +122,71 @@ export const user = {
     const { userId, token } = req.body;
 
     try {
+      // Vérification des données requises
+      if (!userId || !token) {
+        return res.status(400).json({
+          success: false,
+          message: "Données manquantes.",
+        });
+      }
+
+      // Recherche de l'utilisateur par ID
       const user = await User.findOne({
-        where: { id: userId, confirmationToken: token },
+        where: { id: userId },
       });
 
       if (!user) {
-        return res.status(404).json({ error: "Utilisateur introuvable" });
+        return res.status(404).json({
+          success: false,
+          message: "Utilisateur introuvable.",
+        });
       }
 
+      // Vérifier si le compte est déjà confirmé
+      if (!user.confirmationToken && user.confirmedAt) {
+        return res.status(400).json({
+          success: false,
+          message: "Ce compte est déjà confirmé.",
+        });
+      }
+
+      // Vérification du token de confirmation
+      if (user.confirmationToken !== token) {
+        return res.status(400).json({
+          success: false,
+          message: "Token de confirmation invalide.",
+        });
+      }
+
+      // Mise à jour des informations utilisateur (confirmation du compte)
       await user.update({
         confirmationToken: null,
-        confirmedAt: new Date(Date.now()),
+        confirmedAt: new Date(),
+      });
+
+      // Génération des tokens pour connexion automatique
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
+
+      // Stockage du refreshToken dans un cookie sécurisé
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true, // Empêche l'accès via JS
+        secure: true, // Nécessaire pour HTTPS
+        sameSite: "strict", // Protection CSRF
+        maxAge: 30 * 24 * 60 * 60 * 1000, // Expiration du refreshToken (30 jours)
       });
 
       return res.status(200).json({
-        message:
-          "Votre compte a bien été validé, veuillez à présent vous connecter.",
+        success: true,
+        message: "Votre compte a bien été validé.",
+        accessToken, // Retourner le token pour une connexion automatique
       });
     } catch (error) {
       console.error("Erreur lors de la confirmation :", error);
-      return res.status(500).json({ error: "Erreur interne." });
+      return res.status(500).json({
+        success: false,
+        message: "Erreur interne, veuillez réessayer.",
+      });
     }
   },
 
@@ -158,10 +196,18 @@ export const user = {
 
     try {
       const user = await User.findOne({ where: { email } });
+
       if (!user || !(await bcrypt.compare(password, user.password))) {
         return res
           .status(401)
           .json({ success: false, message: "Invalid credentials" });
+      }
+      // Vérification si l'utilisateur a confirmé son compte
+      if (!user.confirmedAt || user.confirmationToken !== null) {
+        return res.status(403).json({
+          success: false,
+          message: "Veuillez confirmer votre compte avant de vous connecter.",
+        });
       }
 
       const accessToken = generateAccessToken(user); // Génère un access token
@@ -188,6 +234,10 @@ export const user = {
         success: true,
         message: "Connexion réussie.",
         accessToken, // Toujours renvoyé
+        user: {
+          avatar: user.avatar,
+          type: "user", // Ajout du type ici
+        },
       };
 
       // Ajoute le refreshToken dans la réponse seulement si `rememberMe` est true
@@ -312,7 +362,7 @@ export const user = {
       await func.sendResetPasswordEmail(
         user.email,
         user.pseudo,
-        "https://usearly-api.vercel.app",
+        `localhost:5173/reset-password/${user.id}/${resetToken}`,
         user.id,
         resetToken
       );
@@ -336,87 +386,92 @@ export const user = {
   },
 
   // RESET PASSWORD
-  resetPassword: function (req, res) {
-    // Params
-    let userId = req.params.userId;
-    let token = req.params.token;
-    let password = req.body.password;
-    let password_confirm = req.body.password_confirm;
+  resetPassword: async (req, res) => {
+    const { userId, token } = req.params;
+    const { password, password_confirm } = req.body;
 
+    // Validation des entrées
     if (!func.checkPassword(password)) {
       return res.status(400).json({
-        error:
-          "password invalid (must length 6 - 10 and include 1 number at least)",
+        success: false,
+        message:
+          "Le mot de passe doit contenir entre 6 et 10 caractères et inclure au moins un chiffre.",
       });
     }
-    if (password_confirm != password) {
-      return res.status(400).json({ error: "password do not match." });
+
+    if (password !== password_confirm) {
+      return res.status(400).json({
+        success: false,
+        message: "Les mots de passe ne correspondent pas.",
+      });
     }
 
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { id: userId },
-          })
-            .then(function (userFound) {
-              done(null, userFound);
-            })
-            .catch(function (err) {
-              return res
-                .status(500)
-                .json({ error: "unable to verify this user" });
-            });
-        },
-        function (userFound, done) {
-          if (userFound) {
-            bcrypt.hash(password, 5, function (err, bcryptedPassword) {
-              done(null, userFound, bcryptedPassword);
-            });
-          } else {
-            return res.status(409).json({ error: "user not exist" });
-          }
-        },
-        function (userFound, bcryptedPassword, done) {
-          if (
-            userFound &&
-            userFound.resetToken !== null &&
-            userFound.resetToken === token
-          ) {
-            if (userFound.expiredAt > new Date(Date.now())) {
-              userFound
-                .update({
-                  password: bcryptedPassword,
-                  resetAt: null,
-                  resetToken: null,
-                  expiredAt: null,
-                })
-                .then(function () {
-                  done(userFound);
-                })
-                .catch(function (err) {
-                  res.status(500).json({ error: "cannot found user" });
-                });
-            } else {
-              res.status(404).json({ error: "Your token is not valid." });
-            }
-          } else {
-            res.status(404).json({ error: "ce lien n'est plus valide...." });
-          }
-        },
-      ],
-      function (userFound) {
-        if (userFound) {
-          return res
-            .status(201)
-            .json({ msg: "Votre mot de pass a bien été modifié." });
-        } else {
-          return res
-            .status(500)
-            .json({ error: "cannot validate your password." });
-        }
+    try {
+      // Recherche de l'utilisateur par ID
+      const user = await User.findOne({ where: { id: userId } });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "Utilisateur introuvable.",
+        });
       }
-    );
+
+      // Vérification du token de réinitialisation
+      if (!user.resetToken || user.resetToken !== token) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Ce lien de réinitialisation est invalide ou a déjà été utilisé.",
+        });
+      }
+
+      // Vérification de l'expiration du token
+      if (user.expiredAt <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: "Le lien de réinitialisation a expiré.",
+        });
+      }
+
+      // Hachage du nouveau mot de passe
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Mise à jour des informations de l'utilisateur
+      await user.update({
+        password: hashedPassword,
+        resetAt: null,
+        resetToken: null,
+        expiredAt: null,
+      });
+
+      // Génération des nouveaux tokens
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
+
+      // Stockage du refreshToken dans un cookie sécurisé
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true, // Empêche l'accès via JS
+        secure: true, // Requis pour HTTPS
+        sameSite: "strict", // Protection CSRF
+        maxAge: 30 * 24 * 60 * 60 * 1000, // Expiration du refreshToken
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Votre mot de passe a été réinitialisé avec succès.",
+        accessToken, // Retourner le token pour authentification automatique
+      });
+    } catch (error) {
+      console.error(
+        "Erreur lors de la réinitialisation du mot de passe :",
+        error
+      );
+      return res.status(500).json({
+        success: false,
+        message: "Erreur interne. Veuillez réessayer plus tard.",
+      });
+    }
   },
 
   // Retrieve all Tutorials from the database.
@@ -708,7 +763,9 @@ export const user = {
         userFound.password
       );
       if (!validPassword) {
-        return res.status(403).json({ error: "Old password is incorrect." });
+        return res
+          .status(403)
+          .json({ error: "Votre ancien mot de passe est incorrect." });
       }
 
       // Hasher le nouveau mot de passe

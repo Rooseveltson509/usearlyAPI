@@ -32,6 +32,7 @@ export const reportService = {
         where: {
           siteUrl: normalizedSiteUrl,
           bugLocation: normalizedBugLocation,
+          description: normalizedDescription,
         },
         limit,
         offset,
@@ -68,35 +69,6 @@ export const reportService = {
     // Retourner le doublon trouvé ou null
     return duplicate;
   },
-
-  /*  async findSimilarReporting(siteUrl, bugLocation, description) {
-     // Normalisation des données
-     const normalizedSiteUrl = siteUrl.trim().toLowerCase();
-     const normalizedBugLocation = bugLocation.trim().toLowerCase();
-     const normalizedDescription = description.trim().toLowerCase();
- 
-     const similarReportings = await Reporting.findAll({
-       where: {
-         siteUrl: normalizedSiteUrl,
-         bugLocation: normalizedBugLocation,
-       },
-       limit: 50, // Augmentez légèrement la limite pour minimiser les appels à OpenAI
-     });
- 
-     for (const reporting of similarReportings) {
-       const similarity = await service.compareDescriptions(
-         normalizedDescription,
-         reporting.description.trim().toLowerCase() // Normalisation pour la comparaison
-       );
-       console.log("Similarité calculée :", similarity);
-       if (similarity >= similarityThreshold) {
-         // 70% de similarité
-         return reporting;
-       }
-     }
- 
-     return null;
-   }, */
 
   /**
    * Vérifie si une description similaire existe déjà pour un signalement donné.

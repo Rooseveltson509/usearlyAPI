@@ -37,6 +37,10 @@ export async function up(queryInterface, Sequelize) {
       values: ["freemium", "start", "start pro", "premium"],
       defaultValue: "freemium",
     },
+    avatar: {
+      allowNull: true,
+      type: Sequelize.STRING,
+    },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,
