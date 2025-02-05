@@ -62,6 +62,10 @@ export default (sequelize, DataTypes) => {
           len: [8, 255], // Longueur minimale de 8 caractères
         },
       },
+      avatar: {
+        type: DataTypes.STRING,
+        allowNull: true, // Facultatif
+      },
       offres: {
         type: DataTypes.ENUM("freemium", "start", "start pro", "premium"),
         defaultValue: "freemium", // Valeur par défaut

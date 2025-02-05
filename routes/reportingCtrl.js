@@ -86,7 +86,7 @@ export const reporting = {
     }
   },
   // Find User Reportings By store
-  getAllReports: async function (req, res) {
+  /*   getAllReports: async function (req, res) {
     try {
       // Récupérer l'authentification de l'admin
       const headerAuth = req.headers["authorization"];
@@ -147,6 +147,76 @@ export const reporting = {
     } catch (err) {
       console.error("Erreur lors de la récupération des reportings :", err);
       // Ajouter l'en-tête Content-Type
+      res.setHeader("Content-Type", "application/json");
+      return res.status(500).json({
+        error:
+          "Une erreur est survenue lors de la récupération des signalements.",
+      });
+    }
+  }, */
+
+  getAllReports: async function (req, res) {
+    try {
+      const headerAuth = req.headers["authorization"];
+      const adminId = getUserId(headerAuth);
+
+      const admin = await User.findOne({ where: { id: adminId } });
+      if (!admin) {
+        return res.status(403).json({ error: "Accès non autorisé." });
+      }
+
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20; // Mets ici la valeur correcte (ex: 20)
+
+      const offset = (page - 1) * limit;
+
+      // ✅ Ajout de `include: Category` pour récupérer les catégories associées
+      const { count, rows: reports } = await Reporting.findAndCountAll({
+        distinct: true, // ✅ Ajoute ceci pour éviter les doublons dans le comptage
+        attributes: [
+          "id",
+          "siteUrl",
+          "marque",
+          "bugLocation",
+          "emojis",
+          "description",
+          "blocking",
+          "tips",
+          "createdAt",
+          "updatedAt",
+        ],
+        include: [
+          {
+            model: User,
+            as: "User",
+            attributes: ["pseudo", "email"],
+          },
+          {
+            model: SiteType,
+            as: "siteType",
+            attributes: ["name", "description"],
+          },
+          {
+            model: Category, // 🔥 Inclusion des catégories
+            as: "categories",
+            attributes: ["name"],
+            through: { attributes: [] }, // 🔹 On n'affiche pas la table de jointure
+          },
+        ],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [["createdAt", "DESC"]],
+      });
+
+      res.setHeader("Content-Type", "application/json");
+      return res.status(200).json({
+        totalReports: count,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(count / limit),
+        reports,
+      });
+    } catch (err) {
+      console.error("Erreur lors de la récupération des reportings :", err);
       res.setHeader("Content-Type", "application/json");
       return res.status(500).json({
         error:

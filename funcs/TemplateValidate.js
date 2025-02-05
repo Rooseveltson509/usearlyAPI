@@ -191,7 +191,7 @@ export function validateMailAccount(token, domain, userId) {
   </html>`;
 }
 
-export function updatePassword(toUserName, domain, userId, resetToken) {
+export function updatePassword(toUserName, domain) {
   return `<!DOCTYPE html>
   <html>
   
@@ -336,7 +336,7 @@ export function updatePassword(toUserName, domain, userId, resetToken) {
                       <table border="0" cellspacing="0" cellpadding="0">
                       <tr>
                         <td bgcolor="#ffffff" align="left" style="padding: 20px 30px 20px 30px; color: #666666; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
-                          <p style="margin: 0;"><a href="${domain}/api/v1/user/resetpwd/${userId}/${resetToken}" target="_blank" style="color: #FA8C16;">Modifiez mon mot de passe.</a></p>
+                          <p style="margin: 0;"><a href="${domain}" target="_blank" style="color: #FA8C16;">Modifiez mon mot de passe.</a></p>
                         </td>
                       </tr>
                       </table>

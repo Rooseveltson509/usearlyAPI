@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import {
   generateAccessToken,
   generateRefreshToken,
+  getUserId,
 } from "../utils/jwtUtils.js";
 const { Marque } = db;
 
@@ -61,6 +62,10 @@ export const brandCtrl = {
         success: true,
         message: "Connexion réussie.",
         accessToken,
+        user: {
+          avatar: user.avatar,
+          type: "brand", // Ajout du type ici
+        },
       };
 
       if (rememberMe && refreshToken) {
@@ -73,6 +78,45 @@ export const brandCtrl = {
       return res
         .status(500)
         .json({ success: false, message: "Erreur interne." });
+    }
+  },
+
+  fetchBrandProfile: async (req, res) => {
+    try {
+      // Récupération du token d'authentification
+      // Getting auth header
+      let headerAuth = req.headers["authorization"];
+      const brandId = getUserId(headerAuth); // Fonction pour extraire l'ID du token
+
+      if (brandId < 0) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Non autorisé." });
+      }
+
+      // Recherche de la marque dans la base de données
+      const brand = await Marque.findOne({
+        attributes: ["id", "name", "email", "avatar", "offres"], // Champs que tu veux retourner
+        where: { id: brandId },
+      });
+
+      // Vérification si la marque existe
+      if (!brand) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Marque non trouvée." });
+      }
+
+      // Retourner le profil de la marque
+      return res.status(200).json({ success: true, brand });
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération du profil de la marque :",
+        error
+      );
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur interne du serveur." });
     }
   },
 };

@@ -10,7 +10,7 @@ import { suggestion } from "./routes/suggestionCtrl.js";
 import { coupDeCoeur } from "./routes/coupdecoeurCtrl.js";
 import { adminAction } from "./routes/adminCtrl.js";
 import { brandCtrl } from "./routes/brandCtrl.js";
-const brandCtrlMethods = brandCtrl.default || brandCtrl; // Permet de gérer les deux types d'exportations
+//const brandCtrlMethods = brandCtrl.default || brandCtrl; // Permet de gérer les deux types d'exportations
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
 import {
   validateCoupdeCoeur,
@@ -82,9 +82,11 @@ apiRouter
 apiRouter
   .route("/user/forgot-password", cors(func.corsOptionsDelegate))
   .post(user.forgotPassword);
+
 apiRouter
   .route("/user/resetpwd/:userId/:token", cors(func.corsOptionsDelegate))
   .post(user.resetPassword);
+
 apiRouter
   .route("/user/del/:email", cors(func.corsOptionsDelegate))
   .delete(user.destroyUserProfile);
@@ -92,7 +94,12 @@ apiRouter
 // Espace Marque
 apiRouter
   .route("/brand/login", cors(func.corsOptionsDelegate))
-  .post(brandCtrlMethods.login);
+  .post(brandCtrl.login);
+
+apiRouter
+  .route("/brand/profile", cors(func.corsOptionsDelegate))
+  .get(brandCtrl.fetchBrandProfile);
+
 apiRouter
   .route("/brand/:idticket/response", cors(func.corsOptionsDelegate))
   .post(createBrandTicket.createTicket);
