@@ -57,21 +57,21 @@ const limits = {
 const upload = multer({ storage: tempStorage, fileFilter, limits });
 
 // 📌 Suppression sécurisée de l'ancien avatar AVANT d'enregistrer le nouveau
-/* const deleteOldAvatar = async (avatarPath) => {
-
+const deleteOldAvatar = async (avatarPath) => {
   try {
     if (!avatarPath) return;
 
-    // 🔒 Vérification stricte pour éviter les suppressions accidentelles
-    if (avatarPath.includes("..")) {
-      throw new Error("❌ Chemin non autorisé détecté !");
+    // 🔒 Vérification stricte pour éviter les attaques Path Traversal
+    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
+      console.error("❌ Chemin non autorisé détecté :", avatarPath);
+      return;
     }
 
-    // 📌 Correction : S'assurer que le chemin est bien absolu et évite "uploads/uploads"
-    let resolvedAvatarPath;
-    if (avatarPath.startsWith("uploads/")) {
-      resolvedAvatarPath = path.resolve(avatarPath); // 🔥 Évite "uploads/uploads"
-    } else {
+    // 🔥 Vérification stricte : Accepter uniquement les fichiers dans "uploads/avatars/"
+    if (
+      !avatarPath.startsWith("uploads/avatars/users") &&
+      !avatarPath.startsWith("uploads/avatars/brands")
+    ) {
       console.error(
         "❌ Suppression interdite (chemin non reconnu) :",
         avatarPath
@@ -79,10 +79,16 @@ const upload = multer({ storage: tempStorage, fileFilter, limits });
       return;
     }
 
+    // 📌 Sécurisation CodeQL : Générer un chemin sécurisé sans utiliser directement `path.resolve(avatarPath)`
+    let resolvedAvatarPath = path.join(
+      path.resolve("uploads"),
+      path.relative("uploads", avatarPath)
+    );
+
     // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
     if (
-      !resolvedAvatarPath.startsWith(userAvatarsDir) &&
-      !resolvedAvatarPath.startsWith(brandAvatarsDir)
+      !resolvedAvatarPath.startsWith(path.resolve(userAvatarsDir)) &&
+      !resolvedAvatarPath.startsWith(path.resolve(brandAvatarsDir))
     ) {
       console.error("❌ Suppression interdite :", resolvedAvatarPath);
       return;
@@ -99,9 +105,8 @@ const upload = multer({ storage: tempStorage, fileFilter, limits });
     console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
   }
 };
- */
 
-const deleteOldAvatar = async (avatarPath) => {
+/* const deleteOldAvatar = async (avatarPath) => {
   try {
     if (!avatarPath) return;
 
@@ -145,7 +150,7 @@ const deleteOldAvatar = async (avatarPath) => {
   } catch (err) {
     console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
   }
-};
+}; */
 
 // 📌 Déplacement sécurisé du fichier vers le répertoire final
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
