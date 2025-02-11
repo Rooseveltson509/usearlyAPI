@@ -8,7 +8,7 @@ const tempDirectory = path.join(baseUploadDir, "temp");
 const userAvatarsDir = path.join(baseUploadDir, "avatars/users");
 const brandAvatarsDir = path.join(baseUploadDir, "avatars/brands");
 
-// 📌 Vérification et création des répertoires si nécessaires
+// 📌 Vérification et création des répertoires sécurisés
 const ensureDirectoryExists = (dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -56,13 +56,104 @@ const limits = {
 // 📌 Middleware Multer pour l'upload temporaire
 const upload = multer({ storage: tempStorage, fileFilter, limits });
 
-// 📌 Déplacement du fichier vers le répertoire final (Utilisateur ou Marque)
+// 📌 Suppression sécurisée de l'ancien avatar AVANT d'enregistrer le nouveau
+/* const deleteOldAvatar = async (avatarPath) => {
+
+  try {
+    if (!avatarPath) return;
+
+    // 🔒 Vérification stricte pour éviter les suppressions accidentelles
+    if (avatarPath.includes("..")) {
+      throw new Error("❌ Chemin non autorisé détecté !");
+    }
+
+    // 📌 Correction : S'assurer que le chemin est bien absolu et évite "uploads/uploads"
+    let resolvedAvatarPath;
+    if (avatarPath.startsWith("uploads/")) {
+      resolvedAvatarPath = path.resolve(avatarPath); // 🔥 Évite "uploads/uploads"
+    } else {
+      console.error(
+        "❌ Suppression interdite (chemin non reconnu) :",
+        avatarPath
+      );
+      return;
+    }
+
+    // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
+    if (
+      !resolvedAvatarPath.startsWith(userAvatarsDir) &&
+      !resolvedAvatarPath.startsWith(brandAvatarsDir)
+    ) {
+      console.error("❌ Suppression interdite :", resolvedAvatarPath);
+      return;
+    }
+
+    // 📌 Vérifier si le fichier existe avant de le supprimer
+    if (fs.existsSync(resolvedAvatarPath)) {
+      await fs.promises.unlink(resolvedAvatarPath);
+      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
+    } else {
+      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
+    }
+  } catch (err) {
+    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
+  }
+};
+ */
+
+const deleteOldAvatar = async (avatarPath) => {
+  try {
+    if (!avatarPath) return;
+
+    // 🔒 Vérification stricte pour éviter les suppressions accidentelles et les attaques Path Traversal
+    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
+      console.error("❌ Chemin non autorisé détecté :", avatarPath);
+      return;
+    }
+
+    // 📌 Correction : S'assurer que le chemin est bien absolu et évite "uploads/uploads"
+    let resolvedAvatarPath;
+    if (
+      avatarPath.startsWith("uploads/avatars/users") ||
+      avatarPath.startsWith("uploads/avatars/brands")
+    ) {
+      resolvedAvatarPath = path.resolve(avatarPath); // 🔥 Évite "uploads/uploads"
+    } else {
+      console.error(
+        "❌ Suppression interdite (chemin non reconnu) :",
+        avatarPath
+      );
+      return;
+    }
+
+    // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
+    if (
+      !resolvedAvatarPath.startsWith(path.resolve(userAvatarsDir)) &&
+      !resolvedAvatarPath.startsWith(path.resolve(brandAvatarsDir))
+    ) {
+      console.error("❌ Suppression interdite :", resolvedAvatarPath);
+      return;
+    }
+
+    // 📌 Vérifier si le fichier existe avant de le supprimer
+    if (fs.existsSync(resolvedAvatarPath)) {
+      await fs.promises.unlink(resolvedAvatarPath);
+      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
+    } else {
+      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
+    }
+  } catch (err) {
+    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
+  }
+};
+
+// 📌 Déplacement sécurisé du fichier vers le répertoire final
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
   try {
     const resolvedTempPath = path.resolve(tempPath);
     const resolvedFinalPath = path.resolve(finalPath);
 
-    // 🔥 Sécurisation : Vérifier que les chemins sont sous `uploads`
+    // 🔥 Vérification stricte : Empêcher l'écriture en dehors de `uploads`
     if (
       !resolvedTempPath.startsWith(baseUploadDir) ||
       !resolvedFinalPath.startsWith(baseUploadDir)
@@ -73,7 +164,7 @@ const moveFileToFinalDestination = async (tempPath, finalPath) => {
     // 📌 Création du répertoire final s'il n'existe pas
     ensureDirectoryExists(path.dirname(resolvedFinalPath));
 
-    // 📌 Déplacement du fichier vers son emplacement final
+    // 📌 Déplacement sécurisé du fichier
     await fs.promises.rename(resolvedTempPath, resolvedFinalPath);
     console.log("✔ Fichier déplacé avec succès :", resolvedFinalPath);
   } catch (err) {
@@ -82,45 +173,7 @@ const moveFileToFinalDestination = async (tempPath, finalPath) => {
   }
 };
 
-// 📌 Suppression de l'ancien avatar (Sécurisé)
-const deleteOldAvatar = async (avatarPath) => {
-  try {
-    if (!avatarPath) return;
-
-    // 📌 Générer le chemin absolu
-    const resolvedAvatarPath = path.resolve("uploads", avatarPath);
-
-    // 🔥 Sécurisation : Vérifier que le fichier est bien sous `avatars/users` ou `avatars/brands`
-    if (
-      !resolvedAvatarPath.startsWith(userAvatarsDir) &&
-      !resolvedAvatarPath.startsWith(brandAvatarsDir)
-    ) {
-      console.error(
-        "❌ Tentative de suppression interdite :",
-        resolvedAvatarPath
-      );
-      return;
-    }
-
-    // 📌 Vérifier si le fichier existe avant de le supprimer
-    if (fs.existsSync(resolvedAvatarPath)) {
-      await fs.promises.unlink(resolvedAvatarPath);
-      console.log(
-        "✔ Ancien avatar supprimé avec succès :",
-        resolvedAvatarPath
-      );
-    } else {
-      console.warn(
-        "⚠️ Fichier avatar à supprimer introuvable :",
-        resolvedAvatarPath
-      );
-    }
-  } catch (err) {
-    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
-  }
-};
-
-// 📌 Export des fonctions et middleware
+// 📌 Export des fonctions et middleware sécurisés
 export default upload;
 export {
   ensureDirectoryExists,

@@ -19,6 +19,7 @@ const { Op } = Sequelize;
 import {
   moveFileToFinalDestination,
   deleteOldAvatar,
+  brandAvatarsDir,
   ensureDirectoryExists,
 } from "../config/multer.js";
 
@@ -623,21 +624,23 @@ export const user = {
 
   // update user profile
   updateUserProfile: async (req, res) => {
-    let avatarFile = req.file; // 📌 Fichier temporaire
-    let finalAvatarPath = null;
-
+    const avatarFile = req.file; // 📌 Nouveau fichier temporaire
     try {
       let headerAuth = req.headers["authorization"];
       let userId = getUserId(headerAuth);
 
-      if (!userId || userId < 0) {
+      if (userId < 0) {
+        if (avatarFile) await deleteOldAvatar(avatarFile.path);
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
+
+      if (!userId) {
         if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(401).json({ error: "Utilisateur non authentifié." });
       }
 
       const { pseudo, born, gender } = req.body;
 
-      // Validation du pseudo
       if (!pseudo || pseudo.length < 3 || pseudo.length > 50) {
         if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(400).json({
@@ -652,50 +655,43 @@ export const user = {
         return res.status(404).json({ error: "Utilisateur non trouvé." });
       }
 
-      // 📌 Gestion de l'avatar SEULEMENT si un nouveau fichier est uploadé
+      // 📌 Suppression de l'ancien avatar AVANT d'ajouter le nouveau
+      if (
+        user.avatar &&
+        user.avatar.startsWith("uploads/avatars/users") &&
+        !user.avatar.includes("default-avatar.png")
+      ) {
+        await deleteOldAvatar(user.avatar);
+      }
+
+      let finalAvatarPath = user.avatar;
       if (avatarFile) {
-        const tempPath = path.resolve(avatarFile.path);
-        const tempBaseDir = path.resolve("uploads/temp");
-
-        // 📌 Vérification stricte pour empêcher les attaques de chemin
-        if (!tempPath.startsWith(tempBaseDir)) {
-          await deleteOldAvatar(tempPath);
-          return res
-            .status(400)
-            .json({ error: "Chemin temporaire non autorisé." });
-        }
-
-        // 📌 Définition du dossier final sécurisé
         const finalDir = path.resolve("uploads/avatars/users");
         ensureDirectoryExists(finalDir);
 
-        // 📌 Création d'un nom unique pour éviter les conflits
-        const finalName = `avatar-${Date.now()}-${userId}${path.extname(
-          avatarFile.originalname
-        )}`;
+        const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
         const finalPath = path.join(finalDir, finalName);
 
-        // 📌 Déplacement sécurisé du fichier
-        await moveFileToFinalDestination(tempPath, finalPath);
-
-        // 📌 Suppression de l'ancien avatar si présent
-        if (user.avatar) {
-          const oldAvatarPath = path.resolve("uploads", user.avatar);
-          if (oldAvatarPath.startsWith(finalDir)) {
-            await deleteOldAvatar(oldAvatarPath);
-          }
+        // 📌 Avant de déplacer, supprimer l'ancien avatar (évite l'accumulation)
+        if (
+          user.avatar &&
+          user.avatar.startsWith("uploads/avatars/users") &&
+          !user.avatar.includes("default-avatar.png")
+        ) {
+          await deleteOldAvatar(user.avatar);
         }
 
-        // 📌 Mise à jour du chemin relatif de l'avatar pour la base de données
-        finalAvatarPath = `avatars/users/${finalName}`;
+        await moveFileToFinalDestination(avatarFile.path, finalPath);
+
+        // 📌 Correction : stocker le chemin correct pour le frontend
+        finalAvatarPath = `uploads/avatars/users/${finalName}`;
       }
 
-      // 📌 Mise à jour des infos utilisateur
       await user.update({
         pseudo: pseudo || user.pseudo,
         born: born || user.born,
         gender: gender || user.gender,
-        avatar: finalAvatarPath || user.avatar, // ✅ Ne change que si un nouvel avatar est uploadé
+        avatar: finalAvatarPath,
       });
 
       return res.status(200).json({
@@ -705,7 +701,7 @@ export const user = {
       });
     } catch (error) {
       console.error("Erreur lors de la mise à jour du profil :", error);
-      if (avatarFile) await deleteOldAvatar(avatarFile.path); // Nettoyage en cas d'erreur
+      if (avatarFile) await deleteOldAvatar(avatarFile.path);
       return res.status(500).json({ error: "Erreur interne du serveur." });
     }
   },
@@ -1070,9 +1066,9 @@ export const user = {
       const { brandId } = req.params;
       const headerAuth = req.headers["authorization"];
       const userId = getUserId(headerAuth);
-      const newAvatar = req.file ? req.file.filename : null;
+      const newAvatarFile = req.file;
 
-      if (!brandId || !newAvatar) {
+      if (!brandId || !newAvatarFile) {
         return res.status(400).json({ error: "Brand ID et avatar requis." });
       }
 
@@ -1090,16 +1086,35 @@ export const user = {
         return res.status(404).json({ error: "Marque non trouvée." });
       }
 
-      // Supprimer l'ancien avatar
-      deleteOldAvatar(brand.avatar);
+      console.log("🔍 Ancien avatar actuel :", brand.avatar);
 
-      // Mettre à jour l'avatar
-      brand.avatar = newAvatar;
+      // 📌 Supprimer l'ancien avatar AVANT d'ajouter le nouveau
+      if (brand.avatar) {
+        const oldAvatarPath = brand.avatar; // Assure-toi que c'est un chemin relatif
+        console.log("🗑 Suppression de l'ancien avatar :", oldAvatarPath);
+        await deleteOldAvatar(oldAvatarPath);
+      }
+
+      // 📌 Déplacement du nouvel avatar dans le bon dossier
+      const finalDir = path.resolve("uploads/avatars/brands");
+      ensureDirectoryExists(finalDir);
+
+      // 📌 Générer un nom propre au brand pour éviter une accumulation de fichiers
+      const finalName = `brand-${brandId}${path.extname(newAvatarFile.originalname)}`;
+      const finalPath = path.join(finalDir, finalName);
+
+      console.log("📂 Nouveau chemin de l'avatar :", finalPath);
+
+      await moveFileToFinalDestination(newAvatarFile.path, finalPath);
+
+      // 📌 Mettre à jour l'avatar dans la base avec le chemin relatif
+      brand.avatar = `avatars/brands/${finalName}`;
       await brand.save();
 
-      return res
-        .status(200)
-        .json({ message: "Avatar mis à jour avec succès.", brand });
+      return res.status(200).json({
+        message: "Avatar mis à jour avec succès.",
+        brand,
+      });
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'avatar :", error);
       return res
@@ -1117,14 +1132,12 @@ export const user = {
       const headerAuth = req.headers["authorization"];
       const userId = getUserId(headerAuth);
 
-      // 🔍 Vérifier si l'utilisateur est authentifié
       if (userId <= 0) {
         return res
           .status(403)
           .json({ error: "Accès refusé. Authentification requise." });
       }
 
-      // 🔍 Vérifier si l'utilisateur est admin OU s'il possède cette marque
       const user = await User.findByPk(userId);
       if (!user) {
         return res.status(404).json({ error: "Utilisateur non trouvé." });
@@ -1135,7 +1148,6 @@ export const user = {
         return res.status(404).json({ error: "Marque non trouvée." });
       }
 
-      // ✅ Condition : Seul l'admin ou le propriétaire peut modifier
       if (user.role !== "admin" && brand.userId !== userId) {
         return res.status(403).json({
           error:
@@ -1143,22 +1155,24 @@ export const user = {
         });
       }
 
-      // 📌 Gestion des mises à jour (avatar, offres, etc.)
+      // 📌 Gestion de l'avatar
       let avatarPath = brand.avatar;
+
       if (avatarFile) {
         const tempPath = avatarFile.path;
-        const finalDir = path.resolve("uploads/avatars/brands");
-        ensureDirectoryExists(finalDir);
         const finalName = `avatar-${Date.now()}-${brandId}${path.extname(avatarFile.originalname)}`;
-        const finalPath = path.join(finalDir, finalName);
+        const finalPath = path.join(brandAvatarsDir, finalName);
 
+        // 🔥 Déplacer le fichier temporaire vers le répertoire final
         await moveFileToFinalDestination(tempPath, finalPath);
         avatarPath = `uploads/avatars/brands/${finalName}`;
 
-        // 🗑 Supprimer l'ancien avatar si existant
-        if (brand.avatar) {
-          const oldAvatarPath = path.resolve(brand.avatar);
-          await deleteOldAvatar(oldAvatarPath);
+        // 🗑 Supprimer l'ancien avatar sécurisé (sauf si c'est un avatar par défaut)
+        if (
+          brand.avatar &&
+          brand.avatar !== "uploads/avatars/brands/default-avatar.png"
+        ) {
+          await deleteOldAvatar(brand.avatar);
         }
       }
 
@@ -1168,7 +1182,7 @@ export const user = {
         hashedPassword = await bcrypt.hash(mdp, 5);
       }
 
-      // ✅ Vérifier et formater correctement `offres`
+      // ✅ Vérifier et formater `offres`
       const allowedOffres = ["freemium", "start", "start pro", "premium"];
       const formattedOffre = offres ? offres.toLowerCase() : brand.offres;
 
