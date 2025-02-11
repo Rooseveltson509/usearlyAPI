@@ -14,6 +14,7 @@ const ALPHANUMERIC_NUMBER = /^([a-zA-Z0-9_-]){2,50}$/;
 let allowlist = [
   "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
   "http://localhost:5173",
+  "https://usearly-frontend.vercel.app",
   "https://www.nike.com",
   "https://www.zalando.fr",
   "https://www.laboutiqueofficielle.com",
