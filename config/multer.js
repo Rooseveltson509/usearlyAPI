@@ -2,23 +2,28 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Vérifier et créer un dossier si nécessaire
+// 📌 Définition des répertoires de stockage
+const baseUploadDir = path.resolve("uploads");
+const tempDirectory = path.join(baseUploadDir, "temp");
+const userAvatarsDir = path.join(baseUploadDir, "avatars/users");
+const brandAvatarsDir = path.join(baseUploadDir, "avatars/brands");
+
+// 📌 Vérification et création des répertoires sécurisés
 const ensureDirectoryExists = (dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 };
 
-// Répertoire temporaire autorisé
-const tempDirectory = path.resolve("uploads/temp");
+// 📌 Création des dossiers au démarrage
+[baseUploadDir, tempDirectory, userAvatarsDir, brandAvatarsDir].forEach(
+  ensureDirectoryExists
+);
 
-// Répertoire final autorisé
-//const finalDirectoryBase = path.resolve("uploads/avatars");
-
-// Configuration de stockage temporaire
+// 📌 Configuration de stockage temporaire
 const tempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    ensureDirectoryExists(tempDirectory); // Vérifie et crée le dossier temporaire
+    ensureDirectoryExists(tempDirectory);
     cb(null, tempDirectory);
   },
   filename: (req, file, cb) => {
@@ -28,118 +33,168 @@ const tempStorage = multer.diskStorage({
   },
 });
 
-// Filtrage des fichiers par type MIME
+// 📌 Vérification du type de fichier (Sécurité)
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true); // Accepter le fichier
+    cb(null, true);
   } else {
-    cb(new Error("Type de fichier non pris en charge"), false);
+    cb(
+      new Error(
+        "Type de fichier non pris en charge (JPG, PNG, WEBP uniquement)"
+      ),
+      false
+    );
   }
 };
 
-// Limite la taille du fichier (par exemple : 2 MB)
+// 📌 Taille limite des fichiers (2MB)
 const limits = {
-  fileSize: 2 * 1024 * 1024, // 2 MB
+  fileSize: 2 * 1024 * 1024, // 2MB
 };
 
-// Middleware multer avec stockage temporaire
+// 📌 Middleware Multer pour l'upload temporaire
 const upload = multer({ storage: tempStorage, fileFilter, limits });
 
-// Fonction pour déplacer un fichier du répertoire temporaire à son emplacement final
+// 📌 Suppression sécurisée de l'ancien avatar AVANT d'enregistrer le nouveau
+const deleteOldAvatar = async (avatarPath) => {
+  try {
+    if (!avatarPath) return;
+
+    // 🔒 Empêcher les attaques Path Traversal et les manipulations de chemin
+    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
+      console.error("❌ Chemin non autorisé détecté :", avatarPath);
+      return;
+    }
+
+    // 🔥 Vérification stricte : Le fichier doit être dans le dossier "uploads/avatars/"
+    if (
+      !avatarPath.startsWith("uploads/avatars/users") &&
+      !avatarPath.startsWith("uploads/avatars/brands")
+    ) {
+      console.error(
+        "❌ Suppression interdite (chemin non reconnu) :",
+        avatarPath
+      );
+      return;
+    }
+
+    // 📌 Récupérer uniquement le nom du fichier pour empêcher toute injection
+    const fileName = path.basename(avatarPath);
+
+    // 📌 Construire le chemin complet de manière sécurisée
+    let resolvedAvatarPath;
+    if (avatarPath.startsWith("uploads/avatars/users")) {
+      resolvedAvatarPath = path.join(userAvatarsDir, fileName);
+    } else if (avatarPath.startsWith("uploads/avatars/brands")) {
+      resolvedAvatarPath = path.join(brandAvatarsDir, fileName);
+    } else {
+      console.error("❌ Chemin d'avatar non valide :", avatarPath);
+      return;
+    }
+
+    // 🔥 Vérification finale avant suppression
+    if (!resolvedAvatarPath.startsWith(path.resolve("uploads/avatars/"))) {
+      console.error(
+        "❌ Suppression interdite en dehors du dossier avatars :",
+        resolvedAvatarPath
+      );
+      return;
+    }
+
+    // 📌 Vérifier si le fichier existe avant de le supprimer
+    if (fs.existsSync(resolvedAvatarPath)) {
+      await fs.promises.unlink(resolvedAvatarPath);
+      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
+    } else {
+      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
+    }
+  } catch (err) {
+    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
+  }
+};
+
+/* const deleteOldAvatar = async (avatarPath) => {
+  try {
+    if (!avatarPath) return;
+
+    // 🔒 Vérification stricte pour éviter les attaques Path Traversal
+    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
+      console.error("❌ Chemin non autorisé détecté :", avatarPath);
+      return;
+    }
+
+    // 🔥 Vérification stricte : Accepter uniquement les fichiers dans "uploads/avatars/"
+    if (
+      !avatarPath.startsWith("uploads/avatars/users") &&
+      !avatarPath.startsWith("uploads/avatars/brands")
+    ) {
+      console.error(
+        "❌ Suppression interdite (chemin non reconnu) :",
+        avatarPath
+      );
+      return;
+    }
+
+    // 📌 Sécurisation CodeQL : Générer un chemin sécurisé sans utiliser directement `path.resolve(avatarPath)`
+    let resolvedAvatarPath = path.join(
+      path.resolve("uploads"),
+      path.relative("uploads", avatarPath)
+    );
+
+    // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
+    if (
+      !resolvedAvatarPath.startsWith(path.resolve(userAvatarsDir)) &&
+      !resolvedAvatarPath.startsWith(path.resolve(brandAvatarsDir))
+    ) {
+      console.error("❌ Suppression interdite :", resolvedAvatarPath);
+      return;
+    }
+
+    // 📌 Vérifier si le fichier existe avant de le supprimer
+    if (fs.existsSync(resolvedAvatarPath)) {
+      await fs.promises.unlink(resolvedAvatarPath);
+      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
+    } else {
+      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
+    }
+  } catch (err) {
+    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
+  }
+}; */
+
+// 📌 Déplacement sécurisé du fichier vers le répertoire final
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
   try {
     const resolvedTempPath = path.resolve(tempPath);
     const resolvedFinalPath = path.resolve(finalPath);
 
-    // Assurez-vous que les chemins restent dans le répertoire attendu
-    const baseDir = path.resolve("uploads");
+    // 🔥 Vérification stricte : Empêcher l'écriture en dehors de `uploads`
     if (
-      !resolvedTempPath.startsWith(baseDir) ||
-      !resolvedFinalPath.startsWith(baseDir)
+      !resolvedTempPath.startsWith(baseUploadDir) ||
+      !resolvedFinalPath.startsWith(baseUploadDir)
     ) {
-      throw new Error("Tentative d'accès à des chemins non autorisés");
+      throw new Error("❌ Tentative d'accès à des chemins non autorisés !");
     }
 
-    // Assurez-vous que le répertoire final existe
-    const finalDir = path.dirname(resolvedFinalPath);
-    ensureDirectoryExists(finalDir);
+    // 📌 Création du répertoire final s'il n'existe pas
+    ensureDirectoryExists(path.dirname(resolvedFinalPath));
 
-    // Déplacer le fichier
+    // 📌 Déplacement sécurisé du fichier
     await fs.promises.rename(resolvedTempPath, resolvedFinalPath);
+    console.log("✔ Fichier déplacé avec succès :", resolvedFinalPath);
   } catch (err) {
-    console.error("Erreur lors du déplacement du fichier :", err);
+    console.error("❌ Erreur lors du déplacement du fichier :", err);
     throw err;
   }
 };
 
-/* const moveFileToFinalDestination = async (tempPath, finalPath) => {
-  try {
-    // Résolution des chemins pour validation
-    const resolvedTempPath = path.resolve(tempPath);
-    const resolvedFinalPath = path.resolve(finalPath);
-
-    // Assurez-vous que les chemins appartiennent aux répertoires autorisés
-    if (!resolvedTempPath.startsWith(tempDirectory)) {
-      throw new Error("Chemin temporaire non autorisé.");
-    }
-    if (!resolvedFinalPath.startsWith(finalDirectoryBase)) {
-      throw new Error("Chemin final non autorisé.");
-    }
-
-    // Assurez-vous que le répertoire final existe
-    const finalDir = path.dirname(resolvedFinalPath);
-    ensureDirectoryExists(finalDir);
-
-    // Déplacer le fichier
-    await fs.promises.rename(resolvedTempPath, resolvedFinalPath);
-  } catch (err) {
-    console.error("Erreur lors du déplacement du fichier :", err);
-    throw err;
-  }
-}; */
-
-// Fonction pour supprimer un fichier inutilisé
-const deleteFileIfExists = async (filePath) => {
-  try {
-    // Résoudre le chemin pour éviter les injections de chemin
-    const resolvedFilePath = path.resolve(filePath);
-
-    // Vérifiez que le chemin reste dans un répertoire sécurisé
-    const baseDir = path.resolve("uploads"); // Limite les actions dans ce répertoire
-    if (!resolvedFilePath.startsWith(baseDir)) {
-      throw new Error("Tentative d'accès à un chemin non autorisé");
-    }
-
-    if (fs.existsSync(resolvedFilePath)) {
-      await fs.promises.unlink(resolvedFilePath);
-    }
-  } catch (err) {
-    console.error("Erreur lors de la suppression du fichier :", err);
-    throw err;
-  }
-};
-
-/* const deleteFileIfExists = async (filePath) => {
-  try {
-    const resolvedFilePath = path.resolve(filePath);
-
-    // Vérifiez que le chemin appartient à un répertoire autorisé
-    if (
-      !resolvedFilePath.startsWith(tempDirectory) &&
-      !resolvedFilePath.startsWith(finalDirectoryBase)
-    ) {
-      throw new Error("Tentative de suppression d'un fichier non autorisé.");
-    }
-
-    if (fs.existsSync(resolvedFilePath)) {
-      await fs.promises.unlink(resolvedFilePath);
-    }
-  } catch (err) {
-    console.error("Erreur lors de la suppression du fichier :", err);
-  }
-}; */
-
+// 📌 Export des fonctions et middleware sécurisés
 export default upload;
-export { ensureDirectoryExists };
-export { moveFileToFinalDestination, deleteFileIfExists };
+export {
+  ensureDirectoryExists,
+  moveFileToFinalDestination,
+  deleteOldAvatar,
+  userAvatarsDir,
+  brandAvatarsDir,
+};
