@@ -10,6 +10,7 @@ import { suggestion } from "./routes/suggestionCtrl.js";
 import { coupDeCoeur } from "./routes/coupdecoeurCtrl.js";
 import { adminAction } from "./routes/adminCtrl.js";
 import { brandCtrl } from "./routes/brandCtrl.js";
+import { posts } from "./routes/postCtrl.js";
 //const brandCtrlMethods = brandCtrl.default || brandCtrl; // Permet de gérer les deux types d'exportations
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./middleware/validateReport.js";
 import rateLimit from "express-rate-limit";
 import upload from "./config/multer.js";
+import { isAdmin } from "./middleware/auth.js";
 
 const refreshTokenLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -107,7 +109,29 @@ apiRouter
 // 1-b Users routes('/admin/')
 apiRouter
   .route("/admin/brand/new", cors(func.corsOptionsDelegate))
-  .post(user.createBrandNew);
+  .post(isAdmin, upload.single("avatar"), user.createBrandNew);
+
+apiRouter
+  .route("/admin/brand/all", cors(func.corsOptionsDelegate))
+  .get(user.BrandList);
+
+/* apiRouter
+  .route("/admin/brand/update/:brandId", cors(func.corsOptionsDelegate))
+  .put(isAdmin, upload.single("avatar"), user.updateBrand); */
+
+apiRouter.put(
+  "/admin/brand/update/:id",
+  async (req, res, next) => {
+    console.log("🔍 ID reçu dans la route API :", req.params.id);
+    next();
+  },
+  isAdmin,
+  upload.single("avatar"),
+  user.updateBrand
+);
+
+apiRouter.route("/admin/brand/:id").delete(isAdmin, user.deleteBrand);
+
 apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))
   .delete(user.destroyUserProfileByAdmin);
@@ -162,6 +186,27 @@ apiRouter
 apiRouter
   .route("/user/suggestion", cors(func.corsOptionsDelegate))
   .get(suggestion.getAllSuggestions);
+
+// Récupérer tous les posts
+apiRouter.route("/user/posts").get(posts.getAllPosts);
+
+// Récupérer un post spécifique
+apiRouter.route("/posts/:id").get(posts.getPostById);
+
+// Créer un post (avec authentification)
+apiRouter
+  .route("/user/post")
+  .post(cors(func.corsOptionsDelegate), posts.createPost);
+
+// Modifier un post
+apiRouter
+  .route("/user/posts/:id")
+  .put(cors(func.corsOptionsDelegate), posts.updatePost);
+
+// Supprimer un post
+apiRouter
+  .route("/user/posts/:id")
+  .delete(cors(func.corsOptionsDelegate), posts.deletePost);
 
 apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))

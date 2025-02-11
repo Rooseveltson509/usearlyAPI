@@ -19,6 +19,7 @@ export default (sequelize, DataTypes) => {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       });
+      Marque.hasMany(models.Post, { foreignKey: "marqueId", as: "posts" });
 
       // Relation avec TicketMarque
       Marque.hasMany(models.TicketMarque, {

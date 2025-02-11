@@ -18,7 +18,7 @@ import Sequelize from "sequelize";
 const { Op } = Sequelize;
 import {
   moveFileToFinalDestination,
-  deleteFileIfExists,
+  deleteOldAvatar,
   ensureDirectoryExists,
 } from "../config/multer.js";
 
@@ -606,7 +606,7 @@ export const user = {
     if (userId < 0) return res.status(400).json({ error: "wrong token" });
 
     User.findOne({
-      attributes: ["gender", "pseudo", "born", "email", "avatar"],
+      attributes: ["gender", "pseudo", "born", "role", "email", "avatar"],
       where: { id: userId },
     })
       .then(function (user) {
@@ -630,12 +630,12 @@ export const user = {
       let userId = getUserId(headerAuth);
 
       if (userId < 0) {
-        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(400).json({ error: "Paramètres manquants." });
       }
 
       if (!userId) {
-        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(401).json({ error: "Utilisateur non authentifié." });
       }
 
@@ -643,7 +643,7 @@ export const user = {
 
       // Validation des données
       if (!pseudo || pseudo.length < 3 || pseudo.length > 50) {
-        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(400).json({
           error:
             "Pseudo invalide. Minimum 3 caractères, maximum 50 caractères.",
@@ -652,7 +652,7 @@ export const user = {
 
       const user = await User.findByPk(userId);
       if (!user) {
-        if (avatarFile) await deleteFileIfExists(avatarFile.path);
+        if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(404).json({ error: "Utilisateur non trouvé." });
       }
 
@@ -661,44 +661,39 @@ export const user = {
       if (avatarFile) {
         const tempPath = path.resolve(avatarFile.path);
 
-        // Validation du chemin temporaire
+        // 📌 Vérification du chemin temporaire
         const tempBaseDir = path.resolve("uploads/temp");
         if (!tempPath.startsWith(tempBaseDir)) {
-          await deleteFileIfExists(tempPath);
+          await deleteOldAvatar(tempPath);
           return res
             .status(400)
             .json({ error: "Chemin temporaire non autorisé." });
         }
 
-        const finalDir = path.resolve("uploads/avatars");
-        const finalName = `avatar-${Date.now()}-${userId}${path.extname(
-          avatarFile.originalname
-        )}`;
-        const finalPath = path.join(finalDir, finalName);
-
-        // Assurez-vous que le répertoire final existe
+        // 📌 Correction : On force l'enregistrement dans le bon dossier `users`
+        const finalDir = path.resolve("uploads/avatars/users");
         ensureDirectoryExists(finalDir);
 
-        // Déplacer le fichier temporaire à son emplacement final
+        const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
+        const finalPath = path.join(finalDir, finalName);
+
+        // 📌 Déplacement du fichier temporaire vers son emplacement final
         await moveFileToFinalDestination(tempPath, finalPath);
 
-        // Supprimer l'ancien avatar s'il existe
+        // 📌 Suppression de l’ancien avatar si présent
         if (user.avatar) {
-          const oldAvatarPath = path.resolve(
-            "uploads/avatars",
-            path.basename(user.avatar)
-          );
+          const oldAvatarPath = path.resolve("uploads", user.avatar); // Correction du chemin
 
-          // Valider et supprimer l'ancien avatar
           if (oldAvatarPath.startsWith(finalDir)) {
-            await deleteFileIfExists(oldAvatarPath);
+            await deleteOldAvatar(oldAvatarPath);
           }
         }
 
-        finalAvatarPath = `uploads/avatars/${finalName}`; // Chemin relatif pour l'enregistrement dans la base de données
+        // 📌 Correction du chemin pour le stocker en base (chemin relatif)
+        finalAvatarPath = `avatars/users/${finalName}`;
       }
 
-      // Mettre à jour les informations de l'utilisateur
+      // 📌 Mise à jour des informations de l'utilisateur
       await user.update({
         pseudo: pseudo || user.pseudo,
         born: born || user.born,
@@ -713,7 +708,7 @@ export const user = {
       });
     } catch (error) {
       console.error("Erreur lors de la mise à jour du profil :", error);
-      if (avatarFile) await deleteFileIfExists(avatarFile.path); // Supprime le fichier temporaire en cas d'erreur
+      if (avatarFile) await deleteOldAvatar(avatarFile.path); // Supprime le fichier temporaire en cas d'erreur
       return res.status(500).json({ error: "Erreur interne du serveur." });
     }
   },
@@ -973,7 +968,266 @@ export const user = {
       }
     );
   },
-  createBrandNew: function (req, res) {
+  createBrandNew: async function (req, res) {
+    try {
+      console.log("📥 Données reçues dans req.body :", req.body);
+      console.log("📥 Fichier reçu dans req.file :", req.file);
+
+      // Récupération des données
+      const { name, email, mdp, mdp_confirm } = req.body;
+      const avatarFile = req.file; // 📌 Fichier avatar reçu via multer
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+
+      if (userId <= 0) {
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
+
+      // Vérification des champs obligatoires
+      if (!name || !email || !mdp || !mdp_confirm) {
+        console.log("❌ Un ou plusieurs champs sont manquants !");
+        return res
+          .status(400)
+          .json({ error: "Tous les champs doivent être remplis." });
+      }
+
+      // Vérifications des formats des champs
+      if (!func.checkString(name)) {
+        return res.status(400).json({
+          error: "Nom invalide (doit être alphanumérique, 3-50 caractères).",
+        });
+      }
+
+      if (!validator.validate(email)) {
+        return res.status(400).json({ error: "Email non valide." });
+      }
+
+      if (!func.validatePassword(mdp)) {
+        return res.status(400).json({
+          error:
+            "Mot de passe invalide (8+ caractères, 1 chiffre, 1 caractère spécial).",
+        });
+      }
+
+      if (mdp !== mdp_confirm) {
+        return res
+          .status(400)
+          .json({ error: "Les mots de passe ne correspondent pas." });
+      }
+
+      // Vérifier si l'utilisateur est un admin
+      const userAdmin = await User.findOne({
+        where: { id: userId, role: "admin" },
+      });
+
+      if (!userAdmin) {
+        return res.status(401).json({ error: "Accès refusé." });
+      }
+
+      // Vérifier si la marque existe déjà
+      const existingBrand = await Marque.findOne({ where: { email } });
+      if (existingBrand) {
+        return res.status(409).json({ error: "La marque existe déjà." });
+      }
+
+      // Hasher le mot de passe
+      const hashedPassword = await bcrypt.hash(mdp, 5);
+
+      // 📌 Gestion de l'avatar (stockage dans le bon dossier)
+      let avatarPath = null;
+      if (avatarFile) {
+        const tempPath = avatarFile.path; // Chemin temporaire
+        const finalDir = path.resolve("uploads/avatars/brands");
+        ensureDirectoryExists(finalDir);
+
+        const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
+        const finalPath = path.join(finalDir, finalName);
+
+        await moveFileToFinalDestination(tempPath, finalPath);
+        avatarPath = `uploads/avatars/brands/${finalName}`;
+        console.log("📂 Avatar stocké :", avatarPath);
+      }
+
+      // Création de la marque
+      const newBrand = await Marque.create({
+        userId,
+        name,
+        email,
+        mdp: hashedPassword,
+        avatar: avatarPath, // 📌 Enregistrer l'avatar dans la base de données
+      });
+
+      return res
+        .status(201)
+        .json({ message: "Compte créé avec succès.", brand: newBrand });
+    } catch (error) {
+      console.error("Erreur lors de la création de la marque :", error);
+      return res
+        .status(500)
+        .json({ error: "Impossible d'ajouter cette marque." });
+    }
+  },
+
+  updateBrandAvatar: async function (req, res) {
+    try {
+      const { brandId } = req.params;
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+      const newAvatar = req.file ? req.file.filename : null;
+
+      if (!brandId || !newAvatar) {
+        return res.status(400).json({ error: "Brand ID et avatar requis." });
+      }
+
+      // Vérifier si l'utilisateur est bien admin
+      const userAdmin = await User.findOne({
+        where: { id: userId, role: "admin" },
+      });
+      if (!userAdmin) {
+        return res.status(401).json({ error: "Accès refusé." });
+      }
+
+      // Vérifier si la marque existe
+      const brand = await Marque.findByPk(brandId);
+      if (!brand) {
+        return res.status(404).json({ error: "Marque non trouvée." });
+      }
+
+      // Supprimer l'ancien avatar
+      deleteOldAvatar(brand.avatar);
+
+      // Mettre à jour l'avatar
+      brand.avatar = newAvatar;
+      await brand.save();
+
+      return res
+        .status(200)
+        .json({ message: "Avatar mis à jour avec succès.", brand });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'avatar :", error);
+      return res
+        .status(500)
+        .json({ error: "Impossible de mettre à jour l'avatar." });
+    }
+  },
+
+  updateBrand: async function (req, res) {
+    try {
+      const brandId = req.params.id;
+      const { name, email, mdp, offres } = req.body;
+      const avatarFile = req.file;
+
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+
+      // 🔍 Vérifier si l'utilisateur est authentifié
+      if (userId <= 0) {
+        return res
+          .status(403)
+          .json({ error: "Accès refusé. Authentification requise." });
+      }
+
+      // 🔍 Vérifier si l'utilisateur est admin OU s'il possède cette marque
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur non trouvé." });
+      }
+
+      const brand = await Marque.findByPk(brandId);
+      if (!brand) {
+        return res.status(404).json({ error: "Marque non trouvée." });
+      }
+
+      // ✅ Condition : Seul l'admin ou le propriétaire peut modifier
+      if (user.role !== "admin" && brand.userId !== userId) {
+        return res.status(403).json({
+          error:
+            "Accès refusé. Vous n'êtes pas autorisé à modifier cette marque.",
+        });
+      }
+
+      // 📌 Gestion des mises à jour (avatar, offres, etc.)
+      let avatarPath = brand.avatar;
+      if (avatarFile) {
+        const tempPath = avatarFile.path;
+        const finalDir = path.resolve("uploads/avatars/brands");
+        ensureDirectoryExists(finalDir);
+        const finalName = `avatar-${Date.now()}-${brandId}${path.extname(avatarFile.originalname)}`;
+        const finalPath = path.join(finalDir, finalName);
+
+        await moveFileToFinalDestination(tempPath, finalPath);
+        avatarPath = `uploads/avatars/brands/${finalName}`;
+
+        // 🗑 Supprimer l'ancien avatar si existant
+        if (brand.avatar) {
+          const oldAvatarPath = path.resolve(brand.avatar);
+          await deleteOldAvatar(oldAvatarPath);
+        }
+      }
+
+      // 🔐 Hash du mot de passe uniquement s'il est fourni
+      let hashedPassword = brand.mdp;
+      if (mdp && mdp.trim() !== "") {
+        hashedPassword = await bcrypt.hash(mdp, 5);
+      }
+
+      // ✅ Vérifier et formater correctement `offres`
+      const allowedOffres = ["freemium", "start", "start pro", "premium"];
+      const formattedOffre = offres ? offres.toLowerCase() : brand.offres;
+
+      if (!allowedOffres.includes(formattedOffre)) {
+        return res.status(400).json({ error: "Offre invalide." });
+      }
+
+      // 🔄 Mise à jour de la marque
+      await brand.update({
+        name: name || brand.name,
+        email: email || brand.email,
+        mdp: hashedPassword,
+        avatar: avatarPath,
+        offres: formattedOffre,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Marque mise à jour avec succès.",
+        brand,
+      });
+    } catch (error) {
+      console.error("❌ Erreur interne :", error);
+      return res.status(500).json({ error: "Erreur interne du serveur." });
+    }
+  },
+
+  deleteBrand: async function (req, res) {
+    try {
+      const brandId = req.params.id;
+
+      // Vérifier si la marque existe
+      const brand = await Marque.findByPk(brandId);
+      if (!brand) {
+        return res.status(404).json({ error: "Marque non trouvée." });
+      }
+
+      // Supprimer l'avatar de la marque s'il existe
+      if (brand.avatar) {
+        const avatarPath = path.resolve(brand.avatar);
+        await deleteOldAvatar(avatarPath);
+      }
+
+      // Supprimer la marque
+      await brand.destroy();
+
+      return res
+        .status(200)
+        .json({ success: true, message: "Marque supprimée avec succès." });
+    } catch (error) {
+      console.error("❌ Erreur lors de la suppression de la marque :", error);
+      return res.status(500).json({ error: "Erreur interne du serveur." });
+    }
+  },
+
+  /*   createBrandNew: function (req, res) {
     // Getting auth header
     var headerAuth = req.headers["authorization"];
     var userId = getUserId(headerAuth);
@@ -982,6 +1236,7 @@ export const user = {
     let email = req.body.email;
     let mdp = req.body.mdp;
     let mdp_confirm = req.body.mdp_confirm;
+    let avatar = req.body.avatar;
 
     if (
       name.trim().length === 0 ||
@@ -1062,6 +1317,7 @@ export const user = {
             name: name,
             email: email,
             mdp: bcryptedPassword,
+            avatar: avatar,
           })
             .then(function (newBrand) {
               done(newBrand);
@@ -1079,35 +1335,38 @@ export const user = {
         }
       }
     );
-  },
-  BrandList: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = getUserId(headerAuth);
+  }, */
+  BrandList: async function (req, res) {
+    try {
+      // Récupérer l'utilisateur à partir du token
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
 
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing parameters" });
-    }
-    User.findOne({
-      where: { id: userId, role: "admin" },
-    })
-      .then(function (user) {
-        if (user) {
-          Marque.findAll({})
-            .then(function (brand) {
-              if (brand) {
-                res.status(200).json(brand);
-              }
-            })
-            .catch(function (err) {
-              res.status(500).json({ error: "cannot fetch user" });
-            });
-        } else {
-          res.status(404).json({ error: "Accès non autorisé." });
-        }
-      })
-      .catch(function (err) {
-        res.status(500).json({ error: "cannot fetch user" });
+      if (userId <= 0) {
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
+
+      // Vérifier si l'utilisateur est un administrateur
+      const user = await User.findOne({
+        where: { id: userId },
       });
+
+      if (!user) {
+        return res.status(403).json({ error: "Accès non autorisé." });
+      }
+
+      // Récupérer toutes les marques avec les colonnes nécessaires
+      const brands = await Marque.findAll({
+        attributes: ["id", "name", "email", "avatar", "offres", "createdAt"], // ✅ Assure que ces champs sont récupérés
+        order: [["createdAt", "DESC"]], // 🔹 Trie par date de création
+      });
+
+      return res.status(200).json({ brands }); // ✅ Retourne un objet JSON avec `brands`
+    } catch (error) {
+      console.error("❌ Erreur lors de la récupération des marques :", error);
+      return res
+        .status(500)
+        .json({ error: "Impossible de récupérer les marques." });
+    }
   },
 };
