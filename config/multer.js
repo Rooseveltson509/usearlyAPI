@@ -114,55 +114,6 @@ const deleteOldAvatar = async (avatarPath) => {
   }
 };
 
-/* const deleteOldAvatar = async (avatarPath) => {
-  try {
-    if (!avatarPath) return;
-
-    // 🔒 Vérification stricte pour éviter les attaques Path Traversal
-    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
-      console.error("❌ Chemin non autorisé détecté :", avatarPath);
-      return;
-    }
-
-    // 🔥 Vérification stricte : Accepter uniquement les fichiers dans "uploads/avatars/"
-    if (
-      !avatarPath.startsWith("uploads/avatars/users") &&
-      !avatarPath.startsWith("uploads/avatars/brands")
-    ) {
-      console.error(
-        "❌ Suppression interdite (chemin non reconnu) :",
-        avatarPath
-      );
-      return;
-    }
-
-    // 📌 Sécurisation CodeQL : Générer un chemin sécurisé sans utiliser directement `path.resolve(avatarPath)`
-    let resolvedAvatarPath = path.join(
-      path.resolve("uploads"),
-      path.relative("uploads", avatarPath)
-    );
-
-    // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
-    if (
-      !resolvedAvatarPath.startsWith(path.resolve(userAvatarsDir)) &&
-      !resolvedAvatarPath.startsWith(path.resolve(brandAvatarsDir))
-    ) {
-      console.error("❌ Suppression interdite :", resolvedAvatarPath);
-      return;
-    }
-
-    // 📌 Vérifier si le fichier existe avant de le supprimer
-    if (fs.existsSync(resolvedAvatarPath)) {
-      await fs.promises.unlink(resolvedAvatarPath);
-      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
-    } else {
-      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
-    }
-  } catch (err) {
-    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
-  }
-}; */
-
 // 📌 Déplacement sécurisé du fichier vers le répertoire final
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
   try {
