@@ -8,7 +8,7 @@ import {
   getUserId,
   verifyRefreshToken,
 } from "../utils/jwtUtils.js";
-const { User, Marque } = db;
+const { User, Marque, Reporting, CoupDeCoeur, Suggestion } = db;
 import asyncLib from "async";
 import randToken from "rand-token";
 const { uid } = randToken;
@@ -1378,6 +1378,52 @@ export const user = {
       return res
         .status(500)
         .json({ error: "Impossible de récupérer les marques." });
+    }
+  },
+
+  getUserStats: async function (req, res) {
+    try {
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+
+      if (!userId) {
+        return res.status(401).json({ error: "Utilisateur non authentifié." });
+      }
+
+      // Vérifier si l'utilisateur existe
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur non trouvé." });
+      }
+
+      // Récupérer le nombre de signalements faits par cet utilisateur
+      const reportsCount = await Reporting.count({
+        where: { userId },
+      });
+
+      // Récupérer le nombre de coups de cœur faits par cet utilisateur
+      const coupsDeCoeurCount = await CoupDeCoeur.count({
+        where: { userId },
+      });
+
+      // Récupérer le nombre de suggestions faites par cet utilisateur
+      const suggestionsCount = await Suggestion.count({
+        where: { userId },
+      });
+
+      // Calcul du Usear Power (exemple : total de toutes les interactions)
+      const usearPower =
+        reportsCount * 5 + coupsDeCoeurCount * 3 + suggestionsCount * 2;
+
+      return res.status(200).json({
+        reports: reportsCount,
+        coupsDeCoeur: coupsDeCoeurCount,
+        suggestions: suggestionsCount,
+        usearPower,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la récupération des stats :", error);
+      return res.status(500).json({ error: "Erreur interne du serveur." });
     }
   },
 };

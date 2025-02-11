@@ -212,6 +212,11 @@ apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))
   .get(reporting.getReportsByUser);
 
+// Route pour récupérer les statistiques de l'utilisateur
+apiRouter.route("/user/stats", cors(func.corsOptions)).get(user.getUserStats);
+
+//router.get("/user/stats", getUserStats);
+
 // 2- Tickets routes
 apiRouter
   .route("/ticket/:idReporting/new", cors(func.corsOptionsDelegate))
