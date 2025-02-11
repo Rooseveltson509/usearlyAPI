@@ -61,6 +61,63 @@ const deleteOldAvatar = async (avatarPath) => {
   try {
     if (!avatarPath) return;
 
+    // 🔒 Empêcher les attaques Path Traversal et les manipulations de chemin
+    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
+      console.error("❌ Chemin non autorisé détecté :", avatarPath);
+      return;
+    }
+
+    // 🔥 Vérification stricte : Le fichier doit être dans le dossier "uploads/avatars/"
+    if (
+      !avatarPath.startsWith("uploads/avatars/users") &&
+      !avatarPath.startsWith("uploads/avatars/brands")
+    ) {
+      console.error(
+        "❌ Suppression interdite (chemin non reconnu) :",
+        avatarPath
+      );
+      return;
+    }
+
+    // 📌 Récupérer uniquement le nom du fichier pour empêcher toute injection
+    const fileName = path.basename(avatarPath);
+
+    // 📌 Construire le chemin complet de manière sécurisée
+    let resolvedAvatarPath;
+    if (avatarPath.startsWith("uploads/avatars/users")) {
+      resolvedAvatarPath = path.join(userAvatarsDir, fileName);
+    } else if (avatarPath.startsWith("uploads/avatars/brands")) {
+      resolvedAvatarPath = path.join(brandAvatarsDir, fileName);
+    } else {
+      console.error("❌ Chemin d'avatar non valide :", avatarPath);
+      return;
+    }
+
+    // 🔥 Vérification finale avant suppression
+    if (!resolvedAvatarPath.startsWith(path.resolve("uploads/avatars/"))) {
+      console.error(
+        "❌ Suppression interdite en dehors du dossier avatars :",
+        resolvedAvatarPath
+      );
+      return;
+    }
+
+    // 📌 Vérifier si le fichier existe avant de le supprimer
+    if (fs.existsSync(resolvedAvatarPath)) {
+      await fs.promises.unlink(resolvedAvatarPath);
+      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
+    } else {
+      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
+    }
+  } catch (err) {
+    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
+  }
+};
+
+/* const deleteOldAvatar = async (avatarPath) => {
+  try {
+    if (!avatarPath) return;
+
     // 🔒 Vérification stricte pour éviter les attaques Path Traversal
     if (avatarPath.includes("..") || avatarPath.includes("\\")) {
       console.error("❌ Chemin non autorisé détecté :", avatarPath);
@@ -84,52 +141,6 @@ const deleteOldAvatar = async (avatarPath) => {
       path.resolve("uploads"),
       path.relative("uploads", avatarPath)
     );
-
-    // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
-    if (
-      !resolvedAvatarPath.startsWith(path.resolve(userAvatarsDir)) &&
-      !resolvedAvatarPath.startsWith(path.resolve(brandAvatarsDir))
-    ) {
-      console.error("❌ Suppression interdite :", resolvedAvatarPath);
-      return;
-    }
-
-    // 📌 Vérifier si le fichier existe avant de le supprimer
-    if (fs.existsSync(resolvedAvatarPath)) {
-      await fs.promises.unlink(resolvedAvatarPath);
-      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
-    } else {
-      console.warn("⚠️ Fichier avatar introuvable :", resolvedAvatarPath);
-    }
-  } catch (err) {
-    console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
-  }
-};
-
-/* const deleteOldAvatar = async (avatarPath) => {
-  try {
-    if (!avatarPath) return;
-
-    // 🔒 Vérification stricte pour éviter les suppressions accidentelles et les attaques Path Traversal
-    if (avatarPath.includes("..") || avatarPath.includes("\\")) {
-      console.error("❌ Chemin non autorisé détecté :", avatarPath);
-      return;
-    }
-
-    // 📌 Correction : S'assurer que le chemin est bien absolu et évite "uploads/uploads"
-    let resolvedAvatarPath;
-    if (
-      avatarPath.startsWith("uploads/avatars/users") ||
-      avatarPath.startsWith("uploads/avatars/brands")
-    ) {
-      resolvedAvatarPath = path.resolve(avatarPath); // 🔥 Évite "uploads/uploads"
-    } else {
-      console.error(
-        "❌ Suppression interdite (chemin non reconnu) :",
-        avatarPath
-      );
-      return;
-    }
 
     // 🔥 Vérification stricte : Empêcher la suppression hors des dossiers autorisés
     if (
