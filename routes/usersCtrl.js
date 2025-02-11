@@ -623,25 +623,21 @@ export const user = {
 
   // update user profile
   updateUserProfile: async (req, res) => {
-    const avatarFile = req.file; // Fichier temporaire
+    let avatarFile = req.file; // 📌 Fichier temporaire
+    let finalAvatarPath = null;
 
     try {
       let headerAuth = req.headers["authorization"];
       let userId = getUserId(headerAuth);
 
-      if (userId < 0) {
-        if (avatarFile) await deleteOldAvatar(avatarFile.path);
-        return res.status(400).json({ error: "Paramètres manquants." });
-      }
-
-      if (!userId) {
+      if (!userId || userId < 0) {
         if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(401).json({ error: "Utilisateur non authentifié." });
       }
 
       const { pseudo, born, gender } = req.body;
 
-      // Validation des données
+      // Validation du pseudo
       if (!pseudo || pseudo.length < 3 || pseudo.length > 50) {
         if (avatarFile) await deleteOldAvatar(avatarFile.path);
         return res.status(400).json({
@@ -656,13 +652,12 @@ export const user = {
         return res.status(404).json({ error: "Utilisateur non trouvé." });
       }
 
-      // Gestion de l'avatar
-      let finalAvatarPath = user.avatar;
+      // 📌 Gestion de l'avatar SEULEMENT si un nouveau fichier est uploadé
       if (avatarFile) {
         const tempPath = path.resolve(avatarFile.path);
-
-        // 📌 Vérification du chemin temporaire
         const tempBaseDir = path.resolve("uploads/temp");
+
+        // 📌 Vérification stricte pour empêcher les attaques de chemin
         if (!tempPath.startsWith(tempBaseDir)) {
           await deleteOldAvatar(tempPath);
           return res
@@ -670,35 +665,37 @@ export const user = {
             .json({ error: "Chemin temporaire non autorisé." });
         }
 
-        // 📌 Correction : On force l'enregistrement dans le bon dossier `users`
+        // 📌 Définition du dossier final sécurisé
         const finalDir = path.resolve("uploads/avatars/users");
         ensureDirectoryExists(finalDir);
 
-        const finalName = `avatar-${Date.now()}-${userId}${path.extname(avatarFile.originalname)}`;
+        // 📌 Création d'un nom unique pour éviter les conflits
+        const finalName = `avatar-${Date.now()}-${userId}${path.extname(
+          avatarFile.originalname
+        )}`;
         const finalPath = path.join(finalDir, finalName);
 
-        // 📌 Déplacement du fichier temporaire vers son emplacement final
+        // 📌 Déplacement sécurisé du fichier
         await moveFileToFinalDestination(tempPath, finalPath);
 
-        // 📌 Suppression de l’ancien avatar si présent
+        // 📌 Suppression de l'ancien avatar si présent
         if (user.avatar) {
-          const oldAvatarPath = path.resolve("uploads", user.avatar); // Correction du chemin
-
+          const oldAvatarPath = path.resolve("uploads", user.avatar);
           if (oldAvatarPath.startsWith(finalDir)) {
             await deleteOldAvatar(oldAvatarPath);
           }
         }
 
-        // 📌 Correction du chemin pour le stocker en base (chemin relatif)
+        // 📌 Mise à jour du chemin relatif de l'avatar pour la base de données
         finalAvatarPath = `avatars/users/${finalName}`;
       }
 
-      // 📌 Mise à jour des informations de l'utilisateur
+      // 📌 Mise à jour des infos utilisateur
       await user.update({
         pseudo: pseudo || user.pseudo,
         born: born || user.born,
         gender: gender || user.gender,
-        avatar: finalAvatarPath,
+        avatar: finalAvatarPath || user.avatar, // ✅ Ne change que si un nouvel avatar est uploadé
       });
 
       return res.status(200).json({
@@ -708,7 +705,7 @@ export const user = {
       });
     } catch (error) {
       console.error("Erreur lors de la mise à jour du profil :", error);
-      if (avatarFile) await deleteOldAvatar(avatarFile.path); // Supprime le fichier temporaire en cas d'erreur
+      if (avatarFile) await deleteOldAvatar(avatarFile.path); // Nettoyage en cas d'erreur
       return res.status(500).json({ error: "Erreur interne du serveur." });
     }
   },

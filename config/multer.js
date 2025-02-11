@@ -2,25 +2,25 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Dossiers de stockage
+// 📌 Définition des répertoires de stockage
 const baseUploadDir = path.resolve("uploads");
 const tempDirectory = path.join(baseUploadDir, "temp");
 const userAvatarsDir = path.join(baseUploadDir, "avatars/users");
 const brandAvatarsDir = path.join(baseUploadDir, "avatars/brands");
 
-// Vérifier et créer les répertoires si nécessaires
+// 📌 Vérification et création des répertoires si nécessaires
 const ensureDirectoryExists = (dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 };
 
-// Création des dossiers au démarrage
+// 📌 Création des dossiers au démarrage
 [baseUploadDir, tempDirectory, userAvatarsDir, brandAvatarsDir].forEach(
   ensureDirectoryExists
 );
 
-// Configuration de stockage temporaire
+// 📌 Configuration de stockage temporaire
 const tempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     ensureDirectoryExists(tempDirectory);
@@ -33,7 +33,7 @@ const tempStorage = multer.diskStorage({
   },
 });
 
-// Vérification du type de fichier
+// 📌 Vérification du type de fichier (Sécurité)
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   if (allowedTypes.includes(file.mimetype)) {
@@ -48,60 +48,79 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Taille limite des fichiers (2MB)
+// 📌 Taille limite des fichiers (2MB)
 const limits = {
   fileSize: 2 * 1024 * 1024, // 2MB
 };
 
-// Middleware Multer pour l'upload temporaire
+// 📌 Middleware Multer pour l'upload temporaire
 const upload = multer({ storage: tempStorage, fileFilter, limits });
 
-// Déplacement du fichier vers le répertoire final (Utilisateur ou Marque)
+// 📌 Déplacement du fichier vers le répertoire final (Utilisateur ou Marque)
 const moveFileToFinalDestination = async (tempPath, finalPath) => {
   try {
     const resolvedTempPath = path.resolve(tempPath);
     const resolvedFinalPath = path.resolve(finalPath);
 
+    // 🔥 Sécurisation : Vérifier que les chemins sont sous `uploads`
     if (
       !resolvedTempPath.startsWith(baseUploadDir) ||
       !resolvedFinalPath.startsWith(baseUploadDir)
     ) {
-      throw new Error("Tentative d'accès à des chemins non autorisés");
+      throw new Error("❌ Tentative d'accès à des chemins non autorisés !");
     }
 
+    // 📌 Création du répertoire final s'il n'existe pas
     ensureDirectoryExists(path.dirname(resolvedFinalPath));
+
+    // 📌 Déplacement du fichier vers son emplacement final
     await fs.promises.rename(resolvedTempPath, resolvedFinalPath);
+    console.log("✔ Fichier déplacé avec succès :", resolvedFinalPath);
   } catch (err) {
-    console.error("Erreur lors du déplacement du fichier :", err);
+    console.error("❌ Erreur lors du déplacement du fichier :", err);
     throw err;
   }
 };
 
-// Suppression de l'ancien avatar
+// 📌 Suppression de l'ancien avatar (Sécurisé)
 const deleteOldAvatar = async (avatarPath) => {
   try {
     if (!avatarPath) return;
 
-    // 📌 Correction ici : Générer le bon chemin absolu
+    // 📌 Générer le chemin absolu
     const resolvedAvatarPath = path.resolve("uploads", avatarPath);
 
-    // 📌 Vérification pour s'assurer qu'on ne supprime que dans `uploads/avatars/users`
+    // 🔥 Sécurisation : Vérifier que le fichier est bien sous `avatars/users` ou `avatars/brands`
     if (
       !resolvedAvatarPath.startsWith(userAvatarsDir) &&
       !resolvedAvatarPath.startsWith(brandAvatarsDir)
     ) {
-      throw new Error("Tentative de suppression d'un fichier non autorisé.");
+      console.error(
+        "❌ Tentative de suppression interdite :",
+        resolvedAvatarPath
+      );
+      return;
     }
 
+    // 📌 Vérifier si le fichier existe avant de le supprimer
     if (fs.existsSync(resolvedAvatarPath)) {
       await fs.promises.unlink(resolvedAvatarPath);
-      console.log("✔ Ancien avatar supprimé :", resolvedAvatarPath);
+      console.log(
+        "✔ Ancien avatar supprimé avec succès :",
+        resolvedAvatarPath
+      );
+    } else {
+      console.warn(
+        "⚠️ Fichier avatar à supprimer introuvable :",
+        resolvedAvatarPath
+      );
     }
   } catch (err) {
     console.error("❌ Erreur lors de la suppression de l'ancien avatar :", err);
   }
 };
 
+// 📌 Export des fonctions et middleware
 export default upload;
 export {
   ensureDirectoryExists,
