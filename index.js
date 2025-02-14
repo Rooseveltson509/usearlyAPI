@@ -76,5 +76,6 @@ process.on("unhandledRejection", (reason) => {
 // launch server
 server.listen(PORT, "0.0.0.0", function () {
   console.log("Server en écoute sur le port : ", PORT);
+  console.log("ENV MODE:", process.env.NODE_ENV);
   console.log(`API disponible à : http://localhost:${PORT}${config.rootAPI}`);
 });

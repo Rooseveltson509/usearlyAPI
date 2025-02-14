@@ -37,6 +37,11 @@ export async function up(queryInterface, Sequelize) {
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
+    reactions: {
+      type: Sequelize.JSON, // Stocke un tableau d'objets [{ emoji: "🔥", count: 10 }, { emoji: "❤️", count: 5 }]
+      allowNull: false,
+      defaultValue: [], // Un post commence sans réactions
+    },
     createdAt: {
       type: Sequelize.DATE,
       allowNull: false,
