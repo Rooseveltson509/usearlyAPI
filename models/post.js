@@ -13,6 +13,7 @@ export default (sequelize, DataTypes) => {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       });
+      Post.hasMany(models.Like, { foreignKey: "postId", as: "postLikes" });
       Post.belongsTo(models.Marque, { foreignKey: "marqueId", as: "brand" });
     }
   }
@@ -55,6 +56,11 @@ export default (sequelize, DataTypes) => {
           key: "id",
         },
         allowNull: true, // Optionnel si tous les posts n'ont pas de marque
+      },
+      reactions: {
+        type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
+        allowNull: false,
+        defaultValue: [], // ✅ Commence vide
       },
       createdAt: {
         type: DataTypes.DATE,

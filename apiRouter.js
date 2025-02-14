@@ -103,6 +103,10 @@ apiRouter
   .get(brandCtrl.fetchBrandProfile);
 
 apiRouter
+  .route("/brand/:name", cors(func.corsOptionsDelegate))
+  .get(brandCtrl.getBrandByName);
+
+apiRouter
   .route("/brand/:idticket/response", cors(func.corsOptionsDelegate))
   .post(createBrandTicket.createTicket);
 
@@ -208,14 +212,27 @@ apiRouter
   .route("/user/posts/:id")
   .delete(cors(func.corsOptionsDelegate), posts.deletePost);
 
+// update like post
+apiRouter
+  .route("/posts/:postId/like")
+  .put(cors(func.corsOptionsDelegate), posts.toggleLike);
+
+// update reaction post
+apiRouter
+  .route("/posts/:postId/reaction")
+  .put(cors(func.corsOptionsDelegate), posts.addReaction);
+
+// get reaction post from each user
+apiRouter
+  .route("/posts/:postId/reactions/:emoji")
+  .get(cors(func.corsOptionsDelegate), posts.getReactionUsers);
+
 apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))
   .get(reporting.getReportsByUser);
 
 // Route pour récupérer les statistiques de l'utilisateur
 apiRouter.route("/user/stats", cors(func.corsOptions)).get(user.getUserStats);
-
-//router.get("/user/stats", getUserStats);
 
 // 2- Tickets routes
 apiRouter

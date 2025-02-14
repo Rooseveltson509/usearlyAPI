@@ -221,8 +221,8 @@ export const user = {
         // Stocke le refresh token dans un cookie sécurisé
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true, // Empêche l'accès via JavaScript (protection XSS)
-          secure: true, // Requis pour HTTPS (les cookies ne transitent que sur HTTPS)
-          sameSite: "strict", // Empêche le partage du cookie entre sites (CSRF)
+          secure: process.env.NODE_ENV === "production", // Désactive secure en local
+          sameSite: "none", // Empêche le partage du cookie entre sites (CSRF)
           maxAge: 30 * 24 * 60 * 60 * 1000, // Définit une expiration
         });
       } else {
@@ -607,7 +607,7 @@ export const user = {
     if (userId < 0) return res.status(400).json({ error: "wrong token" });
 
     User.findOne({
-      attributes: ["gender", "pseudo", "born", "role", "email", "avatar"],
+      attributes: ["id", "gender", "pseudo", "born", "role", "email", "avatar"],
       where: { id: userId },
     })
       .then(function (user) {
@@ -1238,115 +1238,6 @@ export const user = {
     }
   },
 
-  /*   createBrandNew: function (req, res) {
-    // Getting auth header
-    var headerAuth = req.headers["authorization"];
-    var userId = getUserId(headerAuth);
-
-    let name = req.body.name;
-    let email = req.body.email;
-    let mdp = req.body.mdp;
-    let mdp_confirm = req.body.mdp_confirm;
-    let avatar = req.body.avatar;
-
-    if (
-      name.trim().length === 0 ||
-      email.trim().length === 0 ||
-      mdp.trim().length === 0
-    ) {
-      return res.status(400).json({ error: "all fields must be filled in." });
-    }
-
-    if (!func.checkString(name)) {
-      return res.status(400).json({
-        error:
-          "Invalid last name (Must be alphaNumerate Min 3 characters  - Max 50 characters)",
-      });
-    }
-
-    if (!validator.validate(email)) {
-      return res.status(400).json({ error: "email is not valid" });
-    }
-
-    if (!func.checkPassword(mdp)) {
-      return res.status(400).json({
-        error:
-          "password invalid (Min 1 special character - Min 1 number. - Min 8 characters or More)",
-      });
-    }
-
-    if (mdp !== mdp_confirm) {
-      return res.status(400).json({ error: "passwords do not match." });
-    }
-
-    if (userId <= 0) {
-      return res.status(400).json({ error: "missing token" });
-    }
-    asyncLib.waterfall(
-      [
-        function (done) {
-          User.findOne({
-            where: { id: userId, role: "admin" },
-          })
-            .then(function (userAdmin) {
-              done(null, userAdmin);
-            })
-            .catch(function (err) {
-              return res.status(401).json({ error: "User not found" });
-            });
-        },
-        function (userAdmin, done) {
-          if (userAdmin) {
-            Marque.findOne({
-              where: { email: email },
-            })
-              .then(function (userFound) {
-                done(null, userAdmin, userFound);
-              })
-              .catch(function (err) {
-                return res
-                  .status(500)
-                  .json({ error: "unable to verify this user" });
-              });
-          } else {
-            return res.status(401).json({ error: "Access Denied." });
-          }
-        },
-        function (userAdmin, userFound, done) {
-          if (!userFound) {
-            bcrypt.hash(mdp, 5, function (err, bcryptedPassword) {
-              done(null, userFound, bcryptedPassword);
-            });
-          } else {
-            return res.status(409).json({ error: "Brand already exist. " });
-          }
-        },
-
-        function (userFound, bcryptedPassword, done) {
-          Marque.create({
-            userId: userId,
-            name: name,
-            email: email,
-            mdp: bcryptedPassword,
-            avatar: avatar,
-          })
-            .then(function (newBrand) {
-              done(newBrand);
-            })
-            .catch(function (err) {
-              return res.status(500).json({ error: "cannot add this brand" });
-            });
-        },
-      ],
-      function (newBrand) {
-        if (newBrand) {
-          return res.status(201).json({ msg: "account created with success." });
-        } else {
-          return res.status(500).json({ error: "cannot add this brand" });
-        }
-      }
-    );
-  }, */
   BrandList: async function (req, res) {
     try {
       // Récupérer l'utilisateur à partir du token

@@ -189,7 +189,7 @@ export const reporting = {
           {
             model: User,
             as: "User",
-            attributes: ["pseudo", "email"],
+            attributes: ["pseudo", "email", "avatar"],
           },
           {
             model: SiteType,
