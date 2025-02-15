@@ -38,6 +38,13 @@ export default (sequelize, DataTypes) => {
         onUpdate: "CASCADE",
       });
 
+      User.hasMany(models.Comment, {
+        foreignKey: "userId",
+        as: "comments",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
+
       User.hasMany(models.Suggestion, {
         foreignKey: "userId", // Clé étrangère dans Suggestion
         as: "suggestions", // Alias pour accéder aux Suggestions

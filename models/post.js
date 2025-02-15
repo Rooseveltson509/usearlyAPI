@@ -15,6 +15,12 @@ export default (sequelize, DataTypes) => {
       });
       Post.hasMany(models.Like, { foreignKey: "postId", as: "postLikes" });
       Post.belongsTo(models.Marque, { foreignKey: "marqueId", as: "brand" });
+      Post.hasMany(models.Comment, {
+        foreignKey: "postId",
+        as: "comments",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
   }
 

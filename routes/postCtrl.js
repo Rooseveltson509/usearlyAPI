@@ -28,27 +28,44 @@ export const posts = {
         return res.status(403).json({ error: "Utilisateur introuvable" });
       }
 
-      // Création du post avec initialisation des likes et réactions
+      // Création du post
       const post = await Post.create({
         userId: userFound.id,
         title,
         content,
-        marqueId: marqueId || null, // ✅ Assure-toi que `null` est accepté
+        marqueId: marqueId || null, // ✅ Assure que `null` est accepté
         likes: 0, // ✅ Initialisation du nombre de likes
         reactions: [], // ✅ Initialisation des réactions comme un tableau vide
+      });
+
+      // 🔥 **On récupère maintenant le post avec les relations complètes**
+      const fullPost = await Post.findByPk(post.id, {
+        include: [
+          {
+            model: User,
+            as: "author", // 🔥 Inclut l'auteur avec pseudo et avatar
+            attributes: ["id", "pseudo", "avatar"],
+          },
+          {
+            model: Marque,
+            as: "brand", // 🔥 Inclut la marque si elle existe
+            attributes: ["id", "name", "avatar"],
+          },
+        ],
       });
 
       return res.status(201).json({
         status: 201,
         success: true,
         message: "Post créé avec succès.",
-        post,
+        post: fullPost, // ✅ Maintenant on envoie le post avec toutes ses infos
       });
     } catch (err) {
       console.error("Erreur lors de la création du post :", err);
       return res.status(500).json({ error: "Une erreur est survenue" });
     }
   },
+
   toggleLike: async (req, res) => {
     try {
       const { postId } = req.params;

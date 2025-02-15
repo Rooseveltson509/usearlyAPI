@@ -11,6 +11,7 @@ import { coupDeCoeur } from "./routes/coupdecoeurCtrl.js";
 import { adminAction } from "./routes/adminCtrl.js";
 import { brandCtrl } from "./routes/brandCtrl.js";
 import { posts } from "./routes/postCtrl.js";
+import { comment } from "./routes/commentCtrl.js";
 //const brandCtrlMethods = brandCtrl.default || brandCtrl; // Permet de gérer les deux types d'exportations
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
 import {
@@ -176,10 +177,6 @@ apiRouter
     coupDeCoeur.createCoupdeCoeur
   );
 
-/* apiRouter
-  .route("/user/admin/reports", cors(func.corsOptionsDelegate))
-  .get(reporting.getAllReports); */
-
 apiRouter
   .route("/user/reports", cors(func.corsOptionsDelegate))
   .get(reporting.getAllReports);
@@ -226,6 +223,21 @@ apiRouter
 apiRouter
   .route("/posts/:postId/reactions/:emoji")
   .get(cors(func.corsOptionsDelegate), posts.getReactionUsers);
+
+// 📌 Ajouter un commentaire à un post (🔒 Authentification requise)
+apiRouter
+  .route("/posts/:postId/comments")
+  .post(cors(func.corsOptionsDelegate), comment.addComment);
+
+// 📌 Récupérer les commentaires d'un post avec pagination
+apiRouter
+  .route("/posts/:postId/comments")
+  .get(cors(func.corsOptionsDelegate), comment.getPostComments);
+
+// 📌 Supprimer un commentaire (🔒 Seulement l'auteur du commentaire)
+apiRouter
+  .route("/comments/:commentId")
+  .delete(cors(func.corsOptionsDelegate), comment.deleteComment);
 
 apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))
