@@ -12,7 +12,9 @@ import { adminAction } from "./routes/adminCtrl.js";
 import { brandCtrl } from "./routes/brandCtrl.js";
 import { posts } from "./routes/postCtrl.js";
 import { comment } from "./routes/commentCtrl.js";
-//const brandCtrlMethods = brandCtrl.default || brandCtrl; // Permet de gérer les deux types d'exportations
+import { commentReport } from "./routes/commentReportCtrl.js";
+import { commentCdc } from "./routes/commentCdcCtr.js";
+import { commentSuggestion } from "./routes/commentSuggestionCtrl.js";
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
 import {
   validateCoupdeCoeur,
@@ -181,6 +183,50 @@ apiRouter
   .route("/user/reports", cors(func.corsOptionsDelegate))
   .get(reporting.getAllReports);
 
+/* reaction report */
+apiRouter
+  .route("/report/:reportId/reactions", cors(func.corsOptionsDelegate))
+  .put(reporting.addReactionToReport);
+
+apiRouter
+  .route("/reports/:reportId/reactions", cors(func.corsOptionsDelegate))
+  .get(reporting.getAllReportReactions); // ✅ Nouvelle méthode pour récupérer toutes les réactions
+
+apiRouter
+  .route("/reports/:reportId/reactions/:emoji", cors(func.corsOptionsDelegate))
+  .get(reporting.getReportReactionUsers);
+/* end reaction report */
+
+/* reaction suggestion */
+/* ✅ Routes pour les réactions sur les Suggestions */
+apiRouter
+  .route("/suggestion/:suggestionId/reactions", cors(func.corsOptionsDelegate))
+  .put(suggestion.addReactionToSuggestion) // ✅ Ajout d'une réaction
+  .get(suggestion.getAllSuggestionReactions); // ✅ Récupération des réactions
+
+apiRouter
+  .route(
+    "/suggestion/:suggestionId/reactions/:emoji",
+    cors(func.corsOptionsDelegate)
+  )
+  .get(suggestion.getSuggestionReactionUsers); // ✅ Récupération des utilisateurs ayant réagi avec un emoji spécifique
+
+/* end reaction suggestion */
+
+/* reaction cdc */
+apiRouter
+  .route("/cdc/:coupdecoeurId/reactions", cors(func.corsOptionsDelegate))
+  .put(coupDeCoeur.addReactionToCdc);
+
+apiRouter
+  .route("/cdc/:coupdecoeurId/reactions", cors(func.corsOptionsDelegate))
+  .get(coupDeCoeur.getAllCdcReactions);
+
+apiRouter
+  .route("/cdc/:coupdecoeurId/reactions/:emoji", cors(func.corsOptionsDelegate))
+  .get(coupDeCoeur.getCdcReactionUsers);
+/* end reaction cdc */
+
 apiRouter
   .route("/user/coupsdecoeur", cors(func.corsOptionsDelegate))
   .get(coupDeCoeur.getAllCoupdeCoeur);
@@ -238,6 +284,60 @@ apiRouter
 apiRouter
   .route("/comments/:commentId")
   .delete(cors(func.corsOptionsDelegate), comment.deleteComment);
+
+// 📌 Ajouter un commentaire à un Report (🔒 Authentification requise)
+apiRouter
+  .route("/reports/:reportId/comments")
+  .post(cors(func.corsOptionsDelegate), commentReport.addCommentToReport);
+
+// 📌 Récupérer les commentaires d'un Report avec pagination
+apiRouter
+  .route("/reports/:reportId/comments")
+  .get(cors(func.corsOptionsDelegate), commentReport.getReportComments);
+
+// 📌 Supprimer un commentaire d'un Report (🔒 Seulement l'auteur du commentaire ou un admin)
+apiRouter
+  .route("/comments/:commentId")
+  .delete(
+    cors(func.corsOptionsDelegate),
+    commentReport.deleteCommentFromReport
+  );
+
+// 📌 Ajouter un commentaire à un CoupDeCoeur (🔒 Authentification requise)
+apiRouter
+  .route("/coupdecoeur/:coupDeCoeurId/comments")
+  .post(cors(func.corsOptionsDelegate), commentCdc.addCommentToCdc);
+
+// 📌 Récupérer les commentaires d'un CoupDeCoeur avec pagination
+apiRouter
+  .route("/coupdecoeur/:coupDeCoeurId/comments")
+  .get(cors(func.corsOptionsDelegate), commentCdc.getCdcComments);
+
+// 📌 Supprimer un commentaire d'un CoupDeCoeur (🔒 Seulement l'auteur ou un admin)
+apiRouter
+  .route("/comments/:commentId")
+  .delete(cors(func.corsOptionsDelegate), commentCdc.deleteCommentFromCdc);
+
+// 📌 Ajouter un commentaire à une Suggestion (🔒 Authentification requise)
+apiRouter
+  .route("/suggestions/:suggestionId/comments")
+  .post(
+    cors(func.corsOptionsDelegate),
+    commentSuggestion.addCommentToSuggestion
+  );
+
+// 📌 Récupérer les commentaires d'une Suggestion avec pagination
+apiRouter
+  .route("/suggestions/:suggestionId/comments")
+  .get(cors(func.corsOptionsDelegate), commentSuggestion.getSuggestionComments);
+
+// 📌 Supprimer un commentaire d'une Suggestion (🔒 Seulement l'auteur ou un admin)
+apiRouter
+  .route("/comments/:commentId")
+  .delete(
+    cors(func.corsOptionsDelegate),
+    commentSuggestion.deleteCommentFromSuggestion
+  );
 
 apiRouter
   .route("/user/admin/:email", cors(func.corsOptionsDelegate))

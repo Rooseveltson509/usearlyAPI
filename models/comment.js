@@ -23,6 +23,25 @@ export default (sequelize, DataTypes) => {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       });
+
+      Comment.belongsTo(models.Reporting, {
+        foreignKey: "reportId",
+        as: "reporting",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
+      Comment.belongsTo(models.Suggestion, {
+        foreignKey: "suggestionId",
+        as: "suggestion",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
+      Comment.belongsTo(models.CoupDeCoeur, {
+        foreignKey: "coupDeCoeurId",
+        as: "coupDeCoeur",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
   }
 
@@ -35,10 +54,40 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
       },
       postId: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.UUID,
         references: {
           model: "Posts",
+          key: "id",
+        },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      },
+      reportId: {
+        allowNull: true,
+        type: DataTypes.UUID,
+        references: {
+          model: "Reportings",
+          key: "id",
+        },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      },
+      suggestionId: {
+        allowNull: true,
+        type: DataTypes.UUID,
+        references: {
+          model: "Suggestions",
+          key: "id",
+        },
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      },
+      coupDeCoeurId: {
+        allowNull: true,
+        type: DataTypes.UUID,
+        references: {
+          model: "CoupdeCoeurs",
           key: "id",
         },
         onDelete: "CASCADE",

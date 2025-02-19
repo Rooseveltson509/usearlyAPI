@@ -6,6 +6,8 @@ import { service } from "../services/siteService.js";
 import { reportService } from "../services/reportService.js";
 import logger from "../utils/logger.js";
 import { performance } from "perf_hooks";
+import { Sequelize } from "sequelize";
+//[Sequelize.literal("'signalement'"), "type"], // ✅ Ajout du champ `type`
 
 export const reporting = {
   // Créer un rapport
@@ -85,143 +87,276 @@ export const reporting = {
       });
     }
   },
-  // Find User Reportings By store
-  /*   getAllReports: async function (req, res) {
-    try {
-      // Récupérer l'authentification de l'admin
-      const headerAuth = req.headers["authorization"];
-      const adminId = getUserId(headerAuth);
 
-      // Vérifier si l'utilisateur est un administrateur
-      const admin = await User.findOne({
-        where: { id: adminId },
-        //where: { id: adminId, role: "admin" },
-      });
-      if (!admin) {
-        return res.status(403).json({ error: "Accès non autorisé." });
+  // ✅ Ajouter ou supprimer une réaction sur un signalement
+  addReactionToReport: async function (req, res) {
+    try {
+      console.log("📌 Requête reçue pour ajouter une réaction...");
+      console.log("📦 Headers :", req.headers);
+      console.log("📦 Body reçu :", req.body);
+      console.log("📦 Paramètres :", req.params);
+
+      const { reportId } = req.params;
+      const { emoji } = req.body;
+      const userId = getUserId(req.headers["authorization"]);
+
+      if (!userId) {
+        console.error("❌ Erreur : Utilisateur non authentifié.");
+        return res.status(401).json({ error: "Utilisateur non authentifié" });
       }
 
-      // Paramètres pour la pagination
-      const { page = 1, limit = 10 } = req.query;
-      const offset = (page - 1) * limit;
+      if (!reportId || !emoji) {
+        console.error("❌ Erreur : Paramètres manquants.");
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
 
-      // Récupérer tous les reportings avec pagination
-      const { count, rows: reports } = await Reporting.findAndCountAll({
-        attributes: [
-          "id",
-          "siteUrl",
-          "marque",
-          "bugLocation",
-          "emojis",
-          "description",
-          "blocking",
-          "tips",
-          "createdAt",
-          "updatedAt",
-        ],
-        include: [
-          {
-            model: User,
-            as: "User",
-            attributes: ["pseudo", "email"],
-          },
-          {
-            model: SiteType,
-            as: "siteType",
-            attributes: ["name", "description"],
-          },
-        ],
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        order: [["createdAt", "DESC"]],
-      });
-      // Ajouter l'en-tête Content-Type
-      res.setHeader("Content-Type", "application/json");
-      // Retourner les reportings avec pagination
+      const report = await Reporting.findByPk(reportId);
+      if (!report) {
+        console.error("❌ Erreur : Signalement non trouvé.");
+        return res.status(404).json({ error: "Signalement non trouvé." });
+      }
+
+      // ✅ Vérification et correction des réactions
+      let reactions = [];
+
+      if (
+        typeof report.reactions === "string" &&
+        report.reactions.trim() !== ""
+      ) {
+        try {
+          reactions = JSON.parse(report.reactions);
+          if (!Array.isArray(reactions)) {
+            console.error(
+              "❌ Données des réactions invalides. Réinitialisation..."
+            );
+            reactions = [];
+          }
+        } catch (error) {
+          console.error("❌ Erreur lors du parsing JSON :", error);
+          return res.status(500).json({
+            error:
+              "Données corrompues dans les réactions. Veuillez contacter un administrateur.",
+          });
+        }
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      // ✅ Vérifie si l'utilisateur a déjà réagi
+      const existingIndex = reactions.findIndex((r) => r.userId === userId);
+
+      if (existingIndex !== -1) {
+        if (reactions[existingIndex].emoji === emoji) {
+          console.log("🔄 Suppression de la réaction existante.");
+          reactions.splice(existingIndex, 1);
+        } else {
+          console.log("🔄 Mise à jour de l'emoji de la réaction.");
+          reactions[existingIndex].emoji = emoji;
+        }
+      } else {
+        console.log("➕ Ajout d'une nouvelle réaction.");
+        reactions.push({ userId, emoji, count: 1 });
+      }
+
+      console.log("✅ Réactions mises à jour :", reactions);
+
+      // ✅ Mise à jour de la base de données
+      await report.update({ reactions: JSON.stringify(reactions) });
+
       return res.status(200).json({
-        totalReports: count,
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(count / limit),
-        reports,
+        success: true,
+        message: "Réaction mise à jour.",
+        reactions,
       });
     } catch (err) {
-      console.error("Erreur lors de la récupération des reportings :", err);
-      // Ajouter l'en-tête Content-Type
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({
-        error:
-          "Une erreur est survenue lors de la récupération des signalements.",
-      });
+      console.error("❌ Erreur lors de l'ajout de la réaction :", err);
+      return res.status(500).json({ error: "Une erreur est survenue" });
     }
-  }, */
+  },
 
+  // ✅ Récupérer les utilisateurs ayant réagis avec un emoji sur un report
+  getReportReactionUsers: async (req, res) => {
+    try {
+      const { reportId, emoji } = req.params;
+      console.log(
+        "🔍 Requête reçue pour le report :",
+        reportId,
+        "et emoji :",
+        emoji
+      );
+
+      const report = await Reporting.findByPk(reportId);
+      if (!report) {
+        return res.status(404).json({ error: "Signalement non trouvé" });
+      }
+
+      console.log("🗂 Réactions stockées :", report.reactions);
+
+      // Vérifie que les réactions existent et sont bien un tableau
+      if (!report.reactions || typeof report.reactions !== "string") {
+        return res
+          .status(400)
+          .json({ error: "Les réactions ne sont pas valides" });
+      }
+
+      // Transforme en tableau JSON
+      let reactions;
+      try {
+        reactions = JSON.parse(report.reactions);
+      } catch (err) {
+        console.error("❌ Erreur JSON :", err);
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de l'analyse des réactions" });
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      // Filtrer les utilisateurs ayant utilisé cet emoji
+      const users = reactions
+        .filter((r) => r.emoji === emoji)
+        .map((r) => r.userId);
+
+      console.log("👥 Utilisateurs ayant réagi :", users);
+
+      if (users.length === 0) {
+        return res.status(200).json({ success: true, users: [] });
+      }
+
+      // Récupérer les infos des utilisateurs
+      const userInfos = await User.findAll({
+        where: { id: users },
+        attributes: ["id", "pseudo", "avatar"],
+      });
+
+      return res.status(200).json({ success: true, users: userInfos });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getAllReportReactions: async function (req, res) {
+    try {
+      console.log("📌 Récupération des réactions...");
+
+      const { reportId } = req.params;
+
+      const report = await Reporting.findByPk(reportId);
+      if (!report) {
+        return res.status(404).json({ error: "Signalement non trouvé" });
+      }
+
+      console.log("🗂 Réactions stockées dans la BDD :", report.reactions);
+
+      // ✅ Vérifie si `report.reactions` est null ou vide
+      if (!report.reactions || typeof report.reactions !== "string") {
+        return res.status(200).json({ success: true, reactions: [] });
+      }
+
+      let reactions;
+      try {
+        reactions = JSON.parse(report.reactions);
+      } catch (err) {
+        console.error("❌ Erreur JSON :", err);
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de l'analyse des réactions" });
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      return res.status(200).json({ success: true, reactions });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  // Find User Reportings By store
   getAllReports: async function (req, res) {
     try {
-      const headerAuth = req.headers["authorization"];
-      const adminId = getUserId(headerAuth);
-
-      const admin = await User.findOne({ where: { id: adminId } });
-      if (!admin) {
-        return res.status(403).json({ error: "Accès non autorisé." });
-      }
+      console.log("🔄 Requête reçue pour récupérer les signalements...");
 
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20; // Mets ici la valeur correcte (ex: 20)
-
+      const limit = parseInt(req.query.limit) || 5;
       const offset = (page - 1) * limit;
 
-      // ✅ Ajout de `include: Category` pour récupérer les catégories associées
+      console.log(`📌 Page: ${page}, Limit: ${limit}`);
+
       const { count, rows: reports } = await Reporting.findAndCountAll({
-        distinct: true, // ✅ Ajoute ceci pour éviter les doublons dans le comptage
-        attributes: [
-          "id",
-          "siteUrl",
-          "marque",
-          "bugLocation",
-          "emojis",
-          "description",
-          "blocking",
-          "tips",
-          "createdAt",
-          "updatedAt",
-        ],
+        distinct: true,
+        limit,
+        offset,
         include: [
           {
             model: User,
             as: "User",
-            attributes: ["pseudo", "email", "avatar"],
-          },
-          {
-            model: SiteType,
-            as: "siteType",
-            attributes: ["name", "description"],
-          },
-          {
-            model: Category, // 🔥 Inclusion des catégories
-            as: "categories",
-            attributes: ["name"],
-            through: { attributes: [] }, // 🔹 On n'affiche pas la table de jointure
+            attributes: ["id", "pseudo", "avatar"],
           },
         ],
-        limit: parseInt(limit),
-        offset: parseInt(offset),
+        attributes: {
+          include: [[Sequelize.literal("'signalement'"), "type"]],
+        },
         order: [["createdAt", "DESC"]],
       });
 
-      res.setHeader("Content-Type", "application/json");
-      return res.status(200).json({
+      console.log("✅ Signalements récupérés :", reports);
+
+      const formattedReports = reports.map((report) => {
+        let reactions = [];
+        if (report.reactions && typeof report.reactions === "string") {
+          try {
+            reactions = JSON.parse(report.reactions);
+          } catch (error) {
+            console.error("❌ Erreur parsing JSON des réactions :", error);
+          }
+        }
+
+        // ✅ Normalisation des réactions
+        const reactionMap = new Map();
+
+        reactions.forEach((reaction) => {
+          if (!reaction.emoji) return;
+
+          const key = reaction.emoji;
+          if (!reactionMap.has(key)) {
+            reactionMap.set(key, {
+              emoji: reaction.emoji,
+              userIds: new Set(), // Utilisation d'un Set pour éviter les doublons
+            });
+          }
+
+          reactionMap.get(key).userIds.add(reaction.userId);
+        });
+
+        // ✅ Format final des réactions
+        const normalizedReactions = Array.from(reactionMap.values()).map(
+          (reaction) => ({
+            emoji: reaction.emoji,
+            count: reaction.userIds.size, // Le count est le nombre unique d'utilisateurs
+            userIds: Array.from(reaction.userIds), // Convertir le Set en tableau
+          })
+        );
+
+        return {
+          ...report.toJSON(),
+          type: "signalement",
+          reactions: normalizedReactions,
+        };
+      });
+
+      console.log("📤 Réponse envoyée :", formattedReports);
+
+      res.status(200).json({
         totalReports: count,
-        currentPage: parseInt(page),
         totalPages: Math.ceil(count / limit),
-        reports,
+        currentPage: page,
+        reports: formattedReports,
       });
-    } catch (err) {
-      console.error("Erreur lors de la récupération des reportings :", err);
-      res.setHeader("Content-Type", "application/json");
-      return res.status(500).json({
-        error:
-          "Une erreur est survenue lors de la récupération des signalements.",
-      });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      res.status(500).json({ error: "Erreur serveur" });
     }
   },
 

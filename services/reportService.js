@@ -154,6 +154,7 @@ export const reportService = {
       emojis: data.emojis,
       capture: data.capture,
       tips: data.tips,
+      reactions: [], // ✅ Initialisation des réactions
     });
 
     // Chargement ou création des catégories (en mémoire pour minimiser les appels DB)

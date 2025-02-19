@@ -14,6 +14,12 @@ export default (sequelize, DataTypes) => {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       });
+      CoupDeCoeur.hasMany(models.Comment, {
+        foreignKey: "coupDeCoeurId",
+        as: "comments",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
   }
   CoupDeCoeur.init(
@@ -30,6 +36,11 @@ export default (sequelize, DataTypes) => {
       emplacement: DataTypes.STRING,
       emoji: DataTypes.STRING,
       likes: DataTypes.INTEGER,
+      reactions: {
+        type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
+        allowNull: false,
+        defaultValue: [], // ✅ Commence vide
+      },
       validated: DataTypes.BOOLEAN,
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,
@@ -37,6 +48,7 @@ export default (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "CoupDeCoeur",
+      tableName: "CoupDeCoeurs",
     }
   );
   return CoupDeCoeur;

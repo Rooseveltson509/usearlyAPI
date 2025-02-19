@@ -29,6 +29,12 @@ export default (sequelize, DataTypes) => {
         foreignKey: "siteTypeId",
         as: "siteType",
       });
+      Reporting.hasMany(models.Comment, {
+        foreignKey: "reportId",
+        as: "comments",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
   }
   Reporting.init(
@@ -46,6 +52,11 @@ export default (sequelize, DataTypes) => {
       bugLocation: DataTypes.STRING,
       emojis: DataTypes.STRING,
       description: DataTypes.TEXT("long"),
+      reactions: {
+        type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
+        allowNull: false,
+        defaultValue: [], // ✅ Commence vide
+      },
       blocking: DataTypes.BOOLEAN,
       capture: DataTypes.STRING,
       tips: DataTypes.STRING,
@@ -53,6 +64,7 @@ export default (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Reporting",
+      tableName: "Reportings",
     },
     {
       indexes: [
