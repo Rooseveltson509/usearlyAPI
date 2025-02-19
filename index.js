@@ -37,6 +37,7 @@ server.options("*", cors(func.corsOptionsDelegate));
 server.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Body Parser configuration
+server.use(express.json()); // ✅ Permet de parser les requêtes JSON
 server.use(bodyParser.urlencoded({ extended: true, limit: "10mb" })); // Augmente la limite des requêtes URL-encoded
 server.use(bodyParser.json({ limit: "10mb" })); // Augmente la limite des requêtes JSON
 

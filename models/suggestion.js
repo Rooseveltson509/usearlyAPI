@@ -14,6 +14,12 @@ export default (sequelize, DataTypes) => {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       });
+      Suggestion.hasMany(models.Comment, {
+        foreignKey: "suggestionId",
+        as: "comments",
+        onDelete: "CASCADE",
+        onUpdate: "CASCADE",
+      });
     }
   }
   Suggestion.init(
@@ -28,8 +34,11 @@ export default (sequelize, DataTypes) => {
       marque: DataTypes.STRING,
       description: DataTypes.TEXT("long"),
       emplacement: DataTypes.STRING,
-      likes: DataTypes.INTEGER,
-      dislikes: DataTypes.INTEGER,
+      reactions: {
+        type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
+        allowNull: false,
+        defaultValue: [], // ✅ Commence vide
+      },
       validated: DataTypes.BOOLEAN,
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,
@@ -37,6 +46,7 @@ export default (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Suggestion",
+      tableName: "Suggestions",
     }
   );
   return Suggestion;

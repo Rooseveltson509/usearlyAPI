@@ -2,6 +2,7 @@ import db from "../models/index.js"; // Import du fichier contenant les modèles
 import { coupDeCoeurSchema } from "../validation/CoupdeCoeurSchema.js";
 const { CoupDeCoeur, User } = db;
 import { getUserId } from "../utils/jwtUtils.js";
+import { Sequelize } from "sequelize";
 
 export const coupDeCoeur = {
   createCoupdeCoeur: async function (req, res) {
@@ -80,16 +81,16 @@ export const coupDeCoeur = {
       const offset = (page - 1) * limit;
 
       // Récupérer tous les reportings avec pagination
-      const { count, rows: coupdeCoeur } = await CoupDeCoeur.findAndCountAll({
+      const { count, rows: coupdeCoeurs } = await CoupDeCoeur.findAndCountAll({
         attributes: [
           "id",
           "marque",
           "emplacement",
           "emoji",
           "description",
-          "likes",
           "createdAt",
           "updatedAt",
+          [Sequelize.literal("'coupdecoeur'"), "type"], // ✅ Ajoute `type`
         ],
         include: [
           {
@@ -109,12 +110,59 @@ export const coupDeCoeur = {
       });
       // Ajouter l'en-tête Content-Type
       res.setHeader("Content-Type", "application/json");
-      // Retourner les reportings avec pagination
-      return res.status(200).json({
+      console.log("✅ Signalements récupérés :", coupdeCoeurs);
+
+      const formattedCdc = coupdeCoeurs.map((cdc) => {
+        let reactions = [];
+        if (
+          coupdeCoeurs.reactions &&
+          typeof coupdeCoeurs.reactions === "string"
+        ) {
+          try {
+            reactions = JSON.parse(cdc.reactions);
+          } catch (error) {
+            console.error("❌ Erreur parsing JSON des réactions :", error);
+          }
+        }
+
+        // ✅ Normalisation des réactions
+        const reactionMap = new Map();
+
+        reactions.forEach((reaction) => {
+          if (!reaction.emoji) return;
+
+          const key = reaction.emoji;
+          if (!reactionMap.has(key)) {
+            reactionMap.set(key, {
+              emoji: reaction.emoji,
+              userIds: new Set(), // Utilisation d'un Set pour éviter les doublons
+            });
+          }
+
+          reactionMap.get(key).userIds.add(reaction.userId);
+        });
+
+        // ✅ Format final des réactions
+        const normalizedReactions = Array.from(reactionMap.values()).map(
+          (reaction) => ({
+            emoji: reaction.emoji,
+            count: reaction.userIds.size, // Le count est le nombre unique d'utilisateurs
+            userIds: Array.from(reaction.userIds), // Convertir le Set en tableau
+          })
+        );
+
+        return {
+          ...cdc.toJSON(),
+          type: "signalement",
+          reactions: normalizedReactions,
+        };
+      });
+
+      res.status(200).json({
         totalCoupsdeCoeur: count,
         currentPage: parseInt(page),
         totalPages: Math.ceil(count / limit),
-        coupdeCoeur,
+        coupdeCoeurs: formattedCdc,
       });
     } catch (err) {
       console.error("Erreur lors de la récupération des coups de coeur :", err);
@@ -124,6 +172,187 @@ export const coupDeCoeur = {
         error:
           "Une erreur est survenue lors de la récupération des coups de coeur.",
       });
+    }
+  },
+
+  // ✅ Ajouter ou supprimer une réaction sur une suggestion
+  addReactionToCdc: async function (req, res) {
+    try {
+      console.log("📌 Requête reçue pour ajouter une réaction...");
+      console.log("📦 Headers :", req.headers);
+      console.log("📦 Body reçu :", req.body);
+      console.log("📦 Paramètres :", req.params);
+
+      const { coupdecoeurId } = req.params; // Assure-toi que ce nom correspond bien dans ta route
+      const { emoji } = req.body;
+      const userId = getUserId(req.headers["authorization"]);
+
+      if (!userId) {
+        console.error("❌ Erreur : Utilisateur non authentifié.");
+        return res.status(401).json({ error: "Utilisateur non authentifié" });
+      }
+
+      if (!coupdecoeurId || !emoji) {
+        console.error("❌ Erreur : Paramètres manquants.");
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
+
+      const coupdeCoeur = await CoupDeCoeur.findByPk(coupdecoeurId);
+      if (!coupdeCoeur) {
+        console.error("❌ Erreur : Coup de coeur non trouvé.");
+        return res.status(404).json({ error: "Coup de coeur non trouvé." });
+      }
+
+      // ✅ Vérification et correction des réactions
+      let reactions = [];
+
+      if (
+        typeof coupdeCoeur.reactions === "string" &&
+        coupdeCoeur.reactions.trim() !== ""
+      ) {
+        try {
+          reactions = JSON.parse(coupdeCoeur.reactions);
+          if (!Array.isArray(reactions)) {
+            console.error(
+              "❌ Données des réactions invalides. Réinitialisation..."
+            );
+            reactions = [];
+          }
+        } catch (error) {
+          console.error("❌ Erreur lors du parsing JSON :", error);
+          return res.status(500).json({
+            error:
+              "Données corrompues dans les réactions. Veuillez contacter un administrateur.",
+          });
+        }
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      // ✅ Vérifie si l'utilisateur a déjà réagi
+      const existingIndex = reactions.findIndex((r) => r.userId === userId);
+
+      if (existingIndex !== -1) {
+        if (reactions[existingIndex].emoji === emoji) {
+          console.log("🔄 Suppression de la réaction existante.");
+          reactions.splice(existingIndex, 1);
+        } else {
+          console.log("🔄 Mise à jour de l'emoji de la réaction.");
+          reactions[existingIndex].emoji = emoji;
+        }
+      } else {
+        console.log("➕ Ajout d'une nouvelle réaction.");
+        reactions.push({ userId, emoji, count: 1 });
+      }
+
+      console.log("✅ Réactions mises à jour :", reactions);
+
+      // ✅ Mise à jour de la base de données
+      await coupdeCoeur.update({ reactions: JSON.stringify(reactions) });
+
+      return res.status(200).json({
+        success: true,
+        message: "Réaction mise à jour.",
+        reactions,
+      });
+    } catch (err) {
+      console.error("❌ Erreur lors de l'ajout de la réaction :", err);
+      return res.status(500).json({ error: "Une erreur est survenue" });
+    }
+  },
+
+  // ✅ Récupérer les utilisateurs ayant réagis avec un emoji sur un cdc
+  getCdcReactionUsers: async (req, res) => {
+    try {
+      const { cdcId, emoji } = req.params;
+      console.log("🔍 Requête reçue pour le cdc :", cdcId, "et emoji :", emoji);
+
+      const coupDeCoeur = await CoupDeCoeur.findByPk(cdcId);
+      if (!coupDeCoeur) {
+        return res.status(404).json({ error: "Coup de coeur non trouvée" });
+      }
+
+      console.log("🗂 Réactions stockées :", coupDeCoeur.reactions);
+
+      // Vérifie que les réactions existent et sont bien un tableau
+      if (!coupDeCoeur.reactions || typeof coupDeCoeur.reactions !== "string") {
+        return res
+          .status(400)
+          .json({ error: "Les réactions ne sont pas valides" });
+      }
+
+      // Transforme en tableau JSON
+      let reactions;
+      try {
+        reactions = JSON.parse(coupDeCoeur.reactions);
+      } catch (err) {
+        console.error("❌ Erreur JSON :", err);
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de l'analyse des réactions" });
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      // Filtrer les utilisateurs ayant utilisé cet emoji
+      const users = reactions
+        .filter((r) => r.emoji === emoji)
+        .map((r) => r.userId);
+
+      console.log("👥 Utilisateurs ayant réagi :", users);
+
+      if (users.length === 0) {
+        return res.status(200).json({ success: true, users: [] });
+      }
+
+      // Récupérer les infos des utilisateurs
+      const userInfos = await User.findAll({
+        where: { id: users },
+        attributes: ["id", "pseudo", "avatar"],
+      });
+
+      return res.status(200).json({ success: true, users: userInfos });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getAllCdcReactions: async function (req, res) {
+    try {
+      console.log("📌 Récupération des réactions...");
+
+      const { coupdecoeurId } = req.params; // ✅ Correction ici
+      console.log("🔍 ID reçu du frontend :", coupdecoeurId);
+
+      const coupDeCoeur = await CoupDeCoeur.findByPk(coupdecoeurId);
+      if (!coupDeCoeur) {
+        return res.status(404).json({ error: "Coup de cœur non trouvé" });
+      }
+
+      console.log("🗂 Réactions stockées dans la BDD :", coupDeCoeur.reactions);
+
+      // ✅ Vérifie si `reactions` est null ou vide avant de le parser
+      if (!coupDeCoeur.reactions || typeof coupDeCoeur.reactions !== "string") {
+        return res.status(200).json({ success: true, reactions: [] });
+      }
+
+      let reactions;
+      try {
+        reactions = JSON.parse(coupDeCoeur.reactions);
+      } catch (err) {
+        console.error("❌ Erreur JSON :", err);
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de l'analyse des réactions" });
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      return res.status(200).json({ success: true, reactions });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
     }
   },
 };

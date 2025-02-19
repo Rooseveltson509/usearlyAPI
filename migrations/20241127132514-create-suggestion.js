@@ -29,20 +29,15 @@ export async function up(queryInterface, Sequelize) {
       type: Sequelize.STRING,
       allowNull: false,
     },
-    nbrLikes: {
-      type: Sequelize.INTEGER,
-      defaultValue: 0,
-      allowNull: true,
-    },
-    nbrDislikes: {
-      type: Sequelize.INTEGER,
-      defaultValue: 0,
-      allowNull: true,
-    },
     validated: {
       type: Sequelize.BOOLEAN,
       allowNull: true,
       defaultValue: false,
+    },
+    reactions: {
+      type: Sequelize.JSON, // Stocke un tableau d'objets [{ emoji: "🔥", count: 10 }, { emoji: "❤️", count: 5 }]
+      allowNull: false,
+      defaultValue: [], // Un post commence sans réactions
     },
     createdAt: {
       type: Sequelize.DATE,
