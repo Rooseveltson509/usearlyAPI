@@ -265,7 +265,11 @@ export const coupDeCoeur = {
   getCdcReactionUsers: async (req, res) => {
     try {
       const { cdcId, emoji } = req.params;
-      console.log("🔍 Requête reçue pour le cdc :", cdcId, "et emoji :", emoji);
+      console.log("🔍 Emoji reçu dans la requête :", emoji);
+
+      // 🔥 Décodage & Normalisation Unicode
+      const normalizedEmoji = decodeURIComponent(emoji).normalize("NFC");
+      console.log("🔄 Emoji normalisé :", normalizedEmoji);
 
       const coupDeCoeur = await CoupDeCoeur.findByPk(cdcId);
       if (!coupDeCoeur) {
@@ -274,11 +278,8 @@ export const coupDeCoeur = {
 
       console.log("🗂 Réactions stockées :", coupDeCoeur.reactions);
 
-      // Vérifie que les réactions existent et sont bien un tableau
       if (!coupDeCoeur.reactions || typeof coupDeCoeur.reactions !== "string") {
-        return res
-          .status(400)
-          .json({ error: "Les réactions ne sont pas valides" });
+        return res.status(200).json({ success: true, users: [] });
       }
 
       // Transforme en tableau JSON
@@ -294,9 +295,9 @@ export const coupDeCoeur = {
 
       console.log("✅ Réactions après parsing :", reactions);
 
-      // Filtrer les utilisateurs ayant utilisé cet emoji
+      // 🔥 Filtrer les utilisateurs ayant utilisé cet emoji (normalisé)
       const users = reactions
-        .filter((r) => r.emoji === emoji)
+        .filter((r) => r.emoji === normalizedEmoji)
         .map((r) => r.userId);
 
       console.log("👥 Utilisateurs ayant réagi :", users);

@@ -133,4 +133,49 @@ export const comment = {
       res.status(500).json({ error: "Erreur serveur." });
     }
   },
+
+  getReportCommentCount: async (req, res) => {
+    try {
+      const { reportId } = req.params;
+
+      const commentCount = await Comment.count({
+        where: { reportId },
+      });
+
+      return res.status(200).json({ count: commentCount });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getSuggestionCommentCount: async (req, res) => {
+    try {
+      const { suggestionId } = req.params;
+
+      const commentCount = await Comment.count({
+        where: { suggestionId },
+      });
+
+      return res.status(200).json({ count: commentCount });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getCdcCommentCount: async (req, res) => {
+    try {
+      const { coupDeCoeurId } = req.params;
+
+      const commentCount = await Comment.count({
+        where: { coupDeCoeurId },
+      });
+
+      return res.status(200).json({ count: commentCount });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
 };
