@@ -194,9 +194,7 @@ export const reporting = {
 
       // Vérifie que les réactions existent et sont bien un tableau
       if (!report.reactions || typeof report.reactions !== "string") {
-        return res
-          .status(400)
-          .json({ error: "Les réactions ne sont pas valides" });
+        return res.status(200).json({ success: true, users: [] });
       }
 
       // Transforme en tableau JSON

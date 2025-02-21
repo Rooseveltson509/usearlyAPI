@@ -245,7 +245,7 @@ export const suggestion = {
     }
   },
 
-  // ✅ Récupérer les utilisateurs ayant réagis avec un emoji sur un report
+  // ✅ Récupérer les utilisateurs ayant réagis avec un emoji sur un suggestion
   getSuggestionReactionUsers: async (req, res) => {
     try {
       const { suggestionId, emoji } = req.params;
@@ -265,9 +265,7 @@ export const suggestion = {
 
       // Vérifie que les réactions existent et sont bien un tableau
       if (!suggestion.reactions || typeof suggestion.reactions !== "string") {
-        return res
-          .status(400)
-          .json({ error: "Les réactions ne sont pas valides" });
+        return res.status(200).json({ success: true, users: [] });
       }
 
       // Transforme en tableau JSON

@@ -223,9 +223,24 @@ apiRouter
   .get(coupDeCoeur.getAllCdcReactions);
 
 apiRouter
-  .route("/cdc/:coupdecoeurId/reactions/:emoji", cors(func.corsOptionsDelegate))
+  .route("/cdc/:cdcId/reactions/:emoji", cors(func.corsOptionsDelegate))
   .get(coupDeCoeur.getCdcReactionUsers);
 /* end reaction cdc */
+
+apiRouter
+  .route("/reports/:reportId/comments/count", cors(func.corsOptionsDelegate))
+  .get(comment.getReportCommentCount);
+
+apiRouter
+  .route(
+    "/suggestions/:suggestionId/comments/count",
+    cors(func.corsOptionsDelegate)
+  )
+  .get(comment.getSuggestionCommentCount);
+
+apiRouter
+  .route("/cdc/:coupDeCoeurId/comments/count", cors(func.corsOptionsDelegate))
+  .get(comment.getCdcCommentCount);
 
 apiRouter
   .route("/user/coupsdecoeur", cors(func.corsOptionsDelegate))
