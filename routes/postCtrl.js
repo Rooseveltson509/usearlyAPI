@@ -1,7 +1,8 @@
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
-const { User, Post, Marque, Like } = db;
+import { Op } from "sequelize";
 import { getUserId } from "../utils/jwtUtils.js"; // Fonction pour récupérer l'ID utilisateur depuis le token
 import { postSchema } from "../validation/postValidation.js"; // Validation avec Joi
+const { User, Post, Marque, Like } = db;
 
 export const posts = {
   // ✅ Créer un post
@@ -241,9 +242,7 @@ export const posts = {
 
       // Vérifie que les réactions existent et sont bien un tableau
       if (!post.reactions || typeof post.reactions !== "string") {
-        return res
-          .status(400)
-          .json({ error: "Les réactions ne sont pas valides" });
+        return res.status(200).json({ success: true, users: [] });
       }
 
       // Transforme en tableau JSON
@@ -277,6 +276,43 @@ export const posts = {
       });
 
       return res.status(200).json({ success: true, users: userInfos });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getAllPostReactions: async function (req, res) {
+    try {
+      console.log("📌 Récupération des réactions pour un post...");
+
+      const { postId } = req.params;
+
+      const post = await Post.findByPk(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post non trouvé" });
+      }
+
+      console.log("🗂 Réactions stockées dans la BDD :", post.reactions);
+
+      // ✅ Vérifie si `post.reactions` est null ou vide
+      if (!post.reactions || typeof post.reactions !== "string") {
+        return res.status(200).json({ success: true, reactions: [] });
+      }
+
+      let reactions;
+      try {
+        reactions = JSON.parse(post.reactions);
+      } catch (err) {
+        console.error("❌ Erreur JSON :", err);
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de l'analyse des réactions" });
+      }
+
+      console.log("✅ Réactions après parsing :", reactions);
+
+      return res.status(200).json({ success: true, reactions });
     } catch (error) {
       console.error("❌ Erreur serveur :", error);
       return res.status(500).json({ error: "Erreur serveur" });
@@ -353,14 +389,14 @@ export const posts = {
     }
   },
 
-  // 📌 Supprimer un post
+  // 📌 Supprimer un post (utilisateur = son post / admin = tous les posts)
   deletePost: async function (req, res) {
     try {
       const headerAuth = req.headers["authorization"];
       const userId = getUserId(headerAuth);
 
-      if (userId <= 0) {
-        return res.status(400).json({ error: "Missing parameters." });
+      if (!userId) {
+        return res.status(400).json({ error: "Utilisateur non authentifié." });
       }
 
       const post = await Post.findByPk(req.params.id);
@@ -368,8 +404,14 @@ export const posts = {
         return res.status(404).json({ error: "Post introuvable." });
       }
 
-      // Vérification que l'utilisateur est bien l'auteur
-      if (post.userId !== userId) {
+      // 🔍 Récupérer l'utilisateur pour vérifier son rôle
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur introuvable." });
+      }
+
+      // ✅ Vérification : l'utilisateur peut supprimer son post OU l'admin peut tout supprimer
+      if (post.userId !== userId && user.role !== "admin") {
         return res
           .status(403)
           .json({ error: "Non autorisé à supprimer ce post." });
@@ -383,10 +425,52 @@ export const posts = {
         message: "Post supprimé avec succès.",
       });
     } catch (err) {
-      console.error("Erreur lors de la suppression du post :", err);
+      console.error("❌ Erreur lors de la suppression du post :", err);
       return res
         .status(500)
-        .json({ error: "An error occurred", details: err.message });
+        .json({ error: "Une erreur est survenue", details: err.message });
+    }
+  },
+
+  getFilteredPosts: async (req, res) => {
+    try {
+      const { filter, search, sort } = req.query;
+
+      console.log("🛠 Filtre reçu :", filter);
+      console.log("🔎 Recherche :", search);
+      console.log("📌 Tri :", sort);
+
+      let whereClause = {};
+
+      // ✅ Filtrer par type (Actualité, Signalements, Coup de Cœur, Suggestions)
+      if (filter) {
+        whereClause.category = filter; // Assure-toi que ta colonne "category" existe dans le modèle Post
+      }
+
+      // ✅ Filtrer par recherche
+      if (search) {
+        whereClause.title = { [Op.like]: `%${search}%` }; // Recherche dans le titre des posts
+      }
+
+      let orderClause = [["createdAt", "DESC"]]; // Par défaut : tri par date
+
+      // ✅ Tri personnalisé
+      if (sort === "Popularité") {
+        orderClause = [["likes", "DESC"]]; // Trie par nombre de likes
+      } else if (sort === "Commentaires") {
+        orderClause = [["commentCount", "DESC"]]; // Trie par nombre de commentaires (ajoute ce champ dans ton modèle si besoin)
+      }
+
+      // 📌 Récupérer les posts filtrés
+      const posts = await Post.findAll({
+        where: whereClause,
+        order: orderClause,
+      });
+
+      return res.status(200).json(posts);
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      res.status(500).json({ error: "Erreur serveur" });
     }
   },
 };

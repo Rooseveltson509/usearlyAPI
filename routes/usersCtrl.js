@@ -220,10 +220,10 @@ export const user = {
 
         // Stocke le refresh token dans un cookie sécurisé
         res.cookie("refreshToken", refreshToken, {
-          httpOnly: true, // Empêche l'accès via JavaScript (protection XSS)
-          secure: process.env.NODE_ENV === "production", // Désactive secure en local
-          sameSite: "none", // Empêche le partage du cookie entre sites (CSRF)
-          maxAge: 30 * 24 * 60 * 60 * 1000, // Définit une expiration
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production" ? true : false, // Désactive secure en local
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Lax en local
+          maxAge: 30 * 24 * 60 * 60 * 1000,
         });
       } else {
         // Supprime le cookie contenant le refresh token si `rememberMe` est false
@@ -256,25 +256,28 @@ export const user = {
   },
 
   refreshToken: async (req, res) => {
+    console.log("Cookies reçus :", req.cookies); // ✅ Vérifie si le cookie est bien reçu
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
+      console.error("Aucun refreshToken trouvé dans les cookies !");
       return res
         .status(403)
         .json({ success: false, message: "Refresh Token missing" });
     }
 
     try {
-      const decoded = verifyRefreshToken(refreshToken); // Vérifie et décode le Refresh Token
+      const decoded = verifyRefreshToken(refreshToken);
       const user = await User.findByPk(decoded.userId);
 
       if (!user) {
+        console.error("Utilisateur introuvable pour ce refresh token !");
         return res
           .status(403)
           .json({ success: false, message: "Invalid Refresh Token" });
       }
 
-      const newAccessToken = generateAccessToken(user); // Génère un nouvel Access Token
+      const newAccessToken = generateAccessToken(user);
       return res.status(200).json({
         success: true,
         accessToken: newAccessToken,
