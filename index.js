@@ -4,7 +4,6 @@ import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
-import csurf from "csurf";
 import cookieParser from "cookie-parser"; // ✅ Importation de `cookie-parser`
 dotenv.config();
 import bodyParser from "body-parser";
@@ -27,16 +26,6 @@ const server = express();
 
 // ✅ Ajout du middleware `cookie-parser`
 server.use(cookieParser()); // ✅ Permet de lire les cookies envoyés dans les requêtes
-
-const csrfProtection = csurf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  },
-});
-
-server.use(csrfProtection);
 
 // Ajouter un endpoint pour récupérer le token CSRF dans le front
 server.get("/csrf-token", (req, res) => {
