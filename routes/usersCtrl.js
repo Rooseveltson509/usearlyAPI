@@ -220,10 +220,10 @@ export const user = {
 
         // Stocke le refresh token dans un cookie sécurisé
         res.cookie("refreshToken", refreshToken, {
-          httpOnly: true, // Empêche l'accès via JavaScript (protection XSS)
-          secure: process.env.NODE_ENV === "production", // Désactive secure en local
-          sameSite: "none", // Empêche le partage du cookie entre sites (CSRF)
-          maxAge: 30 * 24 * 60 * 60 * 1000, // Définit une expiration
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production" ? true : false, // Désactive secure en local
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Lax en local
+          maxAge: 30 * 24 * 60 * 60 * 1000,
         });
       } else {
         // Supprime le cookie contenant le refresh token si `rememberMe` est false

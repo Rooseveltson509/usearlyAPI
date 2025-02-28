@@ -21,17 +21,8 @@ import {
   validateReport,
   validateSuggest,
 } from "./middleware/validateReport.js";
-import rateLimit from "express-rate-limit";
 import upload from "./config/multer.js";
 import { isAdmin } from "./middleware/auth.js";
-
-const refreshTokenLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limite à 10 requêtes par fenêtre
-  message:
-    "Trop de requêtes de rafraîchissement de token, veuillez réessayer plus tard.",
-  headers: true, // Renvoie des en-têtes d'information sur le taux
-});
 
 // Définition de l'API Router
 const apiRouter = express.Router();
@@ -50,9 +41,8 @@ apiRouter
 
 // 2-b Users routes
 apiRouter
-  .route("/user/refresh-token")
-  .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
-  .post(cors(permissiveCors), refreshTokenLimiter, user.refreshToken);
+  .route("/user/refresh-token", cors(func.corsOptionsDelegate))
+  .post(user.refreshToken);
 
 apiRouter
   .route("/user/verify")
@@ -267,8 +257,12 @@ apiRouter
 
 // Supprimer un post
 apiRouter
-  .route("/user/posts/:id")
+  .route("/posts/:id") // 🔥 Supprime un post (admin = tout, user = son post)
   .delete(cors(func.corsOptionsDelegate), posts.deletePost);
+
+apiRouter
+  .route("/posts")
+  .delete(cors(func.corsOptionsDelegate), posts.getFilteredPosts);
 
 // update like post
 apiRouter
@@ -284,6 +278,10 @@ apiRouter
 apiRouter
   .route("/posts/:postId/reactions/:emoji")
   .get(cors(func.corsOptionsDelegate), posts.getReactionUsers);
+
+apiRouter
+  .route("/posts/:postId/reactions") // ✅ Nouvelle route pour récupérer toutes les réactions
+  .get(cors(func.corsOptionsDelegate), posts.getAllPostReactions);
 
 // 📌 Ajouter un commentaire à un post (🔒 Authentification requise)
 apiRouter
