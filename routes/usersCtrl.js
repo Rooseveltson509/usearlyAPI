@@ -221,9 +221,9 @@ export const user = {
         // Stocke le refresh token dans un cookie sécurisé
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production" ? true : false, // Désactive secure en local
-          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Lax en local
-          maxAge: 30 * 24 * 60 * 60 * 1000,
+          secure: true, // ✅ Doit être `true` car ton backend est sur Fly.io (HTTPS)
+          sameSite: "None", // ✅ Obligatoire pour les requêtes cross-origin entre Vercel (front) et Fly.io (back)
+          maxAge: 30 * 24 * 60 * 60 * 1000, // ✅ Expiration du cookie en 30 jours
         });
       } else {
         // Supprime le cookie contenant le refresh token si `rememberMe` est false
