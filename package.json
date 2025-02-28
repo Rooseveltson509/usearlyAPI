@@ -36,6 +36,7 @@
     "cheerio": "^1.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "csurf": "^1.10.0",
     "dotenv": "^8.6.0",
     "email-validator": "^2.0.4",
     "express": "^4.17.1",

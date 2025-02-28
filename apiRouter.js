@@ -16,6 +16,8 @@ import { commentReport } from "./routes/commentReportCtrl.js";
 import { commentCdc } from "./routes/commentCdcCtr.js";
 import { commentSuggestion } from "./routes/commentSuggestionCtrl.js";
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
+import rateLimit from "express-rate-limit";
+import csrfProtection from "./middleware/csrfProtection.js"; // 🔥 Import du middleware CSRF
 import {
   validateCoupdeCoeur,
   validateReport,
@@ -26,6 +28,17 @@ import { isAdmin } from "./middleware/auth.js";
 
 // Définition de l'API Router
 const apiRouter = express.Router();
+
+// Middleware de limitation de débit (rate limiting)
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Maximum 10 requêtes par IP dans cette période
+  message: {
+    success: false,
+    message: "Trop de requêtes, réessayez plus tard.",
+  },
+  headers: true,
+});
 
 // Configuration CORS pour autoriser toutes les origines
 const permissiveCors = {
@@ -41,8 +54,13 @@ apiRouter
 
 // 2-b Users routes
 apiRouter
-  .route("/user/refresh-token", cors(func.corsOptionsDelegate))
-  .post(user.refreshToken);
+  .route("/user/refresh-token")
+  .post(
+    refreshLimiter,
+    cors(func.corsOptionsDelegate),
+    csrfProtection,
+    user.refreshToken
+  );
 
 apiRouter
   .route("/user/verify")
