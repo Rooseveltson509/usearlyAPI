@@ -4,7 +4,8 @@ import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
-import cookieParser from "cookie-parser"; // ✅ Importation de `cookie-parser`
+import cookieParser from "cookie-parser"; // ✅ Nécessaire pour CSRF
+import csurf from "csurf"; // ✅ Importation du middleware CSRF
 dotenv.config();
 import bodyParser from "body-parser";
 import apiRouter from "./apiRouter.js";
@@ -24,52 +25,53 @@ const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
 
 const server = express();
 
-// ✅ Ajout du middleware `cookie-parser`
-server.use(cookieParser()); // ✅ Permet de lire les cookies envoyés dans les requêtes
-
-// Ajouter un endpoint pour récupérer le token CSRF dans le front
-server.get("/csrf-token", (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
-});
-
-// CORS Configuration
+// ✅ CORS doit être placé en premier
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
 
-// Servir les fichiers statiques
-server.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// ✅ Cookie Parser doit être ajouté avant `csurf`
+server.use(cookieParser());
 
-// Body Parser configuration
+// ✅ Middleware CSRF Protection
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true, // 🔒 Sécurise contre XSS
+    secure: process.env.NODE_ENV === "production", // ✅ Actif uniquement en production
+    sameSite: "Strict", // ✅ Empêche les attaques CSRF intersites
+  },
+});
+
+// ✅ Appliquer CSRF Protection AVANT les routes API
+server.use(csrfProtection);
+
+// ✅ Endpoint pour récupérer le CSRF Token
+server.get("/csrf-token", (req, res) => {
+  res.json({ csrfToken: req.csrfToken() }); // ✅ Correctif ici !
+});
+
+// ✅ Middleware de parsing JSON (Important après `cookieParser`)
 server.use(express.json());
 server.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 server.use(bodyParser.json({ limit: "10mb" }));
 
+// ✅ Swagger
 server.use(
   config.rootAPI + "api-docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerDocument)
 );
 
+// ✅ Middleware Prometheus pour monitoring
 const metricsMiddleware = promBundle({
   includeMethod: true,
   includePath: true,
 });
 server.use(metricsMiddleware);
 
-// Configure routes
-server.get(config.rootAPI, function (req, res) {
-  res.setHeader("Content-Type", "text/html");
-  res.status(200).send("<h1>Welcom to Usearly ApiRestFull.</h1>");
-});
+// ✅ Chargement de l'API Router APRÈS CSRF
+server.use(config.rootAPI, apiRouter);
 
-// ✅ Vérification du chargement des routes
-try {
-  server.use(config.rootAPI, apiRouter);
-} catch (err) {
-  console.error("Erreur lors du chargement des routes :", err);
-}
-
-// Gestion des erreurs globales
+// ✅ Gestion des erreurs globales
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err.stack);
 });
@@ -78,9 +80,11 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
 });
 
-// Lancement du serveur
+// ✅ Lancement du serveur
 server.listen(PORT, "0.0.0.0", function () {
-  console.log("Server en écoute sur le port : ", PORT);
-  console.log("ENV MODE:", process.env.NODE_ENV);
-  console.log(`API disponible à : http://localhost:${PORT}${config.rootAPI}`);
+  console.log("✅ Server en écoute sur le port : ", PORT);
+  console.log("✅ ENV MODE:", process.env.NODE_ENV);
+  console.log(
+    `✅ API disponible à : http://localhost:${PORT}${config.rootAPI}`
+  );
 });

@@ -15,9 +15,6 @@ let allowlist = [
   "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
   "http://localhost:5173",
   "https://usearly-frontend.vercel.app",
-  "https://www.nike.com",
-  "https://www.zalando.fr",
-  "https://www.laboutiqueofficielle.com",
   "https://usearly-api.vercel.app",
 ];
 
@@ -145,7 +142,7 @@ export const func = {
       corsOptions = {
         origin: true,
         methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-        allowedHeaders: "Authorization,Content-Type",
+        allowedHeaders: "Authorization, Content-Type, X-CSRF-Token", // ✅ Ajoute `X-CSRF-Token`
         credentials: true,
       };
     } else {
