@@ -203,7 +203,7 @@ export const user = {
           .status(401)
           .json({ success: false, message: "Invalid credentials" });
       }
-      // Vérification si l'utilisateur a confirmé son compte
+
       if (!user.confirmedAt || user.confirmationToken !== null) {
         return res.status(403).json({
           success: false,
@@ -211,42 +211,31 @@ export const user = {
         });
       }
 
-      const accessToken = generateAccessToken(user); // Génère un access token
-      let refreshToken = null; // Initialise le refresh token à null
+      const accessToken = generateAccessToken(user);
+      let refreshToken = null;
 
       if (rememberMe) {
-        // Génère un refresh token uniquement si `rememberMe` est true
         refreshToken = generateRefreshToken(user);
 
-        // Stocke le refresh token dans un cookie sécurisé
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: true, // ✅ Doit être `true` car ton backend est sur Fly.io (HTTPS)
-          sameSite: "None", // ✅ Obligatoire pour les requêtes cross-origin entre Vercel (front) et Fly.io (back)
-          maxAge: 30 * 24 * 60 * 60 * 1000, // ✅ Expiration du cookie en 30 jours
+          secure: process.env.NODE_ENV === "production", // ✅ Désactivé en local
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // ✅ "Lax" en local pour éviter les erreurs
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
         });
       } else {
-        // Supprime le cookie contenant le refresh token si `rememberMe` est false
         res.clearCookie("refreshToken");
       }
 
-      // Réponse JSON
-      const response = {
+      return res.status(200).json({
         success: true,
         message: "Connexion réussie.",
-        accessToken, // Toujours renvoyé
+        accessToken,
         user: {
           avatar: user.avatar,
-          type: "user", // Ajout du type ici
+          type: "user",
         },
-      };
-
-      // Ajoute le refreshToken dans la réponse seulement si `rememberMe` est true
-      if (rememberMe && refreshToken) {
-        response.refreshToken = refreshToken;
-      }
-
-      return res.status(200).json(response);
+      });
     } catch (error) {
       console.error("Erreur lors de la connexion :", error);
       return res
@@ -256,11 +245,22 @@ export const user = {
   },
 
   refreshToken: async (req, res) => {
-    console.log("Cookies reçus :", req.cookies); // ✅ Vérifie si le cookie est bien reçu
+    console.log(
+      "📌 CSRF Token reçu dans headers :",
+      req.headers["x-csrf-token"]
+    );
+    console.log("📌 CSRF Token attendu (cookie) :", req.cookies["_csrf"]);
+
+    if (req.headers["x-csrf-token"] !== req.cookies["_csrf"]) {
+      return res
+        .status(403)
+        .json({ success: false, message: "CSRF Token invalide" });
+    }
+
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
-      console.error("Aucun refreshToken trouvé dans les cookies !");
+      console.error("⚠ Aucun refreshToken reçu !");
       return res
         .status(403)
         .json({ success: false, message: "Refresh Token missing" });
@@ -271,19 +271,21 @@ export const user = {
       const user = await User.findByPk(decoded.userId);
 
       if (!user) {
-        console.error("Utilisateur introuvable pour ce refresh token !");
+        console.error("❌ Utilisateur introuvable !");
         return res
           .status(403)
           .json({ success: false, message: "Invalid Refresh Token" });
       }
 
       const newAccessToken = generateAccessToken(user);
+      console.log("✅ Nouveau accessToken généré :", newAccessToken);
+
       return res.status(200).json({
         success: true,
         accessToken: newAccessToken,
       });
     } catch (error) {
-      console.error("Erreur lors du rafraîchissement :", error);
+      console.error("❌ Erreur lors du rafraîchissement :", error);
       return res
         .status(403)
         .json({ success: false, message: "Invalid Refresh Token" });

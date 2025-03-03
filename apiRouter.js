@@ -32,7 +32,7 @@ const apiRouter = express.Router();
 // Middleware de limitation de débit (rate limiting)
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Maximum 10 requêtes par IP dans cette période
+  max: 50, // ✅ Permet plus de requêtes en développement
   message: {
     success: false,
     message: "Trop de requêtes, réessayez plus tard.",
@@ -40,27 +40,61 @@ const refreshLimiter = rateLimit({
   headers: true,
 });
 
-// Configuration CORS pour autoriser toutes les origines
+// ✅ Route pour récupérer le CSRF Token
+apiRouter.get("/csrf-token", (req, res) => {
+  try {
+    const csrfToken = req.csrfToken(); // ✅ Génère le CSRF Token
+    console.log("✅ CSRF Token généré :", csrfToken);
+
+    res.cookie("_csrf", csrfToken, {
+      httpOnly: false, // ✅ Permet au frontend de le lire
+      secure: false, // ✅ False en local
+      sameSite: "Lax",
+    });
+
+    res.json({ csrfToken });
+  } catch (error) {
+    console.error("❌ Erreur lors de la génération du CSRF Token :", error);
+    res.status(500).json({ error: "CSRF Token non généré" });
+  }
+});
+
+// ✅ Route sécurisée avec CSRF pour `refresh-token`
+apiRouter.post(
+  "/user/refresh-token",
+  refreshLimiter,
+  cors(func.corsOptionsDelegate),
+  (req, res, next) => {
+    console.log("📌 Avant CSRF Protection");
+    console.log("📌 Cookies reçus :", req.cookies);
+    console.log(
+      "📌 CSRF Token reçu dans headers :",
+      req.headers["x-csrf-token"]
+    );
+    console.log("📌 CSRF Token attendu (cookie) :", req.cookies["_csrf"]);
+
+    if (!req.cookies["_csrf"] || !req.headers["x-csrf-token"]) {
+      return res
+        .status(403)
+        .json({ success: false, message: "CSRF Token manquant." });
+    }
+
+    next();
+  },
+  csrfProtection,
+  user.refreshToken
+);
 const permissiveCors = {
-  origin: true, // Autoriser toutes les origines
-  methods: ["POST", "GET"], // Limiter aux méthodes nécessaires
-  credentials: false, // Désactiver les cookies (optionnel)
+  origin: true, // ✅ Autorise toutes les origines
+  methods: ["POST", "GET"], // ✅ Autorise uniquement les méthodes nécessaires
+  credentials: true, // ✅ Permet l'envoi des cookies (obligatoire pour CSRF & refreshToken)
+  allowedHeaders: ["Authorization", "Content-Type", "X-CSRF-Token"], // ✅ Assure que CSRF passe bien
 };
-// 1-a Users routes
+
 apiRouter
   .route("/user/login")
-  .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
-  .post(cors(permissiveCors), user.login);
-
-// 2-b Users routes
-apiRouter
-  .route("/user/refresh-token")
-  .post(
-    refreshLimiter,
-    cors(func.corsOptionsDelegate),
-    csrfProtection,
-    user.refreshToken
-  );
+  .options(cors(permissiveCors)) // ✅ Gestion des pré-requêtes OPTIONS pour éviter les erreurs CORS
+  .post(cors(permissiveCors), user.login); // ✅ Applique la configuration CORS correctement
 
 apiRouter
   .route("/user/verify")
