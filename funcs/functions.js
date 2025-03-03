@@ -12,7 +12,6 @@ const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
 const ALPHANUMERIC_NUMBER = /^([a-zA-Z0-9_-]){2,50}$/;
 
 let allowlist = [
-  "chrome-extension://fjcggidednblenggahpkilfidbalhmad",
   "http://localhost:5173",
   "https://usearly-frontend.vercel.app",
   "https://usearly-api.vercel.app",
@@ -141,7 +140,7 @@ export const func = {
       console.log(`Origine autorisée : ${origin}`);
       corsOptions = {
         origin: true,
-        methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+        methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
         allowedHeaders: "Authorization, Content-Type, X-CSRF-Token", // ✅ Ajoute `X-CSRF-Token`
         credentials: true,
       };

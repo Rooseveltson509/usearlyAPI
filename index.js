@@ -4,14 +4,14 @@ import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
-import cookieParser from "cookie-parser"; // ✅ Nécessaire pour CSRF
-import csurf from "csurf"; // ✅ Importation du middleware CSRF
-dotenv.config();
+import cookieParser from "cookie-parser"; // ✅ Correctement placé avant csurf
 import bodyParser from "body-parser";
-import apiRouter from "./apiRouter.js";
 import promBundle from "express-prom-bundle";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
+import apiRouter from "./apiRouter.js"; // ✅ Routes API
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,64 +25,53 @@ const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
 
 const server = express();
 
-// ✅ CORS doit être placé en premier
+// ✅ 1. Configuration CORS
 server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
 
-// ✅ Cookie Parser doit être ajouté avant `csurf`
+// ✅ 2. Cookies & Body Parser
 server.use(cookieParser());
-
-// ✅ Middleware CSRF Protection
-const csrfProtection = csurf({
-  cookie: {
-    httpOnly: true, // 🔒 Sécurise contre XSS
-    secure: process.env.NODE_ENV === "production", // ✅ Actif uniquement en production
-    sameSite: "Strict", // ✅ Empêche les attaques CSRF intersites
-  },
-});
-
-// ✅ Appliquer CSRF Protection AVANT les routes API
-server.use(csrfProtection);
-
-// ✅ Endpoint pour récupérer le CSRF Token
-server.get("/csrf-token", (req, res) => {
-  res.json({ csrfToken: req.csrfToken() }); // ✅ Correctif ici !
-});
-
-// ✅ Middleware de parsing JSON (Important après `cookieParser`)
 server.use(express.json());
 server.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 server.use(bodyParser.json({ limit: "10mb" }));
 
-// ✅ Swagger
+// ✅ 3. Autoriser l'accès aux images (évite CSRF sur /uploads)
+server.use("/uploads", express.static(path.join(__dirname, "uploads")));
+server.use((req, res, next) => {
+  if (req.path.startsWith("/uploads/")) {
+    return next();
+  }
+  next();
+});
+
+// ✅ 5. Swagger Documentation
 server.use(
   config.rootAPI + "api-docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerDocument)
 );
 
-// ✅ Middleware Prometheus pour monitoring
+// ✅ 6. Middleware Prometheus pour monitoring
 const metricsMiddleware = promBundle({
   includeMethod: true,
   includePath: true,
 });
 server.use(metricsMiddleware);
 
-// ✅ Chargement de l'API Router APRÈS CSRF
+// ✅ 7. Routes API (doit être après le CSRF middleware)
 server.use(config.rootAPI, apiRouter);
 
-// ✅ Gestion des erreurs globales
+// ✅ 8. Gestion des erreurs globales
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err.stack);
 });
-
 process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
 });
 
-// ✅ Lancement du serveur
+// ✅ 9. Lancement du serveur
 server.listen(PORT, "0.0.0.0", function () {
-  console.log("✅ Server en écoute sur le port : ", PORT);
+  console.log("✅ Server en écoute sur le port :", PORT);
   console.log("✅ ENV MODE:", process.env.NODE_ENV);
   console.log(
     `✅ API disponible à : http://localhost:${PORT}${config.rootAPI}`
