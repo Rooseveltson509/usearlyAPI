@@ -60,6 +60,15 @@ server.use(metricsMiddleware);
 
 // ✅ 7. Routes API (doit être après le CSRF middleware)
 server.use(config.rootAPI, apiRouter);
+// ✅ Middleware de gestion des erreurs Multer (fichiers non autorisés)
+server.use((err, req, res, next) => {
+  if (err.code === "LIMIT_FILE_TYPE") {
+    return res
+      .status(400)
+      .json({ error: "⚠️ Format non autorisé. Utilisez JPG, PNG ou WEBP." });
+  }
+  next(err);
+});
 
 // ✅ 8. Gestion des erreurs globales
 process.on("uncaughtException", (err) => {

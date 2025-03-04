@@ -1130,14 +1130,25 @@ export const user = {
 
   updateBrand: async function (req, res) {
     try {
+      console.log("🛠️ Début de la mise à jour de la marque.");
+
       const brandId = req.params.id;
+      console.log("📩 ID Marque :", brandId);
+
       const { name, email, mdp, offres } = req.body;
+      console.log("📩 Body reçu :", { name, email, mdp, offres });
+
       const avatarFile = req.file;
+      console.log(
+        "📩 Fichier reçu :",
+        avatarFile ? avatarFile.originalname : "Aucun fichier"
+      );
 
       const headerAuth = req.headers["authorization"];
       const userId = getUserId(headerAuth);
 
       if (userId <= 0) {
+        console.error("⛔ Accès refusé : utilisateur non authentifié.");
         return res
           .status(403)
           .json({ error: "Accès refusé. Authentification requise." });
@@ -1145,38 +1156,47 @@ export const user = {
 
       const user = await User.findByPk(userId);
       if (!user) {
+        console.error("⛔ Utilisateur introuvable.");
         return res.status(404).json({ error: "Utilisateur non trouvé." });
       }
 
       const brand = await Marque.findByPk(brandId);
       if (!brand) {
+        console.error("⛔ Marque introuvable.");
         return res.status(404).json({ error: "Marque non trouvée." });
       }
 
       if (user.role !== "admin" && brand.userId !== userId) {
-        return res.status(403).json({
-          error:
-            "Accès refusé. Vous n'êtes pas autorisé à modifier cette marque.",
-        });
+        console.error("⛔ Permission refusée.");
+        return res.status(403).json({ error: "Accès refusé." });
       }
 
       // 📌 Gestion de l'avatar
       let avatarPath = brand.avatar;
 
       if (avatarFile) {
+        console.log(
+          "📂 Avatar en cours de traitement :",
+          avatarFile.originalname
+        );
         const tempPath = avatarFile.path;
         const finalName = `avatar-${Date.now()}-${brandId}${path.extname(avatarFile.originalname)}`;
         const finalPath = path.join(brandAvatarsDir, finalName);
 
+        console.log("📂 Déplacement du fichier vers :", finalPath);
+
         // 🔥 Déplacer le fichier temporaire vers le répertoire final
         await moveFileToFinalDestination(tempPath, finalPath);
         avatarPath = `uploads/avatars/brands/${finalName}`;
+
+        console.log("✅ Fichier déplacé :", avatarPath);
 
         // 🗑 Supprimer l'ancien avatar sécurisé (sauf si c'est un avatar par défaut)
         if (
           brand.avatar &&
           brand.avatar !== "uploads/avatars/brands/default-avatar.png"
         ) {
+          console.log("🗑 Suppression de l'ancien avatar :", brand.avatar);
           await deleteOldAvatar(brand.avatar);
         }
       }
@@ -1184,7 +1204,9 @@ export const user = {
       // 🔐 Hash du mot de passe uniquement s'il est fourni
       let hashedPassword = brand.mdp;
       if (mdp && mdp.trim() !== "") {
+        console.log("🔒 Hash du mot de passe en cours...");
         hashedPassword = await bcrypt.hash(mdp, 5);
+        console.log("✅ Mot de passe hashé !");
       }
 
       // ✅ Vérifier et formater `offres`
@@ -1192,10 +1214,12 @@ export const user = {
       const formattedOffre = offres ? offres.toLowerCase() : brand.offres;
 
       if (!allowedOffres.includes(formattedOffre)) {
+        console.error("⛔ Offre invalide :", formattedOffre);
         return res.status(400).json({ error: "Offre invalide." });
       }
 
       // 🔄 Mise à jour de la marque
+      console.log("🛠️ Mise à jour de la base de données...");
       await brand.update({
         name: name || brand.name,
         email: email || brand.email,
@@ -1203,6 +1227,8 @@ export const user = {
         avatar: avatarPath,
         offres: formattedOffre,
       });
+
+      console.log("✅ Mise à jour réussie !");
 
       return res.status(200).json({
         success: true,
