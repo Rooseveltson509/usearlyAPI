@@ -20,6 +20,15 @@ const ensureDirectoryExists = (dir) => {
   ensureDirectoryExists
 );
 
+// 📌 Fonction pour nettoyer le nom des fichiers
+const sanitizeFileName = (fileName) => {
+  return fileName
+    .normalize("NFD") // Supprime les accents
+    .replace(/[\u0300-\u036f]/g, "") // Supprime les caractères diacritiques
+    .replace(/\s+/g, "-") // Remplace les espaces par des tirets
+    .replace(/[^\w.-]/g, ""); // Supprime les caractères spéciaux sauf "." et "-"
+};
+
 // 📌 Configuration de stockage temporaire
 const tempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -29,22 +38,31 @@ const tempStorage = multer.diskStorage({
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const extension = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${extension}`);
+
+    // 🔥 Nettoie le nom du fichier AVANT de l'enregistrer
+    const sanitizedBaseName = sanitizeFileName(
+      path.basename(file.originalname, extension)
+    );
+
+    cb(null, `${sanitizedBaseName}-${uniqueSuffix}${extension}`);
   },
 });
 
 // 📌 Vérification du type de fichier (Sécurité)
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+  console.log("📂 Vérification du fichier :", file.originalname, file.mimetype);
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(
-      new Error(
-        "Type de fichier non pris en charge (JPG, PNG, WEBP uniquement)"
-      ),
-      false
+    console.error("❌ Type de fichier rejeté :", file.mimetype);
+    const error = new Error(
+      "⚠️ Format non autorisé : Veuillez choisir un fichier JPG, PNG ou WEBP."
     );
+    error.code = "LIMIT_FILE_TYPE"; // 📌 Ajoute un code d'erreur
+    cb(error, false); // 📌 Passe `false` pour empêcher l'upload
   }
 };
 
