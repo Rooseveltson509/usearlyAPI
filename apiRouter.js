@@ -274,6 +274,10 @@ apiRouter
   .get(comment.getReportCommentCount);
 
 apiRouter
+  .route("/posts/:postId/comments/count", cors(func.corsOptionsDelegate))
+  .get(posts.getPostCommentCount);
+
+apiRouter
   .route(
     "/suggestions/:suggestionId/comments/count",
     cors(func.corsOptionsDelegate)

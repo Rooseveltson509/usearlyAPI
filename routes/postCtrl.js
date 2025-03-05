@@ -2,7 +2,7 @@ import db from "../models/index.js"; // Import du fichier contenant les modèles
 import { Op } from "sequelize";
 import { getUserId } from "../utils/jwtUtils.js"; // Fonction pour récupérer l'ID utilisateur depuis le token
 import { postSchema } from "../validation/postValidation.js"; // Validation avec Joi
-const { User, Post, Marque, Like } = db;
+const { User, Post, Marque, Like, Comment } = db;
 
 export const posts = {
   // ✅ Créer un post
@@ -389,7 +389,7 @@ export const posts = {
     }
   },
 
-  // 📌 Supprimer un post (utilisateur = son post / admin = tous les posts)
+  //📌 Supprimer un post (utilisateur = son post / admin = tous les posts)
   deletePost: async function (req, res) {
     try {
       const headerAuth = req.headers["authorization"];
@@ -471,6 +471,27 @@ export const posts = {
     } catch (error) {
       console.error("❌ Erreur serveur :", error);
       res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getPostCommentCount: async (req, res) => {
+    try {
+      const { postId } = req.params;
+
+      // Vérifie si postId est valide
+      if (!postId) {
+        return res.status(400).json({ error: "Post ID manquant." });
+      }
+
+      // 📌 Utilisation du bon modèle (Comment)
+      const commentCount = await Comment.count({
+        where: { postId }, // Vérifie que les commentaires sont liés à ce post
+      });
+
+      return res.status(200).json({ count: commentCount });
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
     }
   },
 };
