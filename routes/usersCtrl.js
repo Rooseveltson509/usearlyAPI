@@ -368,7 +368,7 @@ export const user = {
       await func.sendResetPasswordEmail(
         user.email,
         user.pseudo,
-        `localhost:5173/reset-password/${user.id}/${resetToken}`,
+        `${process.env.FRONTEND_URL}/reset-password/${user.id}/${resetToken}`,
         user.id,
         resetToken
       );
