@@ -12,6 +12,7 @@ const PASSWORD_REGEX = /^(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,}$/;
 const ALPHANUMERIC_NUMBER = /^([a-zA-Z0-9_-]){2,50}$/;
 
 let allowlist = [
+  "chrome-extension://ehlmingoeepbmgjjalhfhmcpppadingc",
   "http://localhost:5173",
   "https://usearly-frontend.vercel.app",
   "https://usearly-api.vercel.app",
@@ -201,6 +202,35 @@ export const func = {
     });
   },
 
+  sendEmail: function (userEmail, subject, message) {
+    console.log("Envoi de l'email à:", userEmail);
+    const transporter = createTransport({
+      service: "Gmail",
+      auth: {
+        user: "rooseveltsonc@gmail.com",
+        pass: "znizuafixsmybjep",
+      },
+      port: 587,
+      tls: {
+        rejectUnauthorized: false,
+        minVersion: "TLSv1.2",
+      },
+    });
+    const mail_option = {
+      from: "rooseveltsonc@gmail.com",
+      to: userEmail,
+      subject: subject,
+      html: message,
+    };
+
+    transporter.sendMail(mail_option, (error, info) => {
+      if (error) {
+        console.log("Erreur lors de l'envoi de l'email:", error);
+      } else {
+        console.log("Email envoyé avec succès: " + info.messageId);
+      }
+    });
+  },
   checkDate: function (date) {
     const exactlyNYearsAgoDate = (yearsAgo) =>
       new Date(new Date().setFullYear(new Date().getFullYear() - yearsAgo));

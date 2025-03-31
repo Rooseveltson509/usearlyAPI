@@ -2,23 +2,23 @@
 import { Model } from "sequelize";
 export default (sequelize, DataTypes) => {
   class ReportingDescription extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      // Association avec Reporting (avec alias)
       ReportingDescription.belongsTo(models.Reporting, {
         foreignKey: "reportingId",
+        as: "reporting", // ✅ Ajout de l'alias ici
         onDelete: "CASCADE",
       });
+
+      // Association avec User
       ReportingDescription.belongsTo(models.User, {
         foreignKey: "userId",
+        as: "user", // ✅ Alias optionnel si tu veux inclure l'utilisateur plus tard
         onDelete: "CASCADE",
       });
     }
   }
+
   ReportingDescription.init(
     {
       id: {
@@ -36,7 +36,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
       description: {
-        type: DataTypes.TEXT("long"), // Utilisation de LONGTEXT
+        type: DataTypes.TEXT("long"),
         allowNull: false,
       },
       createdAt: {
@@ -57,5 +57,6 @@ export default (sequelize, DataTypes) => {
       timestamps: true,
     }
   );
+
   return ReportingDescription;
 };

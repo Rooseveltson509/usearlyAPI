@@ -2,8 +2,6 @@
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable("Users", {
-    unique: true,
-    fields: "email",
     id: {
       allowNull: false,
       primaryKey: true,
@@ -82,6 +80,9 @@ export async function up(queryInterface, Sequelize) {
       defaultValue: "no",
     },
   });
+  // Ajout d'index pour optimiser les recherches
+  await queryInterface.addIndex("Users", ["email"]);
+  await queryInterface.addIndex("Users", ["pseudo"]);
 }
 
 export async function down(queryInterface) {

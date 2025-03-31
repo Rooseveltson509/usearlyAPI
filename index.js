@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
 import cookieParser from "cookie-parser"; // ✅ Correctement placé avant csurf
-import bodyParser from "body-parser";
+//import bodyParser from "body-parser";
 import promBundle from "express-prom-bundle";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
@@ -31,9 +31,8 @@ server.options("*", cors(func.corsOptionsDelegate));
 
 // ✅ 2. Cookies & Body Parser
 server.use(cookieParser());
-server.use(express.json());
-server.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
-server.use(bodyParser.json({ limit: "10mb" }));
+server.use(express.json({ limit: "50mb" }));
+server.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // ✅ 3. Autoriser l'accès aux images (évite CSRF sur /uploads)
 server.use("/uploads", express.static(path.join(__dirname, "uploads")));

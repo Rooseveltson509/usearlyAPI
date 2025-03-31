@@ -1,8 +1,9 @@
 // Imports
+import db from "./models/index.js";
 import express from "express";
+import { getUserId } from "./utils/jwtUtils.js";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
-
 import { user } from "./routes/usersCtrl.js";
 import { ticket } from "./routes/ticketsCtrl.js";
 import { reporting } from "./routes/reportingCtrl.js";
@@ -16,6 +17,13 @@ import { commentReport } from "./routes/commentReportCtrl.js";
 import { commentCdc } from "./routes/commentCdcCtr.js";
 import { commentSuggestion } from "./routes/commentSuggestionCtrl.js";
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
+import { reportService } from "./services/reportService.js";
+import { service as siteService } from "./services/siteService.js";
+import {
+  createNotification,
+  markNotificationAsRead,
+  getNotifications,
+} from "./routes/notificationCtrl.js";
 import rateLimit from "express-rate-limit";
 import csrfProtection from "./middleware/csrfProtection.js"; // 🔥 Import du middleware CSRF
 import {
@@ -23,9 +31,11 @@ import {
   validateReport,
   validateSuggest,
 } from "./middleware/validateReport.js";
+import { sendNotificationToUser } from "./utils/notificationUtils.js";
 import upload from "./config/multer.js";
 import { isAdmin } from "./middleware/auth.js";
 
+const { Reporting, User } = db;
 // Définition de l'API Router
 const apiRouter = express.Router();
 
@@ -64,29 +74,34 @@ apiRouter.post(
   "/user/refresh-token",
   refreshLimiter,
   cors(func.corsOptionsDelegate),
+
+  // 🔹 Désactiver CSRF en local pour éviter les blocages
   (req, res, next) => {
-    console.log("📌 Avant CSRF Protection");
-    console.log("📌 Cookies reçus :", req.cookies);
-    console.log(
-      "📌 CSRF Token reçu dans headers :",
-      req.headers["x-csrf-token"]
-    );
-    console.log("📌 CSRF Token attendu (cookie) :", req.cookies["_csrf"]);
+    if (process.env.NODE_ENV === "production") {
+      console.log("📌 Vérification du CSRF Token en production...");
 
-    if (!req.cookies["_csrf"] || !req.headers["x-csrf-token"]) {
-      return res
-        .status(403)
-        .json({ success: false, message: "CSRF Token manquant." });
+      if (!req.cookies["_csrf"] || !req.headers["x-csrf-token"]) {
+        return res
+          .status(403)
+          .json({ success: false, message: "CSRF Token manquant." });
+      }
+    } else {
+      console.log("⚠ CSRF désactivé en local");
     }
-
     next();
   },
-  csrfProtection,
+
+  // 🔹 Protection CSRF uniquement en production
+  process.env.NODE_ENV === "production"
+    ? csrfProtection
+    : (req, res, next) => next(),
+
   user.refreshToken
 );
+
 const permissiveCors = {
   origin: true, // ✅ Autorise toutes les origines
-  methods: ["POST", "GET"], // ✅ Autorise uniquement les méthodes nécessaires
+  methods: ["POST", "GET", "PUT"], // ✅ Autorise uniquement les méthodes nécessaires
   credentials: true, // ✅ Permet l'envoi des cookies (obligatoire pour CSRF & refreshToken)
   allowedHeaders: ["Authorization", "Content-Type", "X-CSRF-Token"], // ✅ Assure que CSRF passe bien
 };
@@ -108,6 +123,21 @@ apiRouter
 apiRouter
   .route("/user/me", cors(func.corsOptionsDelegate))
   .get(user.getUserProfile);
+
+apiRouter
+  .route("/user/notifications/:userId")
+  .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
+  .get(cors(permissiveCors), getNotifications); // Récupérer les notifications de l'utilisateur
+
+apiRouter
+  .route("/user/notifications/read/:userId")
+  .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
+  .put(cors(permissiveCors), markNotificationAsRead); // Marquer la notification comme lue
+
+apiRouter
+  .route("/user/notifications")
+  .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
+  .post(cors(permissiveCors), createNotification); // Créer une nouvelle notification pour l'utilisateur
 
 /* apiRouter
   .route("/user/me", cors(func.corsOptionsDelegate))
@@ -200,6 +230,52 @@ apiRouter
     validateReport.validateReportFields,
     reporting.createReport
   );
+
+// ✅ Endpoint pour récupérer les bugs les plus signalés pour un site donné
+apiRouter
+  .route("/user/alert/popular")
+  .options(cors(permissiveCors))
+  .get(cors(permissiveCors), async (req, res) => {
+    try {
+      const siteUrl = req.query.siteUrl;
+      if (!siteUrl) {
+        return res.status(400).json({ error: "Paramètre siteUrl manquant." });
+      }
+
+      const normalizedUrl = siteService.normalizeUrl(siteUrl);
+      if (!siteService.isValidUrl(normalizedUrl)) {
+        return res
+          .status(400)
+          .json({ error: "URL invalide ou non approuvée." });
+      }
+
+      const popularBugs = await reportService.getTopReportedBugs(normalizedUrl);
+      return res.status(200).json({ success: true, reports: popularBugs });
+    } catch (error) {
+      console.error("❌ Erreur dans /user/alert/popular:", error);
+      return res.status(500).json({
+        error:
+          "Une erreur est survenue lors de la récupération des signalements populaires.",
+      });
+    }
+  });
+apiRouter
+  .route("/user/alert/support")
+  .options(cors(permissiveCors))
+  .post(cors(permissiveCors), reporting.confirmReport);
+
+/* apiRouter
+  .route("/reporting/:id", cors(func.corsOptionsDelegate))
+  .get(reporting.getReport); */
+
+apiRouter
+  .route("/reporting/:reportingId")
+  .options(cors(permissiveCors))
+  .get(cors(permissiveCors), reporting.getReportWithDescriptions);
+
+apiRouter
+  .route("/test/site-metadata", cors(func.corsOptionsDelegate))
+  .get(reporting.testGetSiteMetadata);
 
 /* Create suggestion */
 apiRouter
@@ -424,5 +500,67 @@ apiRouter
 apiRouter
   .route("/admin/clear-tables", cors(func.corsOptionsDelegate))
   .delete(adminAction.clearTables);
+
+// Endpoint pour mettre à jour le statut d'un signalement
+apiRouter
+  .route("/user/reporting/:reportingId/status")
+  .patch(cors(permissiveCors), async (req, res) => {
+    let headerAuth = req.headers["authorization"];
+    let userId = getUserId(headerAuth);
+    if (!userId || userId < 0) {
+      return res.status(400).json({ error: "Utilisateur non authentifié." });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({
+        error:
+          "Accès refusé. Seuls les administrateurs peuvent effectuer cette action.",
+      });
+    }
+
+    const { reportingId } = req.params;
+    const { status } = req.body;
+    const validStatuses = ["pending", "resolved", "in-progress"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Statut invalide." });
+    }
+
+    try {
+      const reporting = await Reporting.findByPk(reportingId);
+      if (!reporting) {
+        return res.status(404).json({ error: "Signalement non trouvé." });
+      }
+
+      // Mise à jour du statut du signalement
+      reporting.status = status;
+      await reporting.save();
+
+      // Si le signalement est marqué comme "résolu", notifier tous les utilisateurs associés
+      if (status === "resolved") {
+        const users = await reporting.getUsers();
+        console.log("Utilisateurs récupérés :", users);
+        await Promise.all(
+          users.map(async (user) => {
+            console.log("notification sent: ", user.email); // Ajoute un log pour vérifier
+            await sendNotificationToUser(
+              user.id,
+              "🎉 Votre signalement a été résolu !",
+              "bug_resolved"
+            );
+
+            console.log("notification sent: ");
+          })
+        );
+      }
+
+      return res
+        .status(200)
+        .json({ message: "Statut mis à jour avec succès." });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erreur interne." });
+    }
+  });
 
 export default apiRouter;

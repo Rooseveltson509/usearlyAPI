@@ -3,9 +3,10 @@ import { coupDeCoeurSchema } from "../validation/CoupdeCoeurSchema.js";
 const { CoupDeCoeur, User } = db;
 import { getUserId } from "../utils/jwtUtils.js";
 import { Sequelize } from "sequelize";
+import { service as siteService } from "../services/siteService.js";
 
 export const coupDeCoeur = {
-  createCoupdeCoeur: async function (req, res) {
+  /*   createCoupdeCoeur: async function (req, res) {
     try {
       const headerAuth = req.headers["authorization"];
       const userId = getUserId(headerAuth);
@@ -60,7 +61,72 @@ export const coupDeCoeur = {
         .status(500)
         .json({ error: "An error occurred", details: err.message });
     }
+  }, */
+
+  createCoupdeCoeur: async function (req, res) {
+    try {
+      const userId = getUserId(req.headers["authorization"]);
+      if (userId <= 0) {
+        return res.status(400).json({ error: "Utilisateur non authentifié." });
+      }
+
+      // ✅ Vérifier si les données sont bien reçues
+      console.log("📌 Données reçues :", req.body);
+
+      // Validation des données avec Joi
+      const { error } = coupDeCoeurSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+
+      const userFound = await User.findOne({ where: { id: userId } });
+      if (!userFound) {
+        return res.status(403).json({ error: "Access denied." });
+      }
+
+      const { siteUrl, description, emoji, capture } = req.body; // ✅ Ajout de capture
+
+      if (!siteUrl || !description) {
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
+
+      const normalizedUrl = siteService.normalizeUrl(siteUrl);
+      const marque = await siteService.extractBrandName(siteUrl);
+      const { bugLocation } =
+        await siteService.extractBugLocationAndCategories(siteUrl);
+
+      console.log("🔍 Emplacement détecté:", bugLocation);
+      console.log("🏷️ Marque détectée:", marque);
+      console.log("site normalization:", normalizedUrl);
+
+      // ✅ Vérifier si capture est bien reçu avant de l'enregistrer
+      console.log("📸 Capture reçue :", capture ? "OUI" : "NON");
+
+      // ✅ Création du coup de cœur avec capture
+      const coupDeCoeur = await CoupDeCoeur.create({
+        userId: userFound.id,
+        siteUrl,
+        marque,
+        description,
+        emplacement: bugLocation,
+        emoji,
+        capture, // ✅ Ajout de la capture dans la BDD
+      });
+
+      return res.status(201).json({
+        status: 201,
+        success: true,
+        message: "Coup de cœur créé avec succès.",
+        coupDeCoeurId: coupDeCoeur.id,
+      });
+    } catch (err) {
+      console.error("❌ Erreur lors de la création du coup de cœur :", err);
+      return res
+        .status(500)
+        .json({ error: "Une erreur est survenue", details: err.message });
+    }
   },
+
   getAllCoupdeCoeur: async function (req, res) {
     try {
       // Récupérer l'authentification de l'admin
@@ -88,6 +154,8 @@ export const coupDeCoeur = {
           "emplacement",
           "emoji",
           "description",
+          "siteUrl",
+          "capture",
           "createdAt",
           "updatedAt",
           [Sequelize.literal("'coupdecoeur'"), "type"], // ✅ Ajoute `type`

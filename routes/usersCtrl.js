@@ -192,7 +192,7 @@ export const user = {
   },
 
   // Login
-  login: async (req, res) => {
+  /*   login: async (req, res) => {
     const { email, password, rememberMe } = req.body;
 
     try {
@@ -216,7 +216,7 @@ export const user = {
 
       if (rememberMe) {
         refreshToken = generateRefreshToken(user);
-
+        console.log("remember me : " + rememberMe);
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production", // ✅ Désactivé en local
@@ -231,6 +231,64 @@ export const user = {
         success: true,
         message: "Connexion réussie.",
         accessToken,
+        refreshToken,
+        user: {
+          avatar: user.avatar,
+          type: "user",
+        },
+      });
+    } catch (error) {
+      console.error("Erreur lors de la connexion :", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur interne." });
+    }
+  }, */
+  login: async (req, res) => {
+    const { email, password, rememberMe } = req.body;
+
+    // ✅ Correction : Seul `true` ou `"true"` sera accepté
+    const isRememberMe = rememberMe === true || rememberMe === "true";
+
+    try {
+      const user = await User.findOne({ where: { email } });
+
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid credentials" });
+      }
+
+      if (!user.confirmedAt || user.confirmationToken !== null) {
+        return res.status(403).json({
+          success: false,
+          message: "Veuillez confirmer votre compte avant de vous connecter.",
+        });
+      }
+
+      const accessToken = generateAccessToken(user);
+      let refreshToken = null;
+
+      if (isRememberMe) {
+        // ✅ Utilisation de `isRememberMe`
+        refreshToken = generateRefreshToken(user);
+        console.log("remember me :", isRememberMe);
+        // ✅ Définit le cookie HTTP-Only
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production", // ✅ Désactivé en local
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // ✅ "Lax" en local pour éviter les erreurs
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
+        });
+      } else {
+        res.clearCookie("refreshToken");
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Connexion réussie.",
+        accessToken,
+        refreshToken,
         user: {
           avatar: user.avatar,
           type: "user",
@@ -245,50 +303,66 @@ export const user = {
   },
 
   refreshToken: async (req, res) => {
-    console.log(
-      "📌 CSRF Token reçu dans headers :",
-      req.headers["x-csrf-token"]
-    );
-    console.log("📌 CSRF Token attendu (cookie) :", req.cookies["_csrf"]);
-
-    if (req.headers["x-csrf-token"] !== req.cookies["_csrf"]) {
-      return res
-        .status(403)
-        .json({ success: false, message: "CSRF Token invalide" });
-    }
-
-    const refreshToken = req.cookies.refreshToken;
-
-    if (!refreshToken) {
-      console.error("⚠ Aucun refreshToken reçu !");
-      return res
-        .status(403)
-        .json({ success: false, message: "Refresh Token missing" });
-    }
-
     try {
-      const decoded = verifyRefreshToken(refreshToken);
-      const user = await User.findByPk(decoded.userId);
+      console.log("📌 Requête reçue pour refresh token");
 
-      if (!user) {
-        console.error("❌ Utilisateur introuvable !");
-        return res
-          .status(403)
-          .json({ success: false, message: "Invalid Refresh Token" });
+      // 1️⃣ Vérification CSRF (uniquement en production)
+      if (process.env.NODE_ENV === "production") {
+        console.log(
+          "📌 Vérification du CSRF Token en production...",
+          req.headers["x-csrf-token"],
+          req.cookies["_csrf"]
+        );
+
+        if (req.headers["x-csrf-token"] !== req.cookies["_csrf"]) {
+          return res
+            .status(403)
+            .json({ success: false, message: "CSRF Token invalide" });
+        }
       }
 
-      const newAccessToken = generateAccessToken(user);
-      console.log("✅ Nouveau accessToken généré :", newAccessToken);
+      // 2️⃣ Récupération du refresh token (via cookie ou body en local)
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
-      return res.status(200).json({
-        success: true,
-        accessToken: newAccessToken,
-      });
+      if (!refreshToken) {
+        console.error("⚠ Aucun refreshToken reçu !");
+        return res
+          .status(401)
+          .json({ success: false, message: "Refresh Token manquant" });
+      }
+
+      // 3️⃣ Vérification du refresh token
+      try {
+        const decoded = verifyRefreshToken(refreshToken);
+        const user = await User.findByPk(decoded.userId);
+
+        if (!user) {
+          console.error("❌ Utilisateur introuvable !");
+          return res
+            .status(401)
+            .json({ success: false, message: "Utilisateur non trouvé" });
+        }
+
+        // 4️⃣ Génération d'un nouveau access token
+        const newAccessToken = generateAccessToken(user);
+        console.log("✅ Nouveau accessToken généré :", newAccessToken);
+
+        return res.status(200).json({
+          success: true,
+          accessToken: newAccessToken,
+        });
+      } catch (error) {
+        console.error("❌ Refresh Token invalide ou expiré :", error);
+        return res.status(401).json({
+          success: false,
+          message: "Refresh Token invalide ou expiré",
+        });
+      }
     } catch (error) {
-      console.error("❌ Erreur lors du rafraîchissement :", error);
+      console.error("❌ Erreur interne lors du refresh :", error);
       return res
-        .status(403)
-        .json({ success: false, message: "Invalid Refresh Token" });
+        .status(500)
+        .json({ success: false, message: "Erreur serveur" });
     }
   },
 

@@ -67,6 +67,9 @@ export async function up(queryInterface, Sequelize) {
       ),
     },
   });
+  await queryInterface.addIndex("Reportings", ["userId"]);
+  await queryInterface.addIndex("Reportings", ["siteUrl"]);
+  await queryInterface.addIndex("Reportings", ["marque"]);
 }
 
 export async function down(queryInterface) {

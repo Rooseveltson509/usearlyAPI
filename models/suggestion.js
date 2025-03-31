@@ -33,11 +33,16 @@ export default (sequelize, DataTypes) => {
       userId: DataTypes.UUID,
       marque: DataTypes.STRING,
       description: DataTypes.TEXT("long"),
+      siteUrl: DataTypes.STRING,
       emplacement: DataTypes.STRING,
       reactions: {
         type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
         allowNull: false,
         defaultValue: [], // ✅ Commence vide
+      },
+      capture: {
+        type: DataTypes.STRING, // Stocke l'URL de l'image en base64 ou un lien vers un stockage externe
+        allowNull: true, // Ce champ est optionnel
       },
       validated: DataTypes.BOOLEAN,
       createdAt: DataTypes.DATE,

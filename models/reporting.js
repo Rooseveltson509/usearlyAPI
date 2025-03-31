@@ -9,10 +9,12 @@ export default (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      models.Reporting.belongsTo(models.User, {
-        foreignKey: "userId", // Utilisez simplement le nom de la colonne
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
+      // Dans le modèle Reporting
+      Reporting.belongsToMany(models.User, {
+        through: "ReportingUsers", // Nom de la table de liaison
+        foreignKey: "reportingId", // Clé étrangère vers Reporting
+        otherKey: "userId", // Clé étrangère vers User
+        as: "users", // Alias à utiliser pour récupérer les utilisateurs associés
       });
 
       // Association avec le modèle Ticket
@@ -21,9 +23,18 @@ export default (sequelize, DataTypes) => {
       Reporting.belongsToMany(models.Category, {
         through: "ReportingCategories",
         foreignKey: "reportingId",
-        as: "categories",
+        as: "categoriesRelations",
       });
 
+      Reporting.hasMany(models.ReportingDescription, {
+        foreignKey: "reportingId",
+        as: "descriptions", // ✅ Cet alias doit être identique à celui utilisé dans `findSimilarReporting()`
+        onDelete: "CASCADE",
+      });
+      Reporting.belongsTo(models.SiteMetadata, {
+        foreignKey: "siteMetadataId",
+        as: "siteMetadata",
+      });
       // Association avec SiteType
       Reporting.belongsTo(models.SiteType, {
         foreignKey: "siteTypeId",
@@ -46,8 +57,23 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
       },
       userId: DataTypes.UUID,
-      //siteTypeId: DataTypes.UUID,
+      siteMetadataId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Peut être null pour les anciens signalements
+        references: {
+          model: "SiteMetadata",
+          key: "id",
+        },
+      },
       siteUrl: DataTypes.STRING,
+      domain: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      categories: {
+        type: DataTypes.JSON, // ou ARRAY si Postgres
+        allowNull: true,
+      },
       marque: DataTypes.STRING,
       bugLocation: DataTypes.STRING,
       emojis: DataTypes.STRING,
@@ -58,6 +84,11 @@ export default (sequelize, DataTypes) => {
         defaultValue: [], // ✅ Commence vide
       },
       blocking: DataTypes.BOOLEAN,
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "pending", // Initialisation du statut
+      },
       capture: DataTypes.STRING,
       tips: DataTypes.STRING,
     },
