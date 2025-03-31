@@ -96,6 +96,8 @@ export const suggestion = {
           "id",
           "marque",
           "emplacement",
+          "capture",
+          "emoji",
           "description",
           "createdAt",
           "updatedAt",
