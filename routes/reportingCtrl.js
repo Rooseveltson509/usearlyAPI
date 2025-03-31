@@ -456,7 +456,7 @@ export const reporting = {
       });
     } catch (error) {
       console.error("❌ Erreur serveur :", error);
-      res.status(500).json({ error });
+      res.status(500).json({ error: "❌ Erreur serveur" });
     }
   },
 
