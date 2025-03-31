@@ -2,6 +2,7 @@ import db from "../models/index.js"; // Import du fichier contenant les modèles
 import { suggestionSchema } from "../validation/SuggestionSchema.js";
 import { getUserId } from "../utils/jwtUtils.js";
 const { User, Suggestion } = db;
+import { service as siteService } from "../services/siteService.js";
 import { Sequelize } from "sequelize";
 
 export const suggestion = {
@@ -20,7 +21,8 @@ export const suggestion = {
         return res.status(400).json({ error: error.details[0].message });
       }
 
-      const { marque, description, emplacement, likes, dislikes } = req.body;
+      const { siteUrl, description, emoji, likes, dislikes, capture } =
+        req.body;
 
       // Vérifier si l'utilisateur existe
       const userFound = await User.findOne({ where: { id: userId } });
@@ -28,14 +30,32 @@ export const suggestion = {
         return res.status(403).json({ error: "Access denied." });
       }
 
+      if (!siteUrl || !description) {
+        return res.status(400).json({ error: "Paramètres manquants." });
+      }
+
+      const normalizedUrl = siteService.normalizeUrl(siteUrl);
+      const marque = await siteService.extractBrandName(siteUrl);
+      const { bugLocation } =
+        await siteService.extractBugLocationAndCategories(siteUrl);
+
+      console.log("🔍 Emplacement détecté:", bugLocation);
+      console.log("🏷️ Marque détectée:", marque);
+      console.log("site normalization:", normalizedUrl);
+
+      // ✅ Vérifier si capture est bien reçu avant de l'enregistrer
+      console.log("📸 Capture reçue :", capture ? "OUI" : "NON");
+
       // Créer une nouvelle suggestion
       const suggestion = await Suggestion.create({
         userId: userFound.id,
         marque,
-        emplacement,
+        emplacement: bugLocation,
         description,
+        emoji,
         likes,
         dislikes,
+        capture,
       });
 
       return res.status(201).json({

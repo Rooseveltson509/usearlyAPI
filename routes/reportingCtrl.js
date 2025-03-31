@@ -1,89 +1,191 @@
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import { getUserId } from "../utils/jwtUtils.js";
-// Récupération des modèles nécessaires
-const { User, Category, SiteType, Reporting } = db;
-import { service } from "../services/siteService.js";
 import { reportService } from "../services/reportService.js";
-import logger from "../utils/logger.js";
-import { performance } from "perf_hooks";
+import { sendNotificationToUser } from "../services/notificationService.js";
+import { createNotification } from "./notificationCtrl.js";
+import { service as siteService } from "../services/siteService.js";
 import { Sequelize } from "sequelize";
-//[Sequelize.literal("'signalement'"), "type"], // ✅ Ajout du champ `type`
+const { User, SiteType, Reporting } = db;
 
 export const reporting = {
   // Créer un rapport
   createReport: async function (req, res) {
     try {
-      const startTotal = performance.now(); // Démarrage
       const userId = getUserId(req.headers["authorization"]);
       if (userId <= 0) {
-        const endTotal = performance.now();
-        console.log(
-          `Total execution time: ${(endTotal - startTotal).toFixed(2)}ms`
-        );
-        return res.status(400).json({ error: "missing parameters..." });
+        return res.status(400).json({ error: "Utilisateur non authentifié." });
       }
 
       const { siteUrl, description } = req.body;
-      const normalizedUrl = service.normalizeUrl(siteUrl);
+      const normalizedUrl = siteService.normalizeUrl(siteUrl);
 
-      const startValidation = performance.now();
-      if (!service.isValidUrl(normalizedUrl)) {
-        console.log(
-          `Validation executed in ${(performance.now() - startValidation).toFixed(2)}ms`
-        );
+      if (!siteService.isValidUrl(normalizedUrl)) {
         return res
           .status(400)
-          .json({ error: "URL invalide ou non approuvée.", siteUrl });
+          .json({ error: "URL invalide ou non approuvée." });
       }
-      // Appels parallèles pour réduire le temps d'attente
-      const startCategories = performance.now();
-      const [existingCategories, siteMetadata] = await Promise.all([
-        //await reportService.getCategories(),
-        Category.findAll({ attributes: ["name"] }),
-        service.getSiteMetadata(normalizedUrl),
-      ]);
-      console.log(
-        `Category retrieval executed in ${(performance.now() - startCategories).toFixed(2)}ms`
-      );
-      const categoryNames = existingCategories.map((cat) => cat.name);
+      // **🔍 Extraire automatiquement la marque et bugLocation**
+      const brandName = await siteService.extractBrandName(siteUrl);
+      const { bugLocation, categories } =
+        await siteService.extractBugLocationAndCategories(siteUrl);
 
-      // Génération des catégories et du type de site
-      const startSiteType = performance.now();
-      const { siteType, categories: generatedCategories } =
-        await service.getCategoriesAndSiteType(
-          description,
-          siteMetadata,
-          categoryNames,
-          []
-        );
-      console.log(
-        `SiteType generation executed in ${(performance.now() - startSiteType).toFixed(2)}ms`
-      );
+      console.log(`🏷️ Marque détectée: ${brandName}`);
+      console.log(`🔍 bugLocation détecté: ${bugLocation}`);
+      console.log(`🏷️ Catégories détectées: ${categories.join(", ")}`);
 
-      const siteTypeObject = await service.findOrCreateSiteType(siteType);
-
-      // Création du signalement
-      const startDuplicationCheck = performance.now();
-      const reportResult = await reportService.createReporting(
-        userId,
-        req.body,
-        generatedCategories,
-        siteTypeObject.id
-      );
-      console.log(
-        `Duplication check executed in ${(performance.now() - startDuplicationCheck).toFixed(2)}ms`
-      );
-
-      const endTotal = performance.now();
-      console.log(
-        `Total execution time: ${(endTotal - startTotal).toFixed(2)}ms`
-      );
+      // ✅ Passer les données au service de signalement
+      const reportResult = await reportService.createReporting(userId, {
+        siteUrl: normalizedUrl,
+        bugLocation, // ✅ On utilise maintenant la valeur extraite automatiquement
+        categories,
+        description,
+        marque: brandName,
+        blocking: req.body.blocking,
+        tips: req.body.tips,
+        emojis: req.body.emojis,
+        capture: req.body.capture,
+      });
 
       return res.status(reportResult.status).json(reportResult);
     } catch (error) {
-      logger.error("Erreur lors de la création du signalement :", error);
+      console.error("❌ Erreur lors de la création du signalement :", error);
       return res.status(500).json({
         error: "Une erreur est survenue lors de la création du signalement.",
+      });
+    }
+  },
+
+  getReport: async function (req, res) {
+    try {
+      const userId = getUserId(req.headers["authorization"]);
+
+      if (!userId) {
+        return res.status(401).json({ error: "Utilisateur non authentifié." });
+      }
+      const { id } = req.params;
+
+      const reportResult = await reportService.getReportWithDescriptions(id);
+
+      return res.status(reportResult.status).json(reportResult);
+    } catch (error) {
+      console.error(
+        "❌ Erreur lors de la récupération du signalement :",
+        error
+      );
+      return res.status(500).json({
+        error: "Erreur interne du serveur.",
+      });
+    }
+  },
+
+  markReportingAsResolved: async (req, res) => {
+    const { reportingId } = req.params; // On récupère l'ID du signalement dans l'URL
+    try {
+      // Trouver le signalement en base
+      const reporting = await Reporting.findByPk(reportingId);
+      if (!reporting)
+        return res.status(404).json({ error: "Signalement non trouvé" });
+
+      // Mise à jour du statut du signalement
+      reporting.status = "resolved";
+      await reporting.save();
+
+      // Envoi des notifications aux utilisateurs
+      const users = await reporting.getUsers(); // On récupère tous les utilisateurs qui ont signalé ce problème
+      users.forEach((user) => {
+        sendNotificationToUser(user.id, "🎉 Votre signalement a été résolu !"); // Envoi de la notification
+      });
+
+      return res.status(200).json({
+        message: "Signalement marqué comme résolu et notifications envoyées.",
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ error: "Erreur lors de la mise à jour du signalement" });
+    }
+  },
+
+  updateReporting: async (req, res) => {
+    try {
+      const { reportingId } = req.params; // Récupère l'ID du signalement
+      const { status } = req.body; // Le nouveau statut (résolu)
+
+      // Vérification du statut, on ne traite que les signalements "résolus"
+      if (status === "resolved") {
+        // Récupérer le signalement pour trouver l'utilisateur
+        const reporting = await Reporting.findByPk(reportingId);
+
+        if (!reporting) {
+          return res.status(404).json({ message: "Signalement introuvable" });
+        }
+
+        // Marquer le signalement comme "résolu"
+        reporting.status = "resolved";
+        await reporting.save();
+
+        // Créer une notification pour l'utilisateur
+        await createNotification({
+          userId: reporting.userId,
+          message: "🎉 Votre signalement a été résolu !",
+          type: "bug_fixed", // Tu peux ajouter un type pour identifier la notification
+        });
+
+        return res.status(200).json({
+          message: "Signalement marqué comme résolu et notification envoyée",
+        });
+      }
+
+      return res.status(400).json({ message: "Statut invalide" });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du signalement", error);
+      return res.status(500).json({
+        error: "Erreur interne lors de la mise à jour du signalement",
+      });
+    }
+  },
+
+  /**
+   * Récupère un signalement avec toutes ses descriptions associées.
+   */
+  getReportWithDescriptions: async function (req, res) {
+    try {
+      const { reportingId } = req.params;
+      const reportData =
+        await reportService.getReportingWithDescriptions(reportingId);
+
+      if (!reportData.success) {
+        return res.status(404).json({ error: reportData.message });
+      }
+
+      return res.status(200).json(reportData);
+    } catch (error) {
+      console.error("Erreur lors de la récupération du signalement :", error);
+      return res.status(500).json({ error: "Erreur interne du serveur." });
+    }
+  },
+  testGetSiteMetadata: async (req, res) => {
+    try {
+      const { siteUrl } = req.query; // Récupérer l'URL depuis la requête GET
+      if (!siteUrl) {
+        return res.status(400).json({ error: "Veuillez fournir un siteUrl." });
+      }
+
+      console.log(`🔍 Récupération des métadonnées pour : ${siteUrl}`);
+      const metadata = await siteService.getSiteMetadata(siteUrl);
+
+      return res.status(200).json({
+        success: true,
+        metadata,
+      });
+    } catch (error) {
+      console.error(
+        "❌ Erreur lors de la récupération des métadonnées :",
+        error
+      );
+      return res.status(500).json({
+        error: "Impossible de récupérer les métadonnées du site.",
       });
     }
   },
@@ -428,6 +530,33 @@ export const reporting = {
         error:
           "Une erreur est survenue lors de la récupération des signalements.",
       });
+    }
+  },
+
+  // ✅ Confirmer un bug déjà signalé
+  confirmReport: async function (req, res) {
+    try {
+      const userId = getUserId(req.headers["authorization"]);
+      if (!userId) {
+        return res.status(401).json({ error: "Utilisateur non authentifié." });
+      }
+
+      const { reportingId } = req.body;
+      if (!reportingId) {
+        return res.status(400).json({ error: "reportingId manquant." });
+      }
+
+      const result = await reportService.addSupportToReport(
+        userId,
+        reportingId
+      );
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      console.error("❌ Erreur lors de la confirmation du report :", error);
+      return res
+        .status(500)
+        .json({ error: "Erreur serveur lors de la confirmation." });
     }
   },
 };

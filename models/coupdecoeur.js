@@ -32,10 +32,15 @@ export default (sequelize, DataTypes) => {
       },
       userId: DataTypes.UUID,
       marque: DataTypes.STRING,
+      siteUrl: DataTypes.STRING,
       description: DataTypes.TEXT("long"),
       emplacement: DataTypes.STRING,
       emoji: DataTypes.STRING,
       likes: DataTypes.INTEGER,
+      capture: {
+        type: DataTypes.STRING, // Stocke l'URL de l'image en base64 ou un lien vers un stockage externe
+        allowNull: true, // Ce champ est optionnel
+      },
       reactions: {
         type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
         allowNull: false,

@@ -59,7 +59,7 @@ export default (sequelize, DataTypes) => {
       },
       siteTypeId: {
         type: DataTypes.UUID,
-        allowNull: false, // Ensure association with SiteType is required
+        allowNull: true,
         validate: {
           isUUID: { args: 4, msg: "siteTypeId must be a valid UUID" },
         },
