@@ -391,7 +391,7 @@ export const reporting = {
         include: [
           {
             model: User,
-            as: "User",
+            as: "users",
             attributes: ["id", "pseudo", "avatar"],
           },
         ],
@@ -456,7 +456,7 @@ export const reporting = {
       });
     } catch (error) {
       console.error("❌ Erreur serveur :", error);
-      res.status(500).json({ error: "Erreur serveur" });
+      res.status(500).json({ error });
     }
   },
 
