@@ -199,32 +199,33 @@ export const service = {
       return null;
     }
   },
+
   async extractBugLocationAndCategories(url) {
+    function isDomain(hostname, baseDomain) {
+      return (
+        hostname === baseDomain ||
+        hostname.endsWith("." + baseDomain) ||
+        hostname.match(
+          new RegExp(`(^|\\.)${baseDomain.replace(/\./g, "\\.")}\\.[a-z]{2,}$`)
+        )
+      );
+    }
+
     try {
       const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase();
       const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
 
-      let bugLocation = "home"; // Par défaut
-      let categories = ["Général"]; // Catégorie par défaut
+      let bugLocation = "home";
+      let categories = ["Général"];
 
-      if (pathSegments.length === 0) {
-        return { bugLocation, categories };
-      }
-
-      // ✅ Mots-clés supplémentaires (variations pour login/register)
       const mappings = {
-        "cart": { location: "cart", categories: ["Panier", "Achat"] },
-        "checkout": {
-          location: "checkout",
-          categories: ["Paiement", "Commande"],
-        },
-        "payment": {
-          location: "checkout",
-          categories: ["Paiement", "Commande"],
-        },
-        "order": { location: "checkout", categories: ["Commande", "Suivi"] },
-
+        // Authentification
         "login": {
+          location: "login",
+          categories: ["Authentification", "Connexion"],
+        },
+        "connexion": {
           location: "login",
           categories: ["Authentification", "Connexion"],
         },
@@ -244,7 +245,6 @@ export const service = {
           location: "login",
           categories: ["Authentification", "Connexion"],
         },
-
         "register": {
           location: "register",
           categories: ["Authentification", "Inscription"],
@@ -261,27 +261,19 @@ export const service = {
           location: "register",
           categories: ["Authentification", "Inscription"],
         },
-        // Ajout dans le bloc "mappings"
-        "in": {
-          location: "profile_page",
-          categories: ["Profil", "Réseau professionnel"],
+
+        // E-commerce
+        "cart": { location: "cart", categories: ["Panier", "Achat"] },
+        "panier": { location: "cart", categories: ["Panier", "Achat"] },
+        "checkout": {
+          location: "checkout",
+          categories: ["Paiement", "Commande"],
         },
-        "jobs": {
-          location: "job_page",
-          categories: ["Offres d’emploi", "Carrière"],
+        "payment": {
+          location: "checkout",
+          categories: ["Paiement", "Commande"],
         },
-        "feed": {
-          location: "home",
-          categories: ["Fil d’actualité", "Réseau"],
-        },
-        "messaging": {
-          location: "messaging",
-          categories: ["Messagerie", "Communication"],
-        },
-        "notifications": {
-          location: "notifications",
-          categories: ["Notifications", "Réseau"],
-        },
+        "order": { location: "checkout", categories: ["Commande", "Suivi"] },
         "wishlist": {
           location: "wishlist",
           categories: ["Favoris", "Liste de souhaits"],
@@ -293,6 +285,7 @@ export const service = {
         "search": { location: "search_results", categories: ["Recherche"] },
         "recherche": { location: "search_results", categories: ["Recherche"] },
 
+        // Support
         "help": {
           location: "customer_service",
           categories: ["Service Client", "Assistance"],
@@ -333,10 +326,6 @@ export const service = {
           location: "customer_service",
           categories: ["Service Client", "Assistance"],
         },
-        "aide": {
-          location: "customer_service",
-          categories: ["Service Client", "Aide"],
-        },
         "support-client": {
           location: "customer_service",
           categories: ["Service Client", "Support"],
@@ -345,49 +334,39 @@ export const service = {
           location: "customer_service",
           categories: ["Service Client"],
         },
+
+        // Réseaux sociaux
+        "in": {
+          location: "profile_page",
+          categories: ["Profil", "Réseau professionnel"],
+        },
+        "jobs": {
+          location: "job_page",
+          categories: ["Offres d’emploi", "Carrière"],
+        },
+        "feed": { location: "home", categories: ["Fil d’actualité", "Réseau"] },
+        "messaging": {
+          location: "messaging",
+          categories: ["Messagerie", "Communication"],
+        },
+        "notifications": {
+          location: "notifications",
+          categories: ["Notifications", "Réseau"],
+        },
       };
 
-      // ✅ 1️⃣ Recherche stricte dans l’URL
+      // 1️⃣ Recherche dans les segments (mappings)
       for (const segment of pathSegments) {
         const normalizedSegment = segment.toLowerCase();
         if (mappings[normalizedSegment]) {
           bugLocation = mappings[normalizedSegment].location;
           categories = mappings[normalizedSegment].categories;
-          console.log(`🔍 bugLocation détecté: ${bugLocation}`);
-          console.log(`🏷️ Catégories détectées: ${categories.join(", ")}`);
-          return { bugLocation, categories };
+          break;
         }
       }
 
-      const lastSegment = pathSegments[pathSegments.length - 1].toLowerCase();
-
-      // ✅ 2️⃣ Produit
-      if (
-        lastSegment.match(/[-_][a-zA-Z0-9]{5,}$/) ||
-        parsedUrl.searchParams.has("id") ||
-        url.includes("/p/") ||
-        url.includes("/dp/") ||
-        url.includes("/product/")
-      ) {
-        bugLocation = "product_page";
-        categories = ["Produits", "Détail produit"];
-      }
-      // ✅ 3️⃣ Catégorie
-      else if (
-        pathSegments.length === 1 &&
-        lastSegment.match(/[a-z-]+[0-9]*$/)
-      ) {
-        bugLocation = "category_page";
-        categories = ["Catégorie", "Navigation"];
-      }
-      // ✅ 4️⃣ Sous-catégorie
-      else if (bugLocation === "home" && pathSegments.length > 1) {
-        bugLocation = "subcategory";
-        categories = ["Sous-catégorie"];
-      }
-
-      // ✅ 5️⃣ Détection spéciale Amazon
-      if (parsedUrl.hostname.includes("amazon.")) {
+      // 2️⃣ Détection spécifique par domaine
+      if (isDomain(hostname, "amazon")) {
         if (url.includes("/dp/") || url.includes("/gp/product/")) {
           bugLocation = "product_page";
           categories = ["Produits", "Amazon"];
@@ -401,10 +380,7 @@ export const service = {
           bugLocation = "wishlist";
           categories = ["Favoris", "Liste de souhaits"];
         }
-      }
-
-      // LinkedIn
-      if (parsedUrl.hostname.includes("linkedin.com")) {
+      } else if (isDomain(hostname, "linkedin")) {
         const firstSegment = pathSegments[0];
         if (firstSegment === "in") {
           bugLocation = "profile_page";
@@ -419,10 +395,7 @@ export const service = {
           bugLocation = "linkedin_section";
           categories = ["LinkedIn"];
         }
-      }
-
-      // GitHub
-      else if (parsedUrl.hostname.includes("github.com")) {
+      } else if (isDomain(hostname, "github")) {
         if (pathSegments.length === 1) {
           bugLocation = "profile_page";
           categories = ["Profil développeur", "GitHub"];
@@ -436,13 +409,10 @@ export const service = {
           bugLocation = "repository";
           categories = ["Projet", "Dépôt"];
         }
-      } else if (parsedUrl.hostname.includes("facebook.com")) {
+      } else if (isDomain(hostname, "facebook")) {
         bugLocation = "facebook_section";
         categories = ["Facebook"];
-      }
-
-      // TikTok
-      else if (parsedUrl.hostname.includes("tiktok.com")) {
+      } else if (isDomain(hostname, "tiktok")) {
         if (pathSegments[0] === "@") {
           bugLocation = "profile_page";
           categories = ["Profil", "TikTok"];
@@ -453,7 +423,7 @@ export const service = {
           bugLocation = "tiktok_section";
           categories = ["TikTok"];
         }
-      } else if (parsedUrl.hostname.includes("airbnb.")) {
+      } else if (isDomain(hostname, "airbnb")) {
         if (pathSegments.includes("rooms")) {
           bugLocation = "room_page";
           categories = ["Réservation", "Logement", "Fiche produit"];
@@ -472,8 +442,31 @@ export const service = {
         }
       }
 
-      console.log(`🔍 bugLocation détecté: ${bugLocation}`);
-      console.log(`🏷️ Catégories détectées: ${categories.join(", ")}`);
+      // 3️⃣ Fallbacks si rien n’a été détecté
+      if (bugLocation === "home") {
+        const lastSegment = pathSegments[pathSegments.length - 1].toLowerCase();
+
+        if (
+          lastSegment.match(/[-_][a-zA-Z0-9]{5,}$/) ||
+          parsedUrl.searchParams.has("id") ||
+          url.includes("/p/") ||
+          url.includes("/dp/") ||
+          url.includes("/product/")
+        ) {
+          bugLocation = "product_page";
+          categories = ["Produits", "Détail produit"];
+        } else if (
+          pathSegments.length === 1 &&
+          lastSegment.match(/[a-z-]+[0-9]*$/)
+        ) {
+          bugLocation = "category_page";
+          categories = ["Catégorie", "Navigation"];
+        } else if (pathSegments.length > 1) {
+          bugLocation = "subcategory";
+          categories = ["Sous-catégorie"];
+        }
+      }
+
       return { bugLocation, categories };
     } catch (error) {
       console.error("❌ Erreur lors de l'extraction :", error);
