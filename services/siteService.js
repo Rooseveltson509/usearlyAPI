@@ -1,6 +1,7 @@
 import db from "../models/index.js"; // Import du fichier contenant les modèles Sequelize
 import stringSimilarity from "string-similarity";
 import { URL } from "url";
+import { isHostMatching } from "../utils/urlUtils.js";
 // Récupération des modèles nécessaires
 const { SiteType, SiteMetadata } = db;
 // Cache pour stocker les emplacements connus (évite de recalculer inutilement)
@@ -206,7 +207,7 @@ export const service = {
         hostname === baseDomain ||
         hostname.endsWith("." + baseDomain) ||
         hostname.match(
-          new RegExp(`(^|\\.)${baseDomain.replace(/\./g, "\\.")}\\.[a-z]{2,}$`)
+          new RegExp(`(^|\\.)${isHostMatching(baseDomain)}\\.[a-z]{2,}$`)
         )
       );
     }
