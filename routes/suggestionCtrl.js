@@ -107,7 +107,7 @@ export const suggestion = {
           {
             model: User,
             as: "User",
-            attributes: ["pseudo", "email"],
+            attributes: ["pseudo", "email", "avatar"],
           },
         ],
         limit: parseInt(limit),
