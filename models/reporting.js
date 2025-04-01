@@ -14,7 +14,7 @@ export default (sequelize, DataTypes) => {
         through: "ReportingUsers", // Nom de la table de liaison
         foreignKey: "reportingId", // Clé étrangère vers Reporting
         otherKey: "userId", // Clé étrangère vers User
-        as: "users", // Alias à utiliser pour récupérer les utilisateurs associés
+        as: "User", // Alias à utiliser pour récupérer les utilisateurs associés
       });
 
       // Association avec le modèle Ticket

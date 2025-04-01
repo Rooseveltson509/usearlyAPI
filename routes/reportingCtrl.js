@@ -391,7 +391,7 @@ export const reporting = {
         include: [
           {
             model: User,
-            as: "users",
+            as: "User",
             attributes: ["id", "pseudo", "avatar"],
           },
         ],
