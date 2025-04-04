@@ -230,7 +230,13 @@ apiRouter
     validateReport.validateReportFields,
     reporting.createReport
   );
+apiRouter
+  .route("/reportings/:reportingId/subcategories")
+  .get(cors(func.corsOptionsDelegate), reporting.getSubCategories);
 
+apiRouter
+  .route("/reportings/grouped", cors(func.corsOptionsDelegate))
+  .get(reporting.getGroupedReports);
 // ✅ Endpoint pour récupérer les bugs les plus signalés pour un site donné
 apiRouter
   .route("/user/alert/popular")
@@ -263,6 +269,14 @@ apiRouter
   .route("/user/alert/support")
   .options(cors(permissiveCors))
   .post(cors(permissiveCors), reporting.confirmReport);
+
+apiRouter
+  .route("/reportings/grouped-by-category")
+  .get(cors(func.corsOptionsDelegate), reporting.getAllGroupedReports);
+
+apiRouter
+  .route("/reportings/reportings-with-subcategories")
+  .get(cors(func.corsOptionsDelegate), reporting.getAllGroupedReports);
 
 /* apiRouter
   .route("/reporting/:id", cors(func.corsOptionsDelegate))
@@ -321,6 +335,13 @@ apiRouter
   .route("/suggestion/:suggestionId/reactions", cors(func.corsOptionsDelegate))
   .put(suggestion.addReactionToSuggestion) // ✅ Ajout d'une réaction
   .get(suggestion.getAllSuggestionReactions); // ✅ Récupération des réactions
+
+apiRouter
+  .route(
+    "/suggestion/:suggestionId/reactions/count",
+    cors(func.corsOptionsDelegate)
+  )
+  .get(suggestion.getReactionsCountBySuggest); // ✅ Récupération des réactions
 
 apiRouter
   .route(
@@ -538,7 +559,7 @@ apiRouter
 
       // Si le signalement est marqué comme "résolu", notifier tous les utilisateurs associés
       if (status === "resolved") {
-        const users = await reporting.getUsers();
+        const users = await reporting.getUser();
         console.log("Utilisateurs récupérés :", users);
         await Promise.all(
           users.map(async (user) => {

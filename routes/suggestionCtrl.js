@@ -361,4 +361,92 @@ export const suggestion = {
       return res.status(500).json({ error: "Erreur serveur" });
     }
   },
+
+  getReactionsCountBySuggest: async function (req, res) {
+    try {
+      console.log("📌 Récupération des réactions...");
+
+      const { suggestionId } = req.params;
+
+      // Récupérer le suggestion par son ID
+      const suggestion = await Suggestion.findByPk(suggestionId);
+      if (!suggestion) {
+        return res.status(404).json({ error: "Signalement non trouvé" });
+      }
+
+      console.log("🗂 Réactions stockées dans la BDD :", suggestion.reactions);
+
+      // ✅ Vérifie si `suggestion.reactions` est null ou une chaîne vide
+      if (!suggestion.reactions || typeof suggestion.reactions !== "string") {
+        return res
+          .status(200)
+          .json({ success: true, reactionsCount: 0, reactions: [] });
+      }
+
+      let reactions;
+      try {
+        // Tentative de parsing du JSON des réactions
+        reactions = JSON.parse(suggestion.reactions);
+
+        // Vérifie si les réactions sont un tableau ou un objet
+        if (!Array.isArray(reactions) && typeof reactions !== "object") {
+          return res.status(500).json({
+            error: "Les réactions doivent être un tableau ou un objet valide",
+          });
+        }
+
+        // Si c'est un tableau, on va grouper les réactions par `emoji` et compter les occurrences
+        let groupedReactions = [];
+        let reactionsCount = 0;
+
+        if (Array.isArray(reactions)) {
+          // Grouper les réactions par emoji et compter les occurrences
+          reactions.forEach((reaction) => {
+            const existingReaction = groupedReactions.find(
+              (r) => r.emoji === reaction.emoji
+            );
+            if (existingReaction) {
+              existingReaction.count += 1;
+            } else {
+              groupedReactions.push({
+                userId: reaction.userId,
+                emoji: reaction.emoji,
+                count: 1,
+              });
+            }
+            reactionsCount += 1;
+          });
+        } else {
+          // Si les réactions sont un objet, on les convertit en tableau avec des counts
+          Object.keys(reactions).forEach((userId) => {
+            const emoji = reactions[userId];
+            const existingReaction = groupedReactions.find(
+              (r) => r.emoji === emoji
+            );
+            if (existingReaction) {
+              existingReaction.count += 1;
+            } else {
+              groupedReactions.push({ userId, emoji, count: 1 });
+            }
+            reactionsCount += 1;
+          });
+        }
+
+        // Retourner les données avec le nombre total de réactions et le tableau détaillé
+        return res.status(200).json({
+          success: true,
+          reactionsCount,
+          reactions: groupedReactions,
+        });
+      } catch (err) {
+        console.error("❌ Erreur JSON :", err);
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de l'analyse des réactions" });
+      }
+    } catch (error) {
+      console.error("❌ Erreur serveur :", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
 };
