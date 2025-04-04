@@ -25,6 +25,11 @@ export default (sequelize, DataTypes) => {
         foreignKey: "reportingId",
         as: "categoriesRelations",
       });
+      Reporting.hasMany(models.ReportingSubCategory, {
+        foreignKey: "reportingId",
+        as: "subCategories",
+        onDelete: "CASCADE",
+      });
 
       Reporting.hasMany(models.ReportingDescription, {
         foreignKey: "reportingId",
@@ -64,6 +69,10 @@ export default (sequelize, DataTypes) => {
           model: "SiteMetadata",
           key: "id",
         },
+      },
+      subCategory: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
       siteUrl: DataTypes.STRING,
       domain: {

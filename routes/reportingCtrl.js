@@ -4,6 +4,7 @@ import { reportService } from "../services/reportService.js";
 import { sendNotificationToUser } from "../services/notificationService.js";
 import { createNotification } from "./notificationCtrl.js";
 import { service as siteService } from "../services/siteService.js";
+import { getSubCategoriesByReportingId } from "../services/subCategoryService.js";
 import { Sequelize } from "sequelize";
 const { User, SiteType, Reporting } = db;
 
@@ -78,6 +79,53 @@ export const reporting = {
     }
   },
 
+  getGroupedReports: async function (req, res) {
+    try {
+      const grouped = await Reporting.findAll({
+        attributes: [
+          "bugLocation",
+          "subCategory",
+          [Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
+        ],
+        group: ["bugLocation", "subCategory"],
+        order: [[Sequelize.fn("COUNT", Sequelize.col("id")), "DESC"]],
+      });
+
+      return res.status(200).json(grouped);
+    } catch (error) {
+      console.error("❌ Erreur regroupement reports :", error);
+      return res.status(500).json({ error: "Erreur serveur." });
+    }
+  },
+
+  getSubCategories: async function (req, res) {
+    try {
+      const { reportingId } = req.params;
+
+      const result = await getSubCategoriesByReportingId(reportingId);
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("❌ Erreur dans getSubCategories:", error);
+      return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+  getAllGroupedReports: async function (req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const result = await reportService.getAllGroupedByCategory({
+        page,
+        limit,
+      });
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("❌ Erreur dans getAllGroupedReports:", error);
+      return res.status(500).json({ error: "Erreur serveur." });
+    }
+  },
+
   markReportingAsResolved: async (req, res) => {
     const { reportingId } = req.params; // On récupère l'ID du signalement dans l'URL
     try {
@@ -91,7 +139,7 @@ export const reporting = {
       await reporting.save();
 
       // Envoi des notifications aux utilisateurs
-      const users = await reporting.getUsers(); // On récupère tous les utilisateurs qui ont signalé ce problème
+      const users = await reporting.getUser(); // On récupère tous les utilisateurs qui ont signalé ce problème
       users.forEach((user) => {
         sendNotificationToUser(user.id, "🎉 Votre signalement a été résolu !"); // Envoi de la notification
       });

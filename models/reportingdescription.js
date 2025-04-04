@@ -35,6 +35,14 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
+      emoji: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      subCategory: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       description: {
         type: DataTypes.TEXT("long"),
         allowNull: false,

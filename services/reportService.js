@@ -2,12 +2,16 @@ import db from "../models/index.js";
 import dotenv from "dotenv";
 import stringSimilarity from "string-similarity";
 import { sendNotificationToUser } from "./notificationService.js";
+import { updateSubCategories } from "../services/subCategoryService.js";
+
 const {
   Reporting,
   ReportingDescription,
   Category,
   UserPoints,
   ReportingUsers,
+  ReportingSubCategory,
+  User,
 } = db;
 dotenv.config();
 
@@ -18,13 +22,13 @@ export const reportService = {
     // ✅ Normaliser l'URL et extraire le domaine
     const fullUrl = siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`;
     const parsedUrl = new URL(fullUrl);
-    const domain = parsedUrl.hostname.replace(/^www\./, ""); // Ex: "nike.com"
+    const domain = parsedUrl.hostname.replace(/^www\./, "");
 
     console.log(
       `🔍 Vérification du signalement sur: ${domain}, ${bugLocation}`
     );
 
-    // 🔍 Vérifier si un signalement similaire (même domaine + bugLocation) existe déjà
+    // 🔍 Vérifie si un report existe déjà
     const existingReport = await Reporting.findOne({
       where: { domain, bugLocation },
     });
@@ -60,6 +64,11 @@ export const reportService = {
         reportingId: existingReport.id,
         userId,
         description,
+        emoji: data.emojis,
+      });
+
+      process.nextTick(() => {
+        updateSubCategories(existingReport.id);
       });
 
       return {
@@ -71,11 +80,11 @@ export const reportService = {
       };
     }
 
-    // 🆕 Création d’un nouveau signalement avec `domain`
+    // ✅ Création du nouveau signalement
     const newReporting = await Reporting.create({
       userId,
       siteUrl,
-      domain, // ✅ On stocke le domaine pour éviter les erreurs
+      domain,
       bugLocation,
       categories: data.categories,
       description,
@@ -85,10 +94,27 @@ export const reportService = {
       capture: data.capture,
       tips: data.tips,
     });
-    // Ajouter un enregistrement dans ReportingUsers pour le nouveau signalement
+
     await ReportingUsers.create({
       reportingId: newReporting.id,
       userId,
+    });
+
+    // ✅ On enregistre aussi la description du premier utilisateur
+    await ReportingDescription.create({
+      reportingId: newReporting.id,
+      userId,
+      description,
+      emoji: data.emojis,
+    });
+
+    console.log(
+      "🔥 [IA] Appel updateSubCategories pour reportId:",
+      newReporting.id
+    );
+
+    process.nextTick(() => {
+      updateSubCategories(newReporting.id);
     });
 
     return {
@@ -99,7 +125,6 @@ export const reportService = {
       reportingId: newReporting.id,
     };
   },
-
   async findSimilarReporting(siteUrl, bugLocation, description) {
     const start = Date.now();
     console.log(
@@ -344,5 +369,77 @@ export const reportService = {
         error: "Erreur interne lors de la mise à jour du signalement",
       });
     }
+  },
+
+  getAllGroupedByCategory: async ({ page = 1, limit = 10 }) => {
+    const offset = (page - 1) * limit;
+
+    const { count, rows: reportings } = await Reporting.findAndCountAll({
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: ReportingSubCategory,
+          as: "subCategories",
+          order: [["count", "DESC"]],
+        },
+      ],
+    });
+
+    const results = [];
+
+    for (const report of reportings) {
+      const category = report.categories?.[0] || "Autre";
+
+      const formattedSubCategories = [];
+
+      for (const sub of report.subCategories) {
+        const matchingDescriptions = await ReportingDescription.findAll({
+          where: {
+            reportingId: report.id,
+            subCategory: sub.subCategory,
+          },
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "pseudo", "avatar"],
+            },
+          ],
+        });
+
+        const descriptions = matchingDescriptions.map((desc) => ({
+          description: desc.description,
+          emoji: desc.emoji, // ✅ On ajoute ici
+          createdAt: desc.createdAt, // ✅ Bonus : pour afficher la date côté front
+          user: desc.user,
+        }));
+
+        formattedSubCategories.push({
+          subCategory: sub.subCategory,
+          count: sub.count,
+          descriptions,
+        });
+      }
+
+      results.push({
+        reportingId: report.id,
+        category,
+        marque: report.marque,
+        totalCount: formattedSubCategories.reduce(
+          (acc, sc) => acc + sc.count,
+          0
+        ),
+        subCategories: formattedSubCategories,
+      });
+    }
+
+    return {
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalReports: count,
+      results,
+    };
   },
 };
