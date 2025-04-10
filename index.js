@@ -4,12 +4,13 @@ import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
-import cookieParser from "cookie-parser";
+import cookieParser from "cookie-parser"; // ✅ Correctement placé avant csurf
+//import bodyParser from "body-parser";
 import promBundle from "express-prom-bundle";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
-import apiRouter from "./apiRouter.js";
-import csrfProtection from "./middleware/csrfProtection.js"; // ✅ Ajout
+import apiRouter from "./apiRouter.js"; // ✅ Routes API
+import csrfProtection from "./middleware/csrfProtection.js";
 
 dotenv.config();
 
@@ -25,23 +26,20 @@ const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
 
 const server = express();
 
-// ✅ 1. CORS
+// ✅ 1. Configuration CORS
+server.use(cors(func.corsOptionsDelegate));
 server.options("*", cors(func.corsOptionsDelegate));
 
 // ✅ 2. Cookies & Body Parser
 server.use(cookieParser());
+if (process.env.NODE_ENV === "production") {
+  server.use(csrfProtection);
+}
+
 server.use(express.json({ limit: "50mb" }));
 server.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// ✅ 3. Protection CSRF uniquement en production
-if (process.env.NODE_ENV === "production") {
-  console.log("🔐 Middleware CSRF activé (production)");
-  server.use(csrfProtection);
-} else {
-  console.log("⚠️ CSRF désactivé en local");
-}
-
-// ✅ 4. Autoriser l'accès aux images (évite CSRF sur /uploads)
+// ✅ 3. Autoriser l'accès aux images (évite CSRF sur /uploads)
 server.use("/uploads", express.static(path.join(__dirname, "uploads")));
 server.use((req, res, next) => {
   if (req.path.startsWith("/uploads/")) {
@@ -57,17 +55,16 @@ server.use(
   swaggerUi.setup(swaggerDocument)
 );
 
-// ✅ 6. Prometheus Monitoring
+// ✅ 6. Middleware Prometheus pour monitoring
 const metricsMiddleware = promBundle({
   includeMethod: true,
   includePath: true,
 });
 server.use(metricsMiddleware);
 
-// ✅ 7. Routes API
+// ✅ 7. Routes API (doit être après le CSRF middleware)
 server.use(config.rootAPI, apiRouter);
-
-// ✅ 8. Gestion des erreurs Multer
+// ✅ Middleware de gestion des erreurs Multer (fichiers non autorisés)
 server.use((err, req, res, next) => {
   if (err.code === "LIMIT_FILE_TYPE") {
     return res
@@ -77,7 +74,7 @@ server.use((err, req, res, next) => {
   next(err);
 });
 
-// ✅ 9. Erreurs globales
+// ✅ 8. Gestion des erreurs globales
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err.stack);
 });
@@ -85,7 +82,7 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
 });
 
-// ✅ 10. Lancement serveur
+// ✅ 9. Lancement du serveur
 server.listen(PORT, "0.0.0.0", function () {
   console.log("✅ Server en écoute sur le port :", PORT);
   console.log("✅ ENV MODE:", process.env.NODE_ENV);
