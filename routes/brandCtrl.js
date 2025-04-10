@@ -53,18 +53,20 @@ export const brandCtrl = {
       const accessToken = generateAccessToken(user);
       let refreshToken = null;
 
+      const isSecure = process.env.COOKIE_SECURE === "true";
+
+      // ✅ Ajout du refreshToken dans un cookie uniquement si RememberMe
       if (rememberMe) {
-        refreshToken = generateRefreshToken(user);
+        const refreshToken = generateRefreshToken(user);
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: true,
-          sameSite: "strict",
+          secure: isSecure,
+          sameSite: isSecure ? "None" : "Lax",
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
       } else {
         res.clearCookie("refreshToken");
       }
-
       const response = {
         success: true,
         message: "Connexion réussie.",
