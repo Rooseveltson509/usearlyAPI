@@ -13,6 +13,7 @@ export default (sequelize, DataTypes) => {
         foreignKey: "userId",
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
+        as: "author",
       });
       Suggestion.hasMany(models.Comment, {
         foreignKey: "suggestionId",

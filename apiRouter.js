@@ -26,6 +26,7 @@ import {
 } from "./routes/notificationCtrl.js";
 import rateLimit from "express-rate-limit";
 import csrfProtection from "./middleware/csrfProtection.js"; // 🔥 Import du middleware CSRF
+import { checkAlreadyAuthenticated } from "./middleware/checkAlreadyAuthenticated.js"; // 🔥 Import du middleware CSRF
 import {
   validateCoupdeCoeur,
   validateReport,
@@ -75,27 +76,23 @@ apiRouter.post(
   refreshLimiter,
   cors(func.corsOptionsDelegate),
 
-  // 🔹 Désactiver CSRF en local pour éviter les blocages
+  // ✅ Log des cookies et headers (debug uniquement)
   (req, res, next) => {
-    if (process.env.NODE_ENV === "production") {
-      console.log("📌 Vérification du CSRF Token en production...");
-
-      if (!req.cookies["_csrf"] || !req.headers["x-csrf-token"]) {
-        return res
-          .status(403)
-          .json({ success: false, message: "CSRF Token manquant." });
-      }
-    } else {
-      console.log("⚠ CSRF désactivé en local");
-    }
+    console.log("🧪 Cookies reçus :", req.cookies);
+    console.log("🧪 Header X-CSRF-Token :", req.headers["x-csrf-token"]);
+    console.log("🧪 NODE_ENV :", process.env.NODE_ENV);
     next();
   },
 
-  // 🔹 Protection CSRF uniquement en production
+  // ✅ Middleware CSRF uniquement en production
   process.env.NODE_ENV === "production"
     ? csrfProtection
-    : (req, res, next) => next(),
+    : (req, res, next) => {
+        console.log("⚠ CSRF middleware désactivé (dev mode)");
+        next();
+      },
 
+  // ✅ Contrôleur final
   user.refreshToken
 );
 
@@ -110,6 +107,11 @@ apiRouter
   .route("/user/login")
   .options(cors(permissiveCors)) // ✅ Gestion des pré-requêtes OPTIONS pour éviter les erreurs CORS
   .post(cors(permissiveCors), user.login); // ✅ Applique la configuration CORS correctement
+
+apiRouter
+  .route("/user/logout")
+  .options(cors(permissiveCors))
+  .post(cors(permissiveCors), user.logout);
 
 apiRouter
   .route("/user/verify")
@@ -171,15 +173,35 @@ apiRouter
 // Espace Marque
 apiRouter
   .route("/brand/login", cors(func.corsOptionsDelegate))
-  .post(brandCtrl.login);
+  .post(checkAlreadyAuthenticated, brandCtrl.login); // Middleware ajouté ici
 
 apiRouter
   .route("/brand/profile", cors(func.corsOptionsDelegate))
   .get(brandCtrl.fetchBrandProfile);
 
 apiRouter
-  .route("/brand/:name", cors(func.corsOptionsDelegate))
+  .route("/brand/:brandName", cors(func.corsOptionsDelegate))
   .get(brandCtrl.getBrandByName);
+
+apiRouter
+  .route("/brand/:brandName/analytics/weekly")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getAnalyticsStats);
+
+apiRouter
+  .route("/brand/:brandName/analytics/summary")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getSummaryAnalytics);
+
+apiRouter
+  .route("/brand/:brandName/reports/latest")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getLatestReports);
+
+apiRouter
+  .route("/brand/:brandName/latest-feedbacks")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getLatestFeedbacks);
+
+apiRouter
+  .route("/brand/:brandName/top-report")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getTopReport);
 
 apiRouter
   .route("/brand/:idticket/response", cors(func.corsOptionsDelegate))
@@ -559,7 +581,7 @@ apiRouter
 
       // Si le signalement est marqué comme "résolu", notifier tous les utilisateurs associés
       if (status === "resolved") {
-        const users = await reporting.getUser();
+        const users = await reporting.getAuthor();
         console.log("Utilisateurs récupérés :", users);
         await Promise.all(
           users.map(async (user) => {

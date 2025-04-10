@@ -32,6 +32,10 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 1,
       },
+      icon: {
+        type: DataTypes.STRING,
+        allowNull: true, // ou false si tu veux rendre obligatoire plus tard
+      },
       createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,

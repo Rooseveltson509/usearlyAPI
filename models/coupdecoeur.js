@@ -13,6 +13,7 @@ export default (sequelize, DataTypes) => {
         foreignKey: "userId", // Utilisez simplement le nom de la colonne
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
+        as: "author",
       });
       CoupDeCoeur.hasMany(models.Comment, {
         foreignKey: "coupDeCoeurId",
