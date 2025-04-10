@@ -326,14 +326,15 @@ export const user = {
       }
 
       const accessToken = generateAccessToken(user);
+      const isSecure = process.env.COOKIE_SECURE === "true";
 
       // ✅ Ajout du refreshToken dans un cookie uniquement si RememberMe
       if (isRememberMe) {
         const refreshToken = generateRefreshToken(user);
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+          secure: isSecure,
+          sameSite: isSecure ? "None" : "Lax",
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
       } else {
