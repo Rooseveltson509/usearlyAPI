@@ -5,6 +5,13 @@ import {
   generateRefreshToken,
   getUserId,
 } from "../utils/jwtUtils.js";
+import {
+  getStatsByBrand,
+  getLatestReportsByBrand,
+  getLatestFeedbacksByType,
+  getTopReportByBrand,
+} from "../services/brandService.js";
+import { getSummaryByBrand } from "../services/brandServiceSummary.js";
 const { Marque } = db;
 
 // Méthodes exportées
@@ -131,8 +138,8 @@ export const brandCtrl = {
           .status(401)
           .json({ success: false, message: "Non autorisé." });
       }
-      const { name } = req.params;
-      const brand = await Marque.findOne({ where: { name } });
+      const { brandName } = req.params;
+      const brand = await Marque.findOne({ where: { brandName } });
 
       if (!brand) {
         return res.status(404).json({ error: "Marque non trouvée" });
@@ -164,6 +171,78 @@ export const brandCtrl = {
       });
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getAnalyticsStats: async (req, res) => {
+    const { brandName } = req.params;
+    const days = parseInt(req.query.days, 10) || 7;
+
+    try {
+      const stats = await getStatsByBrand(brandName, days);
+      res.status(200).json(stats);
+    } catch (err) {
+      console.error("Erreur getAnalyticsStats:", err);
+      res.status(500).json({ error: "Erreur serveur." });
+    }
+  },
+
+  getSummaryAnalytics: async (req, res) => {
+    const { brandName } = req.params;
+    if (!brandName) return res.status(400).json({ error: "Marque manquante" });
+
+    try {
+      const summary = await getSummaryByBrand(brandName);
+      res.json(summary);
+    } catch (err) {
+      console.error("Erreur getSummaryAnalytics:", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+  getLatestReports: async (req, res) => {
+    const { brandName } = req.params;
+    if (!brandName) {
+      return res.status(400).json({ error: "Marque manquante" });
+    }
+
+    try {
+      const latest = await getLatestReportsByBrand(brandName);
+      res.json(latest);
+    } catch (err) {
+      console.error("Erreur getLatestReports:", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getLatestFeedbacks: async (req, res) => {
+    const { brandName } = req.params;
+    const { type } = req.query;
+
+    if (!brandName || !type) {
+      return res.status(400).json({ error: "Paramètres requis manquants" });
+    }
+
+    try {
+      const data = await getLatestFeedbacksByType(brandName, type);
+      res.json(data);
+    } catch (err) {
+      console.error("Erreur getLatestFeedbacks:", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getTopReport: async (req, res) => {
+    const { brandName } = req.params;
+    if (!brandName) return res.status(400).json({ error: "Marque manquante" });
+
+    try {
+      const data = await getTopReportByBrand(brandName);
+      if (!data)
+        return res.status(404).json({ message: "Aucun signalement trouvé." });
+      res.json(data);
+    } catch (err) {
+      console.error("Erreur getTopReport:", err);
       res.status(500).json({ error: "Erreur serveur" });
     }
   },

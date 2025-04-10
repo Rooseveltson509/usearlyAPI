@@ -26,6 +26,7 @@ import {
 } from "./routes/notificationCtrl.js";
 import rateLimit from "express-rate-limit";
 import csrfProtection from "./middleware/csrfProtection.js"; // 🔥 Import du middleware CSRF
+import { checkAlreadyAuthenticated } from "./middleware/checkAlreadyAuthenticated.js"; // 🔥 Import du middleware CSRF
 import {
   validateCoupdeCoeur,
   validateReport,
@@ -112,6 +113,11 @@ apiRouter
   .post(cors(permissiveCors), user.login); // ✅ Applique la configuration CORS correctement
 
 apiRouter
+  .route("/user/logout")
+  .options(cors(permissiveCors))
+  .post(cors(permissiveCors), user.logout);
+
+apiRouter
   .route("/user/verify")
   .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
   .post(cors(permissiveCors), user.verifyToken);
@@ -171,15 +177,35 @@ apiRouter
 // Espace Marque
 apiRouter
   .route("/brand/login", cors(func.corsOptionsDelegate))
-  .post(brandCtrl.login);
+  .post(checkAlreadyAuthenticated, brandCtrl.login); // Middleware ajouté ici
 
 apiRouter
   .route("/brand/profile", cors(func.corsOptionsDelegate))
   .get(brandCtrl.fetchBrandProfile);
 
 apiRouter
-  .route("/brand/:name", cors(func.corsOptionsDelegate))
+  .route("/brand/:brandName", cors(func.corsOptionsDelegate))
   .get(brandCtrl.getBrandByName);
+
+apiRouter
+  .route("/brand/:brandName/analytics/weekly")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getAnalyticsStats);
+
+apiRouter
+  .route("/brand/:brandName/analytics/summary")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getSummaryAnalytics);
+
+apiRouter
+  .route("/brand/:brandName/reports/latest")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getLatestReports);
+
+apiRouter
+  .route("/brand/:brandName/latest-feedbacks")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getLatestFeedbacks);
+
+apiRouter
+  .route("/brand/:brandName/top-report")
+  .get(cors(func.corsOptionsDelegate), brandCtrl.getTopReport);
 
 apiRouter
   .route("/brand/:idticket/response", cors(func.corsOptionsDelegate))
@@ -559,7 +585,7 @@ apiRouter
 
       // Si le signalement est marqué comme "résolu", notifier tous les utilisateurs associés
       if (status === "resolved") {
-        const users = await reporting.getUser();
+        const users = await reporting.getAuthor();
         console.log("Utilisateurs récupérés :", users);
         await Promise.all(
           users.map(async (user) => {

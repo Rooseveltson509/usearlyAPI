@@ -106,7 +106,7 @@ export const suggestion = {
         include: [
           {
             model: User,
-            as: "User",
+            as: "author",
             attributes: ["pseudo", "email", "avatar"],
           },
         ],

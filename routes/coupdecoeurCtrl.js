@@ -163,7 +163,7 @@ export const coupDeCoeur = {
         include: [
           {
             model: User,
-            as: "User",
+            as: "author",
             attributes: ["pseudo", "email", "avatar"],
           },
           /*           {

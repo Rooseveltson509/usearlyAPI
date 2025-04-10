@@ -366,11 +366,31 @@ export const user = {
     }
   },
 
-  logout: (req, res) => {
-    res.clearCookie("refreshToken"); // Supprimez le cookie contenant le Refresh Token
-    return res
-      .status(200)
-      .json({ success: true, message: "Déconnexion réussie." });
+  // logout controller
+  logout: async (req, res) => {
+    try {
+      // Supprimer les cookies du refreshToken
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // En prod, secure est true
+        sameSite: "Strict",
+      });
+      res.clearCookie("_csrf", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // En prod, secure est true
+        sameSite: "Strict",
+      });
+
+      // Envoyer une réponse de succès
+      return res
+        .status(200)
+        .json({ success: true, message: "Déconnexion réussie" });
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion :", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur lors de la déconnexion" });
+    }
   },
 
   verifyToken: (req, res) => {
