@@ -76,27 +76,23 @@ apiRouter.post(
   refreshLimiter,
   cors(func.corsOptionsDelegate),
 
-  // 🔹 Désactiver CSRF en local pour éviter les blocages
+  // ✅ Log des cookies et headers (debug uniquement)
   (req, res, next) => {
-    if (process.env.NODE_ENV === "production") {
-      console.log("📌 Vérification du CSRF Token en production...");
-
-      if (!req.cookies["_csrf"] || !req.headers["x-csrf-token"]) {
-        return res
-          .status(403)
-          .json({ success: false, message: "CSRF Token manquant." });
-      }
-    } else {
-      console.log("⚠ CSRF désactivé en local");
-    }
+    console.log("🧪 Cookies reçus :", req.cookies);
+    console.log("🧪 Header X-CSRF-Token :", req.headers["x-csrf-token"]);
+    console.log("🧪 NODE_ENV :", process.env.NODE_ENV);
     next();
   },
 
-  // 🔹 Protection CSRF uniquement en production
+  // ✅ Middleware CSRF uniquement en production
   process.env.NODE_ENV === "production"
     ? csrfProtection
-    : (req, res, next) => next(),
+    : (req, res, next) => {
+        console.log("⚠ CSRF middleware désactivé (dev mode)");
+        next();
+      },
 
+  // ✅ Contrôleur final
   user.refreshToken
 );
 

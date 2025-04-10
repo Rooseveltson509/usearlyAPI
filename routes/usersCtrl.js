@@ -244,8 +244,11 @@ export const user = {
         .json({ success: false, message: "Erreur interne." });
     }
   }, */
-  login: async (req, res) => {
+  /*   login: async (req, res) => {
     const { email, password, rememberMe } = req.body;
+
+    console.log("📩 Headers reçus côté serveur :", req.headers);
+    console.log("🔐 Token CSRF côté serveur :", req.headers["x-csrf-token"]);
 
     // ✅ Correction : Seul `true` ou `"true"` sera accepté
     const isRememberMe = rememberMe === true || rememberMe === "true";
@@ -300,13 +303,64 @@ export const user = {
         .status(500)
         .json({ success: false, message: "Erreur interne." });
     }
-  },
+  }, */
 
+  login: async (req, res) => {
+    const { email, password, rememberMe } = req.body;
+    const isRememberMe = rememberMe === true || rememberMe === "true";
+
+    try {
+      const user = await User.findOne({ where: { email } });
+
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid credentials" });
+      }
+
+      if (!user.confirmedAt || user.confirmationToken !== null) {
+        return res.status(403).json({
+          success: false,
+          message: "Veuillez confirmer votre compte avant de vous connecter.",
+        });
+      }
+
+      const accessToken = generateAccessToken(user);
+
+      // ✅ Ajout du refreshToken dans un cookie uniquement si RememberMe
+      if (isRememberMe) {
+        const refreshToken = generateRefreshToken(user);
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
+      } else {
+        res.clearCookie("refreshToken");
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Connexion réussie.",
+        accessToken,
+        user: {
+          avatar: user.avatar,
+          type: "user",
+        },
+      });
+    } catch (error) {
+      console.error("Erreur lors de la connexion :", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur interne." });
+    }
+  },
   refreshToken: async (req, res) => {
     try {
       console.log("📌 Requête reçue pour refresh token");
 
-      // 1️⃣ Vérification CSRF (uniquement en production)
+      // ✅ CSRF vérification uniquement en production
       if (process.env.NODE_ENV === "production") {
         console.log(
           "📌 Vérification du CSRF Token en production...",
@@ -319,9 +373,11 @@ export const user = {
             .status(403)
             .json({ success: false, message: "CSRF Token invalide" });
         }
+      } else {
+        console.log("⚠ CSRF Token check bypassé (dev mode)");
       }
 
-      // 2️⃣ Récupération du refresh token (via cookie ou body en local)
+      // 🔁 Récupération du refresh token (via cookie ou body en dev)
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
       if (!refreshToken) {
@@ -331,33 +387,24 @@ export const user = {
           .json({ success: false, message: "Refresh Token manquant" });
       }
 
-      // 3️⃣ Vérification du refresh token
-      try {
-        const decoded = verifyRefreshToken(refreshToken);
-        const user = await User.findByPk(decoded.userId);
+      // 🔒 Vérification du refresh token
+      const decoded = verifyRefreshToken(refreshToken);
+      const user = await User.findByPk(decoded.userId);
 
-        if (!user) {
-          console.error("❌ Utilisateur introuvable !");
-          return res
-            .status(401)
-            .json({ success: false, message: "Utilisateur non trouvé" });
-        }
-
-        // 4️⃣ Génération d'un nouveau access token
-        const newAccessToken = generateAccessToken(user);
-        console.log("✅ Nouveau accessToken généré :", newAccessToken);
-
-        return res.status(200).json({
-          success: true,
-          accessToken: newAccessToken,
-        });
-      } catch (error) {
-        console.error("❌ Refresh Token invalide ou expiré :", error);
-        return res.status(401).json({
-          success: false,
-          message: "Refresh Token invalide ou expiré",
-        });
+      if (!user) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Utilisateur non trouvé" });
       }
+
+      // ✅ Génération d'un nouveau token
+      const newAccessToken = generateAccessToken(user);
+      console.log("✅ Nouveau accessToken généré :", newAccessToken);
+
+      return res.status(200).json({
+        success: true,
+        accessToken: newAccessToken,
+      });
     } catch (error) {
       console.error("❌ Erreur interne lors du refresh :", error);
       return res
