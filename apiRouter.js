@@ -52,15 +52,16 @@ const refreshLimiter = rateLimit({
 });
 
 // ✅ Route pour récupérer le CSRF Token
-apiRouter.get("/csrf-token", (req, res) => {
+apiRouter.get("/csrf-token", csrfProtection, (req, res) => {
   try {
-    const csrfToken = req.csrfToken(); // ✅ Génère le CSRF Token
+    const csrfToken = req.csrfToken(); // ✅ fonctionne maintenant
+
     console.log("✅ CSRF Token généré :", csrfToken);
 
     res.cookie("_csrf", csrfToken, {
-      httpOnly: false, // ✅ Frontend peut le lire
-      secure: process.env.COOKIE_SECURE === "true", // ✅ true en prod
-      sameSite: process.env.COOKIE_SECURE === "true" ? "None" : "Lax", // ✅ 'None' requis entre Vercel & Fly
+      httpOnly: false, // ✅ accessible côté client
+      secure: process.env.COOKIE_SECURE === "true",
+      sameSite: process.env.COOKIE_SECURE === "true" ? "None" : "Lax",
     });
 
     res.json({ csrfToken });
