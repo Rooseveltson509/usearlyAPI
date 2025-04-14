@@ -5,12 +5,10 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import path from "path";
 import cookieParser from "cookie-parser"; // ✅ Correctement placé avant csurf
-//import bodyParser from "body-parser";
 import promBundle from "express-prom-bundle";
 import cors from "cors";
 import { func } from "./funcs/functions.js";
 import apiRouter from "./apiRouter.js"; // ✅ Routes API
-import csrfProtection from "./middleware/csrfProtection.js";
 
 dotenv.config();
 
@@ -32,9 +30,6 @@ server.options("*", cors(func.corsOptionsDelegate));
 
 // ✅ 2. Cookies & Body Parser
 server.use(cookieParser());
-if (process.env.NODE_ENV === "production") {
-  server.use(csrfProtection);
-}
 
 server.use(express.json({ limit: "50mb" }));
 server.use(express.urlencoded({ extended: true, limit: "50mb" }));
