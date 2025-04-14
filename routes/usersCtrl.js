@@ -168,12 +168,12 @@ export const user = {
       // Génération des tokens pour connexion automatique
       const accessToken = generateAccessToken(user);
       const refreshToken = generateRefreshToken(user);
-
+      const isSecure = process.env.COOKIE_SECURE === "true";
       // Stockage du refreshToken dans un cookie sécurisé
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true, // Empêche l'accès via JS
         secure: true, // Nécessaire pour HTTPS
-        sameSite: "strict", // Protection CSRF
+        sameSite: isSecure ? "None" : "Lax", // Protection CSRF
         maxAge: 30 * 24 * 60 * 60 * 1000, // Expiration du refreshToken (30 jours)
       });
 
@@ -192,119 +192,6 @@ export const user = {
   },
 
   // Login
-  /*   login: async (req, res) => {
-    const { email, password, rememberMe } = req.body;
-
-    try {
-      const user = await User.findOne({ where: { email } });
-
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res
-          .status(401)
-          .json({ success: false, message: "Invalid credentials" });
-      }
-
-      if (!user.confirmedAt || user.confirmationToken !== null) {
-        return res.status(403).json({
-          success: false,
-          message: "Veuillez confirmer votre compte avant de vous connecter.",
-        });
-      }
-
-      const accessToken = generateAccessToken(user);
-      let refreshToken = null;
-
-      if (rememberMe) {
-        refreshToken = generateRefreshToken(user);
-        console.log("remember me : " + rememberMe);
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production", // ✅ Désactivé en local
-          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // ✅ "Lax" en local pour éviter les erreurs
-          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
-        });
-      } else {
-        res.clearCookie("refreshToken");
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: "Connexion réussie.",
-        accessToken,
-        refreshToken,
-        user: {
-          avatar: user.avatar,
-          type: "user",
-        },
-      });
-    } catch (error) {
-      console.error("Erreur lors de la connexion :", error);
-      return res
-        .status(500)
-        .json({ success: false, message: "Erreur interne." });
-    }
-  }, */
-  /*   login: async (req, res) => {
-    const { email, password, rememberMe } = req.body;
-
-    console.log("📩 Headers reçus côté serveur :", req.headers);
-    console.log("🔐 Token CSRF côté serveur :", req.headers["x-csrf-token"]);
-
-    // ✅ Correction : Seul `true` ou `"true"` sera accepté
-    const isRememberMe = rememberMe === true || rememberMe === "true";
-
-    try {
-      const user = await User.findOne({ where: { email } });
-
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res
-          .status(401)
-          .json({ success: false, message: "Invalid credentials" });
-      }
-
-      if (!user.confirmedAt || user.confirmationToken !== null) {
-        return res.status(403).json({
-          success: false,
-          message: "Veuillez confirmer votre compte avant de vous connecter.",
-        });
-      }
-
-      const accessToken = generateAccessToken(user);
-      let refreshToken = null;
-
-      if (isRememberMe) {
-        // ✅ Utilisation de `isRememberMe`
-        refreshToken = generateRefreshToken(user);
-        console.log("remember me :", isRememberMe);
-        // ✅ Définit le cookie HTTP-Only
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production", // ✅ Désactivé en local
-          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // ✅ "Lax" en local pour éviter les erreurs
-          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
-        });
-      } else {
-        res.clearCookie("refreshToken");
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: "Connexion réussie.",
-        accessToken,
-        refreshToken,
-        user: {
-          avatar: user.avatar,
-          type: "user",
-        },
-      });
-    } catch (error) {
-      console.error("Erreur lors de la connexion :", error);
-      return res
-        .status(500)
-        .json({ success: false, message: "Erreur interne." });
-    }
-  }, */
-
   login: async (req, res) => {
     const { email, password, rememberMe } = req.body;
     const isRememberMe = rememberMe === true || rememberMe === "true";
@@ -596,12 +483,13 @@ export const user = {
       // Génération des nouveaux tokens
       const accessToken = generateAccessToken(user);
       const refreshToken = generateRefreshToken(user);
+      const isSecure = process.env.COOKIE_SECURE === "true";
 
       // Stockage du refreshToken dans un cookie sécurisé
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true, // Empêche l'accès via JS
         secure: true, // Requis pour HTTPS
-        sameSite: "strict", // Protection CSRF
+        sameSite: isSecure ? "None" : "Lax", // Protection CSRF
         maxAge: 30 * 24 * 60 * 60 * 1000, // Expiration du refreshToken
       });
 

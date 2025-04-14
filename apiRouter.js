@@ -58,9 +58,9 @@ apiRouter.get("/csrf-token", (req, res) => {
     console.log("✅ CSRF Token généré :", csrfToken);
 
     res.cookie("_csrf", csrfToken, {
-      httpOnly: false, // ✅ Permet au frontend de le lire
-      secure: false, // ✅ False en local
-      sameSite: "Lax",
+      httpOnly: false, // ✅ Frontend peut le lire
+      secure: process.env.COOKIE_SECURE === "true", // ✅ true en prod
+      sameSite: process.env.COOKIE_SECURE === "true" ? "None" : "Lax", // ✅ 'None' requis entre Vercel & Fly
     });
 
     res.json({ csrfToken });
@@ -70,13 +70,20 @@ apiRouter.get("/csrf-token", (req, res) => {
   }
 });
 
+const refreshCors = cors({
+  origin: true,
+  credentials: true,
+  methods: ["POST"],
+  allowedHeaders: ["Authorization", "Content-Type", "X-CSRF-Token"],
+});
+
 // ✅ Route sécurisée avec CSRF pour `refresh-token`
 apiRouter.post(
   "/user/refresh-token",
   refreshLimiter,
-  cors(func.corsOptionsDelegate),
+  refreshCors,
 
-  // ✅ Log des cookies et headers (debug uniquement)
+  // ✅ Debug cookies / CSRF
   (req, res, next) => {
     console.log("🧪 Cookies reçus :", req.cookies);
     console.log("🧪 Header X-CSRF-Token :", req.headers["x-csrf-token"]);
@@ -84,7 +91,7 @@ apiRouter.post(
     next();
   },
 
-  // ✅ Middleware CSRF uniquement en production
+  // ✅ CSRF
   process.env.NODE_ENV === "production"
     ? csrfProtection
     : (req, res, next) => {
@@ -92,7 +99,6 @@ apiRouter.post(
         next();
       },
 
-  // ✅ Contrôleur final
   user.refreshToken
 );
 
