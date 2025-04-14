@@ -140,10 +140,10 @@ export const func = {
     if (allowlist.includes(origin)) {
       console.log(`Origine autorisée : ${origin}`);
       corsOptions = {
-        origin: true,
-        methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-        allowedHeaders: "Authorization, Content-Type, X-CSRF-Token", // ✅ Ajoute `X-CSRF-Token`
+        origin, // ✅ renvoyer l'origine exacte ici
         credentials: true,
+        methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+        allowedHeaders: "Authorization, Content-Type, X-CSRF-Token",
       };
     } else {
       console.log(`Origine refusée : ${origin}`);
@@ -152,7 +152,6 @@ export const func = {
 
     callback(null, corsOptions);
   },
-
   sendConfirmationEmail: function (
     toUser,
     toUserName,
