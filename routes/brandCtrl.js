@@ -140,19 +140,24 @@ export const brandCtrl = {
           .status(401)
           .json({ success: false, message: "Non autorisé." });
       }
-      const { brandName } = req.params;
-      const brand = await Marque.findOne({ where: { brandName } });
+
+      const { brandName } = req.params; // Récupère le paramètre de l'URL
+      console.log("Recherche de la marque :", brandName); // Log pour débogage
+
+      // Changer 'brandName' en 'name' pour correspondre à la colonne de ta BDD
+      const brand = await Marque.findOne({ where: { name: brandName } }); // Utiliser 'name' ici
 
       if (!brand) {
         return res.status(404).json({ error: "Marque non trouvée" });
       }
+
       if (brand.avatar.includes("..")) {
         return res.status(400).json({ error: "Chemin d'accès interdit" });
       }
+
       const isValidAvatarPath = brand.avatar.startsWith(
         "uploads/avatars/brands/"
       );
-
       if (!isValidAvatarPath) {
         return res.status(400).json({ error: "Chemin d'avatar invalide" });
       }
@@ -171,8 +176,8 @@ export const brandCtrl = {
           : "/default-avatar.png",
         updatedAt: brand.updatedAt ? brand.updatedAt.toISOString() : null, // Formate proprement
       });
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
+      console.error("Erreur serveur :", error); // Log détaillé pour l'erreur
       res.status(500).json({ error: "Erreur serveur" });
     }
   },
