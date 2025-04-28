@@ -12,11 +12,13 @@ import { coupDeCoeur } from "./routes/coupdecoeurCtrl.js";
 import { adminAction } from "./routes/adminCtrl.js";
 import { brandCtrl } from "./routes/brandCtrl.js";
 import { posts } from "./routes/postCtrl.js";
+import { reportingDesc } from "./routes/reportingDescriptionCtrl.js";
 import { comment } from "./routes/commentCtrl.js";
 import { commentReport } from "./routes/commentReportCtrl.js";
 import { commentCdc } from "./routes/commentCdcCtr.js";
 import { commentSuggestion } from "./routes/commentSuggestionCtrl.js";
 import { createBrandTicket } from "./routes/brandTicketCtrl.js";
+import { timeline } from "./routes/reportTimelineStepCtrl.js";
 import { reportService } from "./services/reportService.js";
 import { service as siteService } from "./services/siteService.js";
 import {
@@ -26,7 +28,7 @@ import {
 } from "./routes/notificationCtrl.js";
 import rateLimit from "express-rate-limit";
 import csrfProtection from "./middleware/csrfProtection.js"; // 🔥 Import du middleware CSRF
-import { checkAlreadyAuthenticated } from "./middleware/checkAlreadyAuthenticated.js"; // 🔥 Import du middleware CSRF
+//import { checkAlreadyAuthenticated } from "./middleware/checkAlreadyAuthenticated.js"; // 🔥 Import du middleware CSRF
 import {
   validateCoupdeCoeur,
   validateReport,
@@ -35,7 +37,7 @@ import {
 import { sendNotificationToUser } from "./utils/notificationUtils.js";
 import upload from "./config/multer.js";
 import { isAdmin } from "./middleware/auth.js";
-
+import { authenticateBrand } from "./middleware/authenticateBrand.js";
 const { Reporting, User } = db;
 // Définition de l'API Router
 const apiRouter = express.Router();
@@ -180,7 +182,7 @@ apiRouter
 // Espace Marque
 apiRouter
   .route("/brand/login", cors(func.corsOptionsDelegate))
-  .post(checkAlreadyAuthenticated, brandCtrl.login); // Middleware ajouté ici
+  .post(/* checkAlreadyAuthenticated, */ brandCtrl.login); // Middleware ajouté ici
 
 apiRouter
   .route("/brand/profile", cors(func.corsOptionsDelegate))
@@ -264,6 +266,11 @@ apiRouter
   .get(cors(func.corsOptionsDelegate), reporting.getSubCategories);
 
 apiRouter
+  .route("/report/page-info")
+  .options(cors(permissiveCors))
+  .get(cors(permissiveCors), reporting.getPageInfo);
+
+apiRouter
   .route("/reportings/grouped", cors(func.corsOptionsDelegate))
   .get(reporting.getGroupedReports);
 // ✅ Endpoint pour récupérer les bugs les plus signalés pour un site donné
@@ -304,8 +311,31 @@ apiRouter
   .get(cors(func.corsOptionsDelegate), reporting.getAllGroupedReports);
 
 apiRouter
+  .route("/reports/:reportId/timeline")
+  .post(
+    cors(func.corsOptionsDelegate),
+    authenticateBrand,
+    timeline.createOrUpdateTimelineStep // Utilisation de `POST` pour créer ou mettre à jour
+  )
+  .put(
+    cors(func.corsOptionsDelegate),
+    authenticateBrand,
+    timeline.createOrUpdateTimelineStep // Utilisation de `PUT` pour la mise à jour
+  )
+  .options(cors(permissiveCors))
+  .get(
+    cors(permissiveCors),
+    timeline.getTimelineSteps // ✅ Pas besoin d'auth pour voir la timeline
+  );
+
+apiRouter
+  .route("/report/description")
+  .options(cors(permissiveCors))
+  .post(cors(permissiveCors), reportingDesc.createReportingDescription);
+
+/* apiRouter
   .route("/reportings/reportings-with-subcategories")
-  .get(cors(func.corsOptionsDelegate), reporting.getAllGroupedReports);
+  .get(cors(func.corsOptionsDelegate), reporting.getAllGroupedReports); */
 
 /* apiRouter
   .route("/reporting/:id", cors(func.corsOptionsDelegate))

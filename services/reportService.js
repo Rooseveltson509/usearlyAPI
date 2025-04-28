@@ -1,17 +1,19 @@
 import db from "../models/index.js";
 import dotenv from "dotenv";
-import stringSimilarity from "string-similarity";
+import { service as siteService } from "../services/siteService.js";
+//import stringSimilarity from "string-similarity";
 import { sendNotificationToUser } from "./notificationService.js";
 import { updateSubCategories } from "../services/subCategoryService.js";
 
 const {
   Reporting,
   ReportingDescription,
-  Category,
+  //Category,
   UserPoints,
   ReportingUsers,
   ReportingSubCategory,
   User,
+  ReportTimelineStep,
 } = db;
 dotenv.config();
 
@@ -34,6 +36,21 @@ export const reportService = {
     });
 
     if (existingReport) {
+      // Ajouter la première étape si pas déjà dans la timeline
+      const existingSteps = await ReportTimelineStep.count({
+        where: { reportId: existingReport.id },
+      });
+
+      if (existingSteps === 0) {
+        await ReportTimelineStep.create({
+          reportId: existingReport.id,
+          label: "Signalement transmis",
+          status: "upcoming",
+          date: existingReport.createdAt, // Utilise la date du signalement
+          message: "Votre signalement a été transmis à notre équipe.",
+          createdBy: "system",
+        });
+      }
       if (existingReport.userId === userId) {
         return {
           isDuplicate: true,
@@ -95,6 +112,14 @@ export const reportService = {
       tips: data.tips,
     });
 
+    await ReportTimelineStep.create({
+      reportId: newReporting.id,
+      label: "Signalement transmis",
+      status: "upcoming",
+      date: newReporting.createdAt, // maintenant
+      message: "Votre signalement a été transmis à notre équipe.",
+      createdBy: "user",
+    });
     await ReportingUsers.create({
       reportingId: newReporting.id,
       userId,
@@ -125,7 +150,7 @@ export const reportService = {
       reportingId: newReporting.id,
     };
   },
-  async findSimilarReporting(siteUrl, bugLocation, description) {
+  /*   async findSimilarReporting(siteUrl, bugLocation, description) {
     const start = Date.now();
     console.log(
       `🔍 Recherche signalement similaire pour ${siteUrl} - ${bugLocation}`
@@ -169,8 +194,8 @@ export const reportService = {
       `❌ [${Date.now() - similarityStart}ms] Aucun signalement similaire trouvé.`
     );
     return null;
-  },
-  async hasUserAlreadyReported(reportingId, userId) {
+  }, */
+  /*   async hasUserAlreadyReported(reportingId, userId) {
     const isAuthor = await Reporting.findOne({
       where: { id: reportingId, userId },
     });
@@ -180,12 +205,12 @@ export const reportService = {
       where: { reportingId, userId },
     });
     return !!existingDescription;
-  },
+  }, */
 
   /**
    * Recherche ou crée les catégories nécessaires.
    */
-  async findOrCreateCategories(categories, siteTypeId) {
+  /*   async findOrCreateCategories(categories, siteTypeId) {
     const existingCategories = await Category.findAll({
       where: { name: categories },
       attributes: ["id", "name"],
@@ -204,7 +229,7 @@ export const reportService = {
     );
 
     return [...existingCategories, ...newCategoryInstances];
-  },
+  }, */
   /**
    * Récupère un signalement avec ses descriptions associées.
    */
@@ -407,13 +432,15 @@ export const reportService = {
               attributes: ["id", "pseudo", "avatar"],
             },
           ],
+          order: [["createdAt", "ASC"]], // Pour que le premier signalement soit bien en premier
         });
 
-        const descriptions = matchingDescriptions.map((desc) => ({
+        const descriptions = matchingDescriptions.map((desc, index) => ({
           description: desc.description,
-          emoji: desc.emoji, // ✅ On ajoute ici
-          createdAt: desc.createdAt, // ✅ Bonus : pour afficher la date côté front
+          emoji: desc.emoji,
+          createdAt: desc.createdAt,
           user: desc.user,
+          capture: index === 0 ? report.capture || null : null, // ✅ Ajout uniquement pour le 1er signalement
         }));
 
         formattedSubCategories.push({
@@ -439,6 +466,111 @@ export const reportService = {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalReports: count,
+      results,
+    };
+  },
+  getSubcategoryStructureForPage: async function (url) {
+    const normalizedUrl = siteService.normalizeFullUrl(url);
+    if (!normalizedUrl) return null;
+
+    const parsed = new URL(normalizedUrl);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const { bugLocation, categories } =
+      await siteService.extractBugLocationAndCategories(normalizedUrl);
+    const brandName = await siteService.extractBrandName(normalizedUrl);
+
+    const existingReports = await Reporting.findAll({
+      where: { domain, bugLocation },
+      include: [
+        {
+          model: ReportingSubCategory,
+          as: "subCategories",
+        },
+      ],
+    });
+
+    const results = [];
+
+    for (const category of categories) {
+      const subCategoryMap = {};
+
+      for (const report of existingReports) {
+        if (!report.categories.includes(category)) continue;
+
+        let hasAttachedCapture = false;
+
+        for (const sub of report.subCategories) {
+          if (!sub.subCategory) continue;
+
+          const matchingDescriptions = await ReportingDescription.findAll({
+            where: {
+              reportingId: report.id,
+              subCategory: sub.subCategory,
+            },
+            attributes: [
+              "id",
+              "reportingId",
+              "emoji",
+              "description",
+              "subCategory",
+              "createdAt",
+            ],
+            include: [
+              {
+                model: User,
+                as: "user",
+                attributes: ["id", "pseudo", "avatar"],
+              },
+            ],
+            order: [["createdAt", "ASC"]],
+          });
+
+          if (!subCategoryMap[sub.subCategory]) {
+            subCategoryMap[sub.subCategory] = {
+              subCategory: sub.subCategory,
+              count: 0,
+              descriptions: [],
+            };
+          }
+
+          subCategoryMap[sub.subCategory].count += matchingDescriptions.length;
+
+          subCategoryMap[sub.subCategory].descriptions.push(
+            ...matchingDescriptions.map((desc, index) => ({
+              reportingId: desc.reportingId,
+              description: desc.description,
+              emoji: desc.emoji,
+              createdAt: desc.createdAt,
+              user: desc.user,
+              capture:
+                !hasAttachedCapture && index === 0
+                  ? report.capture || null
+                  : null,
+            }))
+          );
+
+          if (!hasAttachedCapture && matchingDescriptions.length > 0) {
+            hasAttachedCapture = true;
+          }
+        }
+      }
+
+      results.push({
+        category,
+        subCategories: Object.values(subCategoryMap),
+      });
+    }
+
+    return {
+      domain: parsed.hostname,
+      bugLocation,
+      brandName,
+      reportingCount: existingReports.length, // ← pour backward compatibility
+      reportingTotalCount: await ReportingDescription.count({
+        where: {
+          reportingId: existingReports.map((r) => r.id),
+        },
+      }), // ← ✅ nombre total de contributions utilisateurs
       results,
     };
   },
