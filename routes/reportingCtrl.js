@@ -193,6 +193,23 @@ export const reporting = {
       });
     }
   },
+  getPageInfo: async function (req, res) {
+    try {
+      const { url } = req.query;
+      if (!url) return res.status(400).json({ error: "URL manquante." });
+
+      const result = await reportService.getSubcategoryStructureForPage(url);
+      if (!result)
+        return res
+          .status(400)
+          .json({ error: "URL invalide ou non traitable." });
+
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("❌ Erreur getPageInfo:", err);
+      return res.status(500).json({ error: "Erreur serveur." });
+    }
+  },
 
   /**
    * Récupère un signalement avec toutes ses descriptions associées.

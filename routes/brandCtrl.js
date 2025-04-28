@@ -50,14 +50,14 @@ export const brandCtrl = {
       }
 
       // Génération des tokens
-      const accessToken = generateAccessToken(user);
+      const accessToken = generateAccessToken(user, "brand");
       let refreshToken = null;
 
       const isSecure = process.env.COOKIE_SECURE === "true";
 
       // ✅ Ajout du refreshToken dans un cookie uniquement si RememberMe
       if (rememberMe) {
-        const refreshToken = generateRefreshToken(user);
+        const refreshToken = generateRefreshToken(user, "brand");
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: isSecure,
