@@ -252,31 +252,15 @@ export const service = {
           location: "login",
           categories: ["Authentification", "Connexion"],
         },
-        "logon": {
-          location: "login",
-          categories: ["Authentification", "Connexion"],
-        },
-        "log-in": {
-          location: "login",
-          categories: ["Authentification", "Connexion"],
-        },
         "signin": {
           location: "login",
           categories: ["Authentification", "Connexion"],
-        },
-        "sign-in": {
-          location: "login",
-          categories: ["Authentification", "Connexion"],
-        },
-        "register": {
-          location: "register",
-          categories: ["Authentification", "Inscription"],
         },
         "signup": {
           location: "register",
           categories: ["Authentification", "Inscription"],
         },
-        "sign-up": {
+        "register": {
           location: "register",
           categories: ["Authentification", "Inscription"],
         },
@@ -284,10 +268,8 @@ export const service = {
           location: "register",
           categories: ["Authentification", "Inscription"],
         },
-
         // E-commerce
         "cart": { location: "cart", categories: ["Panier", "Achat"] },
-        "panier": { location: "cart", categories: ["Panier", "Achat"] },
         "checkout": {
           location: "checkout",
           categories: ["Paiement", "Commande"],
@@ -301,13 +283,7 @@ export const service = {
           location: "wishlist",
           categories: ["Favoris", "Liste de souhaits"],
         },
-        "favoris": {
-          location: "wishlist",
-          categories: ["Favoris", "Liste de souhaits"],
-        },
         "search": { location: "search_results", categories: ["Recherche"] },
-        "recherche": { location: "search_results", categories: ["Recherche"] },
-
         // Support
         "help": {
           location: "customer_service",
@@ -341,23 +317,10 @@ export const service = {
           location: "customer_service",
           categories: ["Service Client", "Confidentialité"],
         },
-        "customer-service": {
+        "contracts": {
           location: "customer_service",
-          categories: ["Service Client"],
+          categories: ["Contrats", "Service Client"],
         },
-        "assistance": {
-          location: "customer_service",
-          categories: ["Service Client", "Assistance"],
-        },
-        "support-client": {
-          location: "customer_service",
-          categories: ["Service Client", "Support"],
-        },
-        "service-client": {
-          location: "customer_service",
-          categories: ["Service Client"],
-        },
-
         // Réseaux sociaux
         "in": {
           location: "profile_page",
@@ -378,7 +341,7 @@ export const service = {
         },
       };
 
-      // 1️⃣ Recherche dans les segments (mappings)
+      // 1️⃣ Recherche dans les segments
       for (const segment of pathSegments) {
         const normalizedSegment = segment.toLowerCase();
         if (mappings[normalizedSegment]) {
@@ -388,7 +351,7 @@ export const service = {
         }
       }
 
-      // 2️⃣ Détection spécifique par domaine
+      // 2️⃣ Cas spécifique par domaine
       if (isDomain(hostname, "amazon")) {
         if (url.includes("/dp/") || url.includes("/gp/product/")) {
           bugLocation = "product_page";
@@ -399,101 +362,51 @@ export const service = {
         } else if (url.includes("/gp/help/")) {
           bugLocation = "customer_service";
           categories = ["Service Client", "Amazon"];
-        } else if (url.includes("/hz/wishlist")) {
-          bugLocation = "wishlist";
-          categories = ["Favoris", "Liste de souhaits"];
         }
       } else if (isDomain(hostname, "linkedin")) {
-        const firstSegment = pathSegments[0];
-        if (firstSegment === "in") {
-          bugLocation = "profile_page";
-          categories = ["Profil", "Réseau professionnel"];
-        } else if (firstSegment === "jobs") {
-          bugLocation = "job_page";
-          categories = ["Emploi", "Carrière"];
-        } else if (firstSegment === "messaging") {
-          bugLocation = "messaging";
-          categories = ["Messagerie", "Communication"];
-        } else {
-          bugLocation = "linkedin_section";
-          categories = ["LinkedIn"];
-        }
+        bugLocation = "linkedin_section";
+        categories = ["LinkedIn"];
       } else if (isDomain(hostname, "github")) {
-        if (pathSegments.length === 1) {
-          bugLocation = "profile_page";
-          categories = ["Profil développeur", "GitHub"];
-        } else if (pathSegments[1] === "issues") {
-          bugLocation = "issues";
-          categories = ["Bugs", "Suivi de projet"];
-        } else if (pathSegments[1] === "pulls") {
-          bugLocation = "pull_requests";
-          categories = ["Contributions", "Revue de code"];
-        } else {
-          bugLocation = "repository";
-          categories = ["Projet", "Dépôt"];
-        }
+        bugLocation = "github_section";
+        categories = ["GitHub"];
       } else if (isDomain(hostname, "facebook")) {
         bugLocation = "facebook_section";
         categories = ["Facebook"];
       } else if (isDomain(hostname, "tiktok")) {
-        if (pathSegments[0] === "@") {
-          bugLocation = "profile_page";
-          categories = ["Profil", "TikTok"];
-        } else if (pathSegments.includes("video")) {
-          bugLocation = "video_page";
-          categories = ["Vidéo", "Contenu"];
-        } else {
-          bugLocation = "tiktok_section";
-          categories = ["TikTok"];
-        }
+        bugLocation = "tiktok_section";
+        categories = ["TikTok"];
       } else if (isDomain(hostname, "airbnb")) {
         if (pathSegments.includes("rooms")) {
           bugLocation = "room_page";
           categories = ["Réservation", "Logement", "Fiche produit"];
-        } else if (pathSegments.includes("wishlist")) {
-          bugLocation = "wishlist";
-          categories = ["Favoris", "Sélection"];
-        } else if (pathSegments.includes("trips")) {
-          bugLocation = "booking_history";
-          categories = ["Historique", "Voyages"];
-        } else if (pathSegments.includes("help")) {
-          bugLocation = "customer_service";
-          categories = ["Aide", "Support"];
-        } else {
-          bugLocation = "airbnb_section";
-          categories = ["Airbnb"];
         }
       }
 
-      // 3️⃣ Fallbacks si rien n’a été détecté
-      if (bugLocation === "home") {
-        const lastSegment = pathSegments[pathSegments.length - 1].toLowerCase();
-
-        if (
-          lastSegment.match(/[-_][a-zA-Z0-9]{5,}$/) ||
-          parsedUrl.searchParams.has("id") ||
-          url.includes("/p/") ||
-          url.includes("/dp/") ||
-          url.includes("/product/")
-        ) {
-          bugLocation = "product_page";
-          categories = ["Produits", "Détail produit"];
-        } else if (
-          pathSegments.length === 1 &&
-          lastSegment.match(/[a-z-]+[0-9]*$/)
-        ) {
-          bugLocation = "category_page";
-          categories = ["Catégorie", "Navigation"];
-        } else if (pathSegments.length > 1) {
-          bugLocation = "subcategory";
-          categories = ["Sous-catégorie"];
+      // 3️⃣ Fallback intelligent
+      if (!bugLocation || bugLocation === "home") {
+        if (pathSegments.length > 0) {
+          const lastSegment = pathSegments[pathSegments.length - 1];
+          if (
+            lastSegment &&
+            typeof lastSegment === "string" &&
+            lastSegment.length < 20
+          ) {
+            bugLocation = "category_page";
+            categories = ["Catégorie", "Navigation"];
+          } else {
+            bugLocation = "home";
+            categories = ["Général"];
+          }
+        } else {
+          bugLocation = "home";
+          categories = ["Général"];
         }
       }
 
       return { bugLocation, categories };
     } catch (error) {
       console.error("❌ Erreur lors de l'extraction :", error);
-      return { bugLocation: "unknown", categories: ["Non classé"] };
+      return { bugLocation: "home", categories: ["Général"] };
     }
   },
 

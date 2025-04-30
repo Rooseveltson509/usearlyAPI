@@ -22,6 +22,124 @@ export const updateSubCategories = async (reportingId) => {
 
     const descriptions = await ReportingDescription.findAll({
       where: { reportingId },
+      order: [["createdAt", "ASC"]],
+      attributes: ["id", "userId", "description"],
+    });
+
+    if (descriptions.length === 0) {
+      return console.warn("❌ Aucune description à analyser.");
+    }
+
+    const texts = descriptions.map((d) => d.description).filter(Boolean);
+
+    const prompt = `Tu es un assistant IA. Voici des descriptions de bugs liés à la zone : ${report.bugLocation}
+
+${texts.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+
+Analyse ces descriptions et regroupe-les par problème similaire.
+Pour chaque groupe, donne une sous-catégorie représentative du type de problème.
+
+Réponds au format JSON comme ceci :
+[
+  { "subCategory": "Nom du problème", "indexes": [1, 3] },
+  { "subCategory": "Autre type de bug", "indexes": [2, 4] }
+]`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+    });
+
+    const content = completion.choices?.[0]?.message?.content;
+    if (!content) throw new Error("❌ Pas de réponse IA");
+
+    const groups = JSON.parse(content);
+    if (!Array.isArray(groups)) throw new Error("❌ Format JSON incorrect");
+
+    // 🔁 Mise à jour des ReportingSubCategory
+    const existing = await ReportingSubCategory.findAll({
+      where: { reportingId },
+    });
+    const existingMap = new Map();
+    for (const entry of existing) {
+      existingMap.set(entry.subCategory, entry);
+    }
+
+    const updatedIds = [];
+
+    for (const group of groups) {
+      const subCategory = group.subCategory.trim();
+      const indexes = group.indexes;
+      if (!Array.isArray(indexes)) continue;
+
+      const count = indexes.length;
+      let entry;
+
+      if (existingMap.has(subCategory)) {
+        entry = existingMap.get(subCategory);
+        await entry.update({ count });
+      } else {
+        entry = await ReportingSubCategory.create({
+          reportingId,
+          subCategory,
+          count,
+        });
+      }
+      updatedIds.push(entry.id);
+
+      // ✅ LOGIQUE AJOUTÉE : ne jamais associer un user deux fois à la même subCategory
+      const seenUsers = new Set();
+
+      for (const i of indexes) {
+        const desc = descriptions[i - 1];
+        if (!desc) continue;
+
+        const userKey = `${desc.userId}::${subCategory}`;
+
+        const alreadyExists = await ReportingDescription.findOne({
+          where: {
+            reportingId,
+            userId: desc.userId,
+            subCategory,
+          },
+        });
+
+        if (alreadyExists || seenUsers.has(userKey)) {
+          console.log(
+            `⛔ Ignoré: User ${desc.userId} a déjà une description dans '${subCategory}'`
+          );
+          continue;
+        }
+
+        await desc.update({ subCategory });
+        seenUsers.add(userKey);
+      }
+    }
+
+    // 🔥 Nettoyage des sous-catégories obsolètes
+    await ReportingSubCategory.destroy({
+      where: {
+        reportingId,
+        id: { [Op.notIn]: updatedIds },
+      },
+    });
+
+    console.log("✅ Sous-catégories mises à jour + descriptions filtrées.");
+  } catch (err) {
+    console.error("❌ updateSubCategories error:", err);
+  }
+};
+
+/* export const updateSubCategories = async (reportingId) => {
+  try {
+    console.log("🔥 updateSubCategories START pour:", reportingId);
+
+    const report = await Reporting.findByPk(reportingId);
+    if (!report) return console.warn("❌ Aucun reporting trouvé.");
+
+    const descriptions = await ReportingDescription.findAll({
+      where: { reportingId },
       order: [["createdAt", "ASC"]], // 🔁 Important pour avoir des indexes fiables
       attributes: ["id", "description"],
     });
@@ -111,7 +229,7 @@ Réponds au format JSON comme ceci :
   } catch (err) {
     console.error("❌ updateSubCategories error:", err);
   }
-};
+}; */
 
 export const getSubCategoriesByReportingId = async (reportingId) => {
   try {
