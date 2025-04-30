@@ -18,10 +18,9 @@ const {
 dotenv.config();
 
 export const reportService = {
-  async createReporting(userId, data) {
+  /*   async createReporting(userId, data) {
     const { siteUrl, bugLocation, description } = data;
 
-    // ✅ Normaliser l'URL et extraire le domaine
     const fullUrl = siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`;
     const parsedUrl = new URL(fullUrl);
     const domain = parsedUrl.hostname.replace(/^www\./, "");
@@ -30,58 +29,46 @@ export const reportService = {
       `🔍 Vérification du signalement sur: ${domain}, ${bugLocation}`
     );
 
-    // 🔍 Vérifie si un report existe déjà
     const existingReport = await Reporting.findOne({
       where: { domain, bugLocation },
+      include: [
+        {
+          association: "descriptions",
+          where: { userId },
+          required: false,
+          attributes: ["subCategory"],
+        },
+      ],
     });
 
     if (existingReport) {
-      // Ajouter la première étape si pas déjà dans la timeline
-      const existingSteps = await ReportTimelineStep.count({
-        where: { reportId: existingReport.id },
-      });
+      const userDescriptions = existingReport.descriptions || [];
+      const userSubCategories = userDescriptions
+        .map((d) => d.subCategory)
+        .filter(Boolean);
 
-      if (existingSteps === 0) {
-        await ReportTimelineStep.create({
-          reportId: existingReport.id,
-          label: "Signalement transmis",
-          status: "upcoming",
-          date: existingReport.createdAt, // Utilise la date du signalement
-          message: "Votre signalement a été transmis à notre équipe.",
-          createdBy: "system",
-        });
-      }
-      if (existingReport.userId === userId) {
+      const predictedSubCategory = null; // sera ajouté plus tard par IA
+
+      const alreadyReported = userSubCategories.includes(predictedSubCategory);
+
+      if (alreadyReported) {
         return {
           isDuplicate: true,
+          isNewDescription: false,
           status: 200,
           success: true,
-          message:
-            "Vous avez déjà signalé ce problème, nous sommes en train de l'étudier.",
+          message: "Vous avez déjà signalé ce problème spécifique.",
           reportingId: existingReport.id,
         };
       }
 
-      const existingDescriptions = await ReportingDescription.findOne({
-        where: { reportingId: existingReport.id, userId },
-      });
-
-      if (existingDescriptions) {
-        return {
-          isDuplicate: true,
-          status: 200,
-          success: true,
-          message:
-            "Vous avez déjà signalé ce problème, nous sommes en train de l'étudier.",
-          reportingId: existingReport.id,
-        };
-      }
-
+      // ✅ Ajout d’une nouvelle description
       await ReportingDescription.create({
         reportingId: existingReport.id,
         userId,
         description,
         emoji: data.emojis,
+        subCategory: predictedSubCategory,
       });
 
       process.nextTick(() => {
@@ -89,15 +76,16 @@ export const reportService = {
       });
 
       return {
+        isDuplicate: false,
+        isNewDescription: true,
         status: 200,
         success: true,
-        message:
-          "Un signalement similaire existe déjà. Votre description a été ajoutée.",
+        message: "Votre signalement a été ajouté au problème existant.",
         reportingId: existingReport.id,
       };
     }
 
-    // ✅ Création du nouveau signalement
+    // 🆕 Création d’un nouveau signalement
     const newReporting = await Reporting.create({
       userId,
       siteUrl,
@@ -110,27 +98,29 @@ export const reportService = {
       blocking: data.blocking,
       capture: data.capture,
       tips: data.tips,
+      subCategory: null,
     });
 
     await ReportTimelineStep.create({
       reportId: newReporting.id,
       label: "Signalement transmis",
       status: "upcoming",
-      date: newReporting.createdAt, // maintenant
+      date: newReporting.createdAt,
       message: "Votre signalement a été transmis à notre équipe.",
       createdBy: "user",
     });
+
     await ReportingUsers.create({
       reportingId: newReporting.id,
       userId,
     });
 
-    // ✅ On enregistre aussi la description du premier utilisateur
     await ReportingDescription.create({
       reportingId: newReporting.id,
       userId,
       description,
       emoji: data.emojis,
+      subCategory: null,
     });
 
     console.log(
@@ -144,92 +134,138 @@ export const reportService = {
 
     return {
       isDuplicate: false,
+      isNewDescription: true,
+      status: 201,
+      success: true,
+      message: "Nouveau signalement créé avec succès.",
+      reportingId: newReporting.id,
+    };
+  }, */
+
+  async createReporting(userId, data) {
+    const { siteUrl, bugLocation, description } = data;
+
+    const fullUrl = siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`;
+    const parsedUrl = new URL(fullUrl);
+    const domain = parsedUrl.hostname.replace(/^www\./, "");
+
+    console.log(
+      `🔍 Vérification du signalement sur: ${domain}, ${bugLocation}`
+    );
+
+    const existingReport = await Reporting.findOne({
+      where: { domain, bugLocation },
+      include: [
+        {
+          association: "descriptions",
+          where: { userId },
+          required: false,
+          attributes: ["subCategory"],
+        },
+      ],
+    });
+
+    if (existingReport) {
+      const userDescriptions = existingReport.descriptions || [];
+      const userSubCategories = userDescriptions
+        .map((d) => d.subCategory)
+        .filter(Boolean);
+
+      const predictedSubCategory = null; // sera enrichi par l’IA plus tard
+
+      const alreadyReported = userSubCategories.includes(predictedSubCategory);
+
+      if (alreadyReported) {
+        return {
+          isDuplicate: true,
+          isNewDescription: false,
+          status: 200,
+          success: true,
+          message: "Vous avez déjà signalé ce problème.", // 🔁 Message + clair
+          reportingId: existingReport.id,
+        };
+      }
+
+      await ReportingDescription.create({
+        reportingId: existingReport.id,
+        userId,
+        description,
+        emoji: data.emojis,
+        subCategory: predictedSubCategory,
+      });
+
+      process.nextTick(() => {
+        updateSubCategories(existingReport.id);
+      });
+
+      return {
+        isDuplicate: null,
+        isNewDescription: true,
+        status: 200,
+        success: true,
+        message:
+          "Ton signalement a bien été reçu. Analyse en cours pour le classer.",
+        reportingId: existingReport.id,
+      };
+    }
+
+    // 🆕 Création d’un nouveau signalement
+    const newReporting = await Reporting.create({
+      userId,
+      siteUrl,
+      domain,
+      bugLocation,
+      categories: data.categories,
+      description,
+      marque: data.marque,
+      emojis: data.emojis,
+      blocking: data.blocking,
+      capture: data.capture,
+      tips: data.tips,
+      subCategory: null,
+    });
+
+    await ReportTimelineStep.create({
+      reportId: newReporting.id,
+      label: "Signalement transmis",
+      status: "upcoming",
+      date: newReporting.createdAt,
+      message: "Votre signalement a été transmis à notre équipe.",
+      createdBy: "user",
+    });
+
+    await ReportingUsers.create({
+      reportingId: newReporting.id,
+      userId,
+    });
+
+    await ReportingDescription.create({
+      reportingId: newReporting.id,
+      userId,
+      description,
+      emoji: data.emojis,
+      subCategory: null,
+    });
+
+    console.log(
+      "🔥 [IA] Appel updateSubCategories pour reportId:",
+      newReporting.id
+    );
+
+    process.nextTick(() => {
+      updateSubCategories(newReporting.id);
+    });
+
+    return {
+      isDuplicate: false,
+      isNewDescription: true,
       status: 201,
       success: true,
       message: "Nouveau signalement créé avec succès.",
       reportingId: newReporting.id,
     };
   },
-  /*   async findSimilarReporting(siteUrl, bugLocation, description) {
-    const start = Date.now();
-    console.log(
-      `🔍 Recherche signalement similaire pour ${siteUrl} - ${bugLocation}`
-    );
 
-    const reports = await Reporting.findAll({
-      where: { siteUrl, bugLocation },
-      include: [{ model: ReportingDescription, as: "descriptions" }],
-    });
-
-    console.log(
-      `📌 [${Date.now() - start}ms] Signalements trouvés : ${reports.length}`
-    );
-
-    if (reports.length === 0) {
-      return null;
-    }
-
-    // Comparer la description avec les existantes
-    const similarityStart = Date.now();
-    for (let report of reports) {
-      for (let desc of report.descriptions) {
-        const similarity = stringSimilarity.compareTwoStrings(
-          description.toLowerCase(),
-          desc.description.toLowerCase()
-        );
-        console.log(
-          `🧐 Comparaison "${description}" vs "${desc.description}" → Similarité: ${similarity.toFixed(2)}`
-        );
-
-        if (similarity > 0.8) {
-          console.log(
-            `✅ [${Date.now() - similarityStart}ms] Signalement similaire détecté : ${report.id}`
-          );
-          return report;
-        }
-      }
-    }
-
-    console.log(
-      `❌ [${Date.now() - similarityStart}ms] Aucun signalement similaire trouvé.`
-    );
-    return null;
-  }, */
-  /*   async hasUserAlreadyReported(reportingId, userId) {
-    const isAuthor = await Reporting.findOne({
-      where: { id: reportingId, userId },
-    });
-    if (isAuthor) return true;
-
-    const existingDescription = await ReportingDescription.findOne({
-      where: { reportingId, userId },
-    });
-    return !!existingDescription;
-  }, */
-
-  /**
-   * Recherche ou crée les catégories nécessaires.
-   */
-  /*   async findOrCreateCategories(categories, siteTypeId) {
-    const existingCategories = await Category.findAll({
-      where: { name: categories },
-      attributes: ["id", "name"],
-    });
-
-    const existingCategoryNames = existingCategories.map((cat) => cat.name);
-
-    const newCategories = categories.filter(
-      (cat) => !existingCategoryNames.includes(cat)
-    );
-
-    const newCategoryInstances = await Promise.all(
-      newCategories.map((categoryName) =>
-        Category.create({ name: categoryName, siteTypeId })
-      )
-    );
-
-    return [...existingCategories, ...newCategoryInstances];
-  }, */
   /**
    * Récupère un signalement avec ses descriptions associées.
    */

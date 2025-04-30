@@ -11,6 +11,7 @@ import { suggestion } from "./routes/suggestionCtrl.js";
 import { coupDeCoeur } from "./routes/coupdecoeurCtrl.js";
 import { adminAction } from "./routes/adminCtrl.js";
 import { brandCtrl } from "./routes/brandCtrl.js";
+import { brandResponseCtrl } from "./routes/brandResponseCtrl.js";
 import { posts } from "./routes/postCtrl.js";
 import { reportingDesc } from "./routes/reportingDescriptionCtrl.js";
 import { comment } from "./routes/commentCtrl.js";
@@ -183,6 +184,16 @@ apiRouter
 apiRouter
   .route("/brand/login", cors(func.corsOptionsDelegate))
   .post(/* checkAlreadyAuthenticated, */ brandCtrl.login); // Middleware ajouté ici
+
+apiRouter
+  .route("/brand-reply/:reportId", cors(func.corsOptionsDelegate))
+  .post(brandResponseCtrl.createBrandReply);
+
+// Récupérer la réponse de marque pour un report donné
+apiRouter
+  .route("/reports/:id/brand-reply")
+  .options(cors(permissiveCors))
+  .get(cors(permissiveCors), brandResponseCtrl.getBrandReplyByReport);
 
 apiRouter
   .route("/brand/profile", cors(func.corsOptionsDelegate))

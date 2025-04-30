@@ -25,6 +25,53 @@ export const reporting = {
           .status(400)
           .json({ error: "URL invalide ou non approuvée." });
       }
+
+      // 🔍 Extraire automatiquement la marque, la bugLocation et les catégories
+      const brandName = await siteService.extractBrandName(siteUrl);
+      const { bugLocation, categories } =
+        await siteService.extractBugLocationAndCategories(siteUrl);
+
+      console.log(`🏷️ Marque détectée: ${brandName}`);
+      console.log(`🔍 bugLocation détecté: ${bugLocation}`);
+      console.log(`🏷️ Catégories détectées: ${categories.join(", ")}`);
+
+      // ✅ Envoyer les données vers createReporting
+      const reportResult = await reportService.createReporting(userId, {
+        siteUrl: normalizedUrl,
+        bugLocation,
+        categories,
+        description,
+        marque: brandName,
+        blocking: req.body.blocking,
+        tips: req.body.tips,
+        emojis: req.body.emojis,
+        capture: req.body.capture,
+      });
+
+      return res.status(reportResult.status).json(reportResult);
+    } catch (error) {
+      console.error("❌ Erreur lors de la création du signalement :", error);
+      return res.status(500).json({
+        error: "Une erreur est survenue lors de la création du signalement.",
+      });
+    }
+  },
+
+  /*   createReport: async function (req, res) {
+    try {
+      const userId = getUserId(req.headers["authorization"]);
+      if (userId <= 0) {
+        return res.status(400).json({ error: "Utilisateur non authentifié." });
+      }
+
+      const { siteUrl, description } = req.body;
+      const normalizedUrl = siteService.normalizeUrl(siteUrl);
+
+      if (!siteService.isValidUrl(normalizedUrl)) {
+        return res
+          .status(400)
+          .json({ error: "URL invalide ou non approuvée." });
+      }
       // **🔍 Extraire automatiquement la marque et bugLocation**
       const brandName = await siteService.extractBrandName(siteUrl);
       const { bugLocation, categories } =
@@ -54,7 +101,7 @@ export const reporting = {
         error: "Une erreur est survenue lors de la création du signalement.",
       });
     }
-  },
+  }, */
 
   getReport: async function (req, res) {
     try {
