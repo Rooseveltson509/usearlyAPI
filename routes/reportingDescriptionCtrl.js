@@ -23,6 +23,7 @@ export const reportingDesc = {
         where: {
           reportingId,
           userId,
+          subCategory,
           //description,
           //subCategory,
         },
