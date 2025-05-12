@@ -4,6 +4,7 @@ import { service as siteService } from "../services/siteService.js";
 //import stringSimilarity from "string-similarity";
 import { sendNotificationToUser } from "./notificationService.js";
 import { updateSubCategories } from "../services/subCategoryService.js";
+import { Op } from "sequelize";
 
 const {
   Reporting,
@@ -527,6 +528,128 @@ export const reportService = {
 
     const results = [];
 
+    // ✅ Choisir UNE seule catégorie principale (ex: "Panier")
+    const mainCategory = categories[0]; // 🔥 On prend toujours la première pour représenter le bloc
+
+    const subCategoryMap = {};
+
+    for (const report of existingReports) {
+      let hasAttachedCapture = false;
+
+      for (const sub of report.subCategories) {
+        if (!sub.subCategory) continue; // 🔒 Skip les sous-catégories nulles
+
+        // 🔥 Récupère toutes les descriptions pour cette sous-catégorie
+        const matchingDescriptions = await ReportingDescription.findAll({
+          where: {
+            reportingId: report.id,
+            subCategory: sub.subCategory,
+          },
+          attributes: [
+            "id",
+            "reportingId",
+            "emoji",
+            "description",
+            "subCategory",
+            "createdAt",
+          ],
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "pseudo", "avatar"],
+            },
+          ],
+          order: [["createdAt", "ASC"]],
+        });
+
+        // ✅ Filtre uniquement celles qui ont une vraie sous-catégorie (sécurité)
+        const filteredDescriptions = matchingDescriptions.filter(
+          (desc) => desc.subCategory
+        );
+
+        if (!subCategoryMap[sub.subCategory]) {
+          subCategoryMap[sub.subCategory] = {
+            subCategory: sub.subCategory,
+            count: 0,
+            descriptions: [],
+          };
+        }
+
+        subCategoryMap[sub.subCategory].count += filteredDescriptions.length;
+
+        subCategoryMap[sub.subCategory].descriptions.push(
+          ...filteredDescriptions.map((desc, index) => ({
+            reportingId: desc.reportingId,
+            description: desc.description,
+            emoji: desc.emoji,
+            createdAt: desc.createdAt,
+            user: desc.user,
+            capture:
+              !hasAttachedCapture && index === 0
+                ? report.capture || null
+                : null,
+          }))
+        );
+
+        if (!hasAttachedCapture && filteredDescriptions.length > 0) {
+          hasAttachedCapture = true;
+        }
+      }
+    }
+
+    // ✅ Une seule fois : push dans results avec la catégorie principale choisie
+    results.push({
+      category: mainCategory, // 👈 Ex: "Panier" (si ["Panier", "Achat"] côté service)
+      subCategories: Object.values(subCategoryMap),
+    });
+
+    // ✅ On compte toutes les sous-catégories uniques NON NULL pour avoir le bon "problème count"
+    let subCategoryCount = 0;
+    for (const result of results) {
+      subCategoryCount += result.subCategories.filter(
+        (sub) => !!sub.subCategory
+      ).length;
+    }
+
+    return {
+      domain: parsed.hostname,
+      bugLocation,
+      brandName,
+      reportingCount: existingReports.length, // (compatibilité)
+      reportingTotalCount: await ReportingDescription.count({
+        where: {
+          reportingId: existingReports.map((r) => r.id),
+          subCategory: { [Op.ne]: null },
+        },
+      }),
+      reportingSubCategoryCount: subCategoryCount, // ✅ Pour front : nbre de sous-catégories distinctes
+      results,
+    };
+  },
+
+  /*   getSubcategoryStructureForPage: async function (url) {
+    const normalizedUrl = siteService.normalizeFullUrl(url);
+    if (!normalizedUrl) return null;
+
+    const parsed = new URL(normalizedUrl);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const { bugLocation, categories } =
+      await siteService.extractBugLocationAndCategories(normalizedUrl);
+    const brandName = await siteService.extractBrandName(normalizedUrl);
+
+    const existingReports = await Reporting.findAll({
+      where: { domain, bugLocation },
+      include: [
+        {
+          model: ReportingSubCategory,
+          as: "subCategories",
+        },
+      ],
+    });
+
+    const results = [];
+
     for (const category of categories) {
       const subCategoryMap = {};
 
@@ -536,8 +659,9 @@ export const reportService = {
         let hasAttachedCapture = false;
 
         for (const sub of report.subCategories) {
-          if (!sub.subCategory) continue;
+          if (!sub.subCategory) continue; // ✅ par sécurité : skip les sous-catégories nulles
 
+          // 🔥 Récupère toutes les descriptions pour cette sous-catégorie
           const matchingDescriptions = await ReportingDescription.findAll({
             where: {
               reportingId: report.id,
@@ -561,6 +685,11 @@ export const reportService = {
             order: [["createdAt", "ASC"]],
           });
 
+          // ✅ Filtre uniquement celles qui ont une vraie sous-catégorie (sécurité)
+          const filteredDescriptions = matchingDescriptions.filter(
+            (desc) => desc.subCategory
+          );
+
           if (!subCategoryMap[sub.subCategory]) {
             subCategoryMap[sub.subCategory] = {
               subCategory: sub.subCategory,
@@ -569,10 +698,10 @@ export const reportService = {
             };
           }
 
-          subCategoryMap[sub.subCategory].count += matchingDescriptions.length;
+          subCategoryMap[sub.subCategory].count += filteredDescriptions.length;
 
           subCategoryMap[sub.subCategory].descriptions.push(
-            ...matchingDescriptions.map((desc, index) => ({
+            ...filteredDescriptions.map((desc, index) => ({
               reportingId: desc.reportingId,
               description: desc.description,
               emoji: desc.emoji,
@@ -585,7 +714,7 @@ export const reportService = {
             }))
           );
 
-          if (!hasAttachedCapture && matchingDescriptions.length > 0) {
+          if (!hasAttachedCapture && filteredDescriptions.length > 0) {
             hasAttachedCapture = true;
           }
         }
@@ -596,18 +725,26 @@ export const reportService = {
         subCategories: Object.values(subCategoryMap),
       });
     }
-
+    // ✅ On compte toutes les sous-catégories uniques NON NULL
+    let subCategoryCount = 0;
+    for (const result of results) {
+      subCategoryCount += result.subCategories.filter(
+        (sub) => !!sub.subCategory
+      ).length;
+    }
     return {
       domain: parsed.hostname,
       bugLocation,
       brandName,
-      reportingCount: existingReports.length, // ← pour backward compatibility
+      reportingCount: existingReports.length, // (garde pour compatibilité)
       reportingTotalCount: await ReportingDescription.count({
         where: {
           reportingId: existingReports.map((r) => r.id),
+          subCategory: { [Op.ne]: null },
         },
-      }), // ← ✅ nombre total de contributions utilisateurs
+      }),
+      reportingSubCategoryCount: subCategoryCount,
       results,
     };
-  },
+  }, */
 };

@@ -248,6 +248,10 @@ export const service = {
           location: "login",
           categories: ["Authentification", "Connexion"],
         },
+        "logon": {
+          location: "login",
+          categories: ["Authentification", "Connexion"],
+        },
         "connexion": {
           location: "login",
           categories: ["Authentification", "Connexion"],
