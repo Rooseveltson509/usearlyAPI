@@ -539,7 +539,15 @@ export const reportService = {
       for (const sub of report.subCategories) {
         if (!sub.subCategory) continue; // 🔒 Skip les sous-catégories nulles
 
-        // 🔥 Récupère toutes les descriptions pour cette sous-catégorie
+        // 1️⃣ Compter toutes les descriptions réelles sans limitation
+        const totalDescriptions = await ReportingDescription.count({
+          where: {
+            reportingId: report.id,
+            subCategory: sub.subCategory,
+          },
+        });
+
+        // 2️⃣ Puis récupérer les dernières descriptions (par exemple les 5 dernières)
         const matchingDescriptions = await ReportingDescription.findAll({
           where: {
             reportingId: report.id,
@@ -560,26 +568,20 @@ export const reportService = {
               attributes: ["id", "pseudo", "avatar"],
             },
           ],
-          order: [["createdAt", "ASC"]],
+          order: [["createdAt", "DESC"]],
+          limit: 1, // Affiche juste la dernière description, mais le count est correct
         });
-
-        // ✅ Filtre uniquement celles qui ont une vraie sous-catégorie (sécurité)
-        const filteredDescriptions = matchingDescriptions.filter(
-          (desc) => desc.subCategory
-        );
 
         if (!subCategoryMap[sub.subCategory]) {
           subCategoryMap[sub.subCategory] = {
             subCategory: sub.subCategory,
-            count: 0,
+            count: totalDescriptions, // ✅ Utilise le vrai total ici
             descriptions: [],
           };
         }
 
-        subCategoryMap[sub.subCategory].count += filteredDescriptions.length;
-
         subCategoryMap[sub.subCategory].descriptions.push(
-          ...filteredDescriptions.map((desc, index) => ({
+          ...matchingDescriptions.map((desc, index) => ({
             reportingId: desc.reportingId,
             description: desc.description,
             emoji: desc.emoji,
@@ -592,7 +594,7 @@ export const reportService = {
           }))
         );
 
-        if (!hasAttachedCapture && filteredDescriptions.length > 0) {
+        if (!hasAttachedCapture && matchingDescriptions.length > 0) {
           hasAttachedCapture = true;
         }
       }
@@ -627,124 +629,4 @@ export const reportService = {
       results,
     };
   },
-
-  /*   getSubcategoryStructureForPage: async function (url) {
-    const normalizedUrl = siteService.normalizeFullUrl(url);
-    if (!normalizedUrl) return null;
-
-    const parsed = new URL(normalizedUrl);
-    const domain = parsed.hostname.replace(/^www\./, "");
-    const { bugLocation, categories } =
-      await siteService.extractBugLocationAndCategories(normalizedUrl);
-    const brandName = await siteService.extractBrandName(normalizedUrl);
-
-    const existingReports = await Reporting.findAll({
-      where: { domain, bugLocation },
-      include: [
-        {
-          model: ReportingSubCategory,
-          as: "subCategories",
-        },
-      ],
-    });
-
-    const results = [];
-
-    for (const category of categories) {
-      const subCategoryMap = {};
-
-      for (const report of existingReports) {
-        if (!report.categories.includes(category)) continue;
-
-        let hasAttachedCapture = false;
-
-        for (const sub of report.subCategories) {
-          if (!sub.subCategory) continue; // ✅ par sécurité : skip les sous-catégories nulles
-
-          // 🔥 Récupère toutes les descriptions pour cette sous-catégorie
-          const matchingDescriptions = await ReportingDescription.findAll({
-            where: {
-              reportingId: report.id,
-              subCategory: sub.subCategory,
-            },
-            attributes: [
-              "id",
-              "reportingId",
-              "emoji",
-              "description",
-              "subCategory",
-              "createdAt",
-            ],
-            include: [
-              {
-                model: User,
-                as: "user",
-                attributes: ["id", "pseudo", "avatar"],
-              },
-            ],
-            order: [["createdAt", "ASC"]],
-          });
-
-          // ✅ Filtre uniquement celles qui ont une vraie sous-catégorie (sécurité)
-          const filteredDescriptions = matchingDescriptions.filter(
-            (desc) => desc.subCategory
-          );
-
-          if (!subCategoryMap[sub.subCategory]) {
-            subCategoryMap[sub.subCategory] = {
-              subCategory: sub.subCategory,
-              count: 0,
-              descriptions: [],
-            };
-          }
-
-          subCategoryMap[sub.subCategory].count += filteredDescriptions.length;
-
-          subCategoryMap[sub.subCategory].descriptions.push(
-            ...filteredDescriptions.map((desc, index) => ({
-              reportingId: desc.reportingId,
-              description: desc.description,
-              emoji: desc.emoji,
-              createdAt: desc.createdAt,
-              user: desc.user,
-              capture:
-                !hasAttachedCapture && index === 0
-                  ? report.capture || null
-                  : null,
-            }))
-          );
-
-          if (!hasAttachedCapture && filteredDescriptions.length > 0) {
-            hasAttachedCapture = true;
-          }
-        }
-      }
-
-      results.push({
-        category,
-        subCategories: Object.values(subCategoryMap),
-      });
-    }
-    // ✅ On compte toutes les sous-catégories uniques NON NULL
-    let subCategoryCount = 0;
-    for (const result of results) {
-      subCategoryCount += result.subCategories.filter(
-        (sub) => !!sub.subCategory
-      ).length;
-    }
-    return {
-      domain: parsed.hostname,
-      bugLocation,
-      brandName,
-      reportingCount: existingReports.length, // (garde pour compatibilité)
-      reportingTotalCount: await ReportingDescription.count({
-        where: {
-          reportingId: existingReports.map((r) => r.id),
-          subCategory: { [Op.ne]: null },
-        },
-      }),
-      reportingSubCategoryCount: subCategoryCount,
-      results,
-    };
-  }, */
 };
