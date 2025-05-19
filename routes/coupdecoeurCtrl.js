@@ -4,65 +4,9 @@ const { CoupDeCoeur, User } = db;
 import { getUserId } from "../utils/jwtUtils.js";
 import { Sequelize } from "sequelize";
 import { service as siteService } from "../services/siteService.js";
+import { getRecentCoupDeCoeurByUrl } from "../services/getCdcAndSuggestion.js";
 
 export const coupDeCoeur = {
-  /*   createCoupdeCoeur: async function (req, res) {
-    try {
-      const headerAuth = req.headers["authorization"];
-      const userId = getUserId(headerAuth);
-
-      if (userId <= 0) {
-        return res.status(400).json({ error: "Missing parameters." });
-      }
-
-      // Validation des données avec Joi
-      const { error } = coupDeCoeurSchema.validate(req.body);
-      if (error) {
-        return res.status(400).json({ error: error.details[0].message });
-      }
-
-      const {
-        marque,
-        description,
-        emplacement,
-        emoji,
-        validated,
-        likes,
-        dislikes,
-      } = req.body;
-
-      // Vérifier si l'utilisateur existe
-      const userFound = await User.findOne({ where: { id: userId } });
-      if (!userFound) {
-        return res.status(403).json({ error: "Access denied." });
-      }
-
-      // Créer un nouveau coup de coeur
-      const coupDeCoeur = await CoupDeCoeur.create({
-        userId: userFound.id,
-        marque,
-        description,
-        emplacement,
-        emoji,
-        validated,
-        likes,
-        dislikes,
-      });
-
-      return res.status(201).json({
-        status: 201,
-        success: true,
-        message: "Coup de coeur créé avec succès.",
-        coupDeCoeurId: coupDeCoeur.id,
-      });
-    } catch (err) {
-      console.error("Erreur lors de la création du coup de coeur :", err);
-      return res
-        .status(500)
-        .json({ error: "An error occurred", details: err.message });
-    }
-  }, */
-
   createCoupdeCoeur: async function (req, res) {
     try {
       const userId = getUserId(req.headers["authorization"]);
@@ -90,22 +34,18 @@ export const coupDeCoeur = {
         return res.status(400).json({ error: "Paramètres manquants." });
       }
 
-      const normalizedUrl = siteService.normalizeUrl(siteUrl);
       const marque = await siteService.extractBrandName(siteUrl);
+
+      const domainOnly = new URL(siteUrl).hostname;
+      const domain = domainOnly.replace(/^www\./, "");
+
       const { bugLocation } =
         await siteService.extractBugLocationAndCategories(siteUrl);
-
-      console.log("🔍 Emplacement détecté:", bugLocation);
-      console.log("🏷️ Marque détectée:", marque);
-      console.log("site normalization:", normalizedUrl);
-
-      // ✅ Vérifier si capture est bien reçu avant de l'enregistrer
-      console.log("📸 Capture reçue :", capture ? "OUI" : "NON");
 
       // ✅ Création du coup de cœur avec capture
       const coupDeCoeur = await CoupDeCoeur.create({
         userId: userFound.id,
-        siteUrl,
+        siteUrl: domain,
         marque,
         description,
         emplacement: bugLocation,
@@ -422,6 +362,19 @@ export const coupDeCoeur = {
     } catch (error) {
       console.error("❌ Erreur serveur :", error);
       return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+
+  getRecentCoupDeCoeur: async (req, res) => {
+    try {
+      const { url } = req.query;
+      if (!url) return res.status(400).json({ error: "URL manquante." });
+
+      const result = await getRecentCoupDeCoeurByUrl(url);
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("Erreur getRecentCoupDeCoeur:", err);
+      res.status(500).json({ error: "Erreur serveur." });
     }
   },
 };

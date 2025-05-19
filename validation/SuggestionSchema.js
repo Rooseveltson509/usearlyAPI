@@ -2,6 +2,7 @@ import Joi from "joi";
 
 export const suggestionSchema = Joi.object({
   siteUrl: Joi.string().trim().required(),
+  emoji: Joi.string().trim().required(),
   //marque: Joi.string().trim().required(),
   description: Joi.string().trim().required(),
   //emplacement: Joi.string().trim().required(),

@@ -236,10 +236,6 @@ apiRouter
   .route("/admin/brand/all", cors(func.corsOptionsDelegate))
   .get(user.BrandList);
 
-/* apiRouter
-  .route("/admin/brand/update/:brandId", cors(func.corsOptionsDelegate))
-  .put(isAdmin, upload.single("avatar"), user.updateBrand); */
-
 apiRouter.put(
   "/admin/brand/update/:id",
   async (req, res, next) => {
@@ -370,6 +366,16 @@ apiRouter
     validateSuggest.validateReportFields,
     suggestion.create
   );
+
+apiRouter
+  .route("/suggestion/recent")
+  .options(cors(permissiveCors))
+  .get(cors(permissiveCors), suggestion.getRecentSuggestion);
+
+apiRouter
+  .route("/coupdecoeur/recent")
+  .options(cors(permissiveCors))
+  .get(cors(permissiveCors), coupDeCoeur.getRecentCoupDeCoeur);
 
 /* Create coup de coeur */
 apiRouter
