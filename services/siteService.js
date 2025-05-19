@@ -31,18 +31,7 @@ export const service = {
       return null;
     }
   },
-  extractDomain: function (url) {
-    try {
-      if (!/^https?:\/\//i.test(url)) {
-        url = `https://${url}`;
-      }
-      const parsed = new URL(url);
-      return parsed.hostname.replace(/^www\./, "");
-    } catch (error) {
-      console.error("❌ Erreur extractDomain:", error);
-      return null;
-    }
-  },
+
   isValidUrl: function (url) {
     try {
       const formattedUrl = url.startsWith("http") ? url : `https://${url}`;

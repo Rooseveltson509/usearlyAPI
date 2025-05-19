@@ -3,6 +3,7 @@ import { suggestionSchema } from "../validation/SuggestionSchema.js";
 import { getUserId } from "../utils/jwtUtils.js";
 const { User, Suggestion } = db;
 import { service as siteService } from "../services/siteService.js";
+import { getRecentSuggestionsByUrl } from "../services/getCdcAndSuggestion.js";
 import { Sequelize } from "sequelize";
 
 export const suggestion = {
@@ -34,21 +35,16 @@ export const suggestion = {
         return res.status(400).json({ error: "Paramètres manquants." });
       }
 
-      const normalizedUrl = siteService.normalizeUrl(siteUrl);
       const marque = await siteService.extractBrandName(siteUrl);
+      const domainOnly = new URL(siteUrl).hostname;
+      const domain = domainOnly.replace(/^www\./, "");
       const { bugLocation } =
         await siteService.extractBugLocationAndCategories(siteUrl);
-
-      console.log("🔍 Emplacement détecté:", bugLocation);
-      console.log("🏷️ Marque détectée:", marque);
-      console.log("site normalization:", normalizedUrl);
-
-      // ✅ Vérifier si capture est bien reçu avant de l'enregistrer
-      console.log("📸 Capture reçue :", capture ? "OUI" : "NON");
 
       // Créer une nouvelle suggestion
       const suggestion = await Suggestion.create({
         userId: userFound.id,
+        siteUrl: domain,
         marque,
         emplacement: bugLocation,
         description,
@@ -447,6 +443,20 @@ export const suggestion = {
     } catch (error) {
       console.error("❌ Erreur serveur :", error);
       return res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+  getRecentSuggestion: async (req, res) => {
+    try {
+      const { url } = req.query;
+      if (!url) {
+        return res.status(400).json({ error: "URL manquante." });
+      }
+
+      const result = await getRecentSuggestionsByUrl(url);
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error("❌ Erreur getRecentSuggestion:", err);
+      return res.status(500).json({ error: "Erreur serveur." });
     }
   },
 };

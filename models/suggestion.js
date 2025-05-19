@@ -36,6 +36,7 @@ export default (sequelize, DataTypes) => {
       description: DataTypes.TEXT("long"),
       siteUrl: DataTypes.STRING,
       emplacement: DataTypes.STRING,
+      emoji: DataTypes.STRING,
       reactions: {
         type: DataTypes.JSON, // ✅ Tableau d'objets { emoji: "🔥", count: 10 }
         allowNull: false,
