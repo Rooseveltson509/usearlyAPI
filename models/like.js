@@ -5,7 +5,7 @@ export default (sequelize, DataTypes) => {
   class Like extends Model {
     static associate(models) {
       Like.belongsTo(models.User, { foreignKey: "userId" });
-      Like.belongsTo(models.Post, { foreignKey: "postId" });
+      // Pas de relation directe à Post/Suggestion/CoupDeCoeur
     }
   }
 
@@ -21,14 +21,24 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      postId: {
+      targetId: {
         type: DataTypes.UUID,
+        allowNull: false,
+      },
+      targetType: {
+        type: DataTypes.ENUM("report", "coupDeCoeur", "suggestion"),
         allowNull: false,
       },
     },
     {
       sequelize,
       modelName: "Like",
+      indexes: [
+        {
+          unique: true,
+          fields: ["userId", "targetId", "targetType"], // évite les doublons
+        },
+      ],
     }
   );
 

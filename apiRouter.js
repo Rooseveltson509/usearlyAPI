@@ -495,8 +495,9 @@ apiRouter
 
 // update like post
 apiRouter
-  .route("/posts/:postId/like")
-  .put(cors(func.corsOptionsDelegate), posts.toggleLike);
+  .route("/likes/toggle")
+  .options(cors(permissiveCors))
+  .put(cors(permissiveCors), posts.toggleLike);
 
 // update reaction post
 apiRouter

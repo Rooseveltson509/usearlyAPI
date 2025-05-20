@@ -13,7 +13,7 @@ export default (sequelize, DataTypes) => {
         onDelete: "CASCADE",
         onUpdate: "CASCADE",
       });
-      Post.hasMany(models.Like, { foreignKey: "postId", as: "postLikes" });
+      //Post.hasMany(models.Like, { foreignKey: "postId", as: "postLikes" });
       Post.belongsTo(models.Marque, { foreignKey: "marqueId", as: "brand" });
       Post.hasMany(models.Comment, {
         foreignKey: "postId",

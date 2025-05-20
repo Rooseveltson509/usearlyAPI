@@ -368,9 +368,12 @@ export const coupDeCoeur = {
   getRecentCoupDeCoeur: async (req, res) => {
     try {
       const { url } = req.query;
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth);
+
       if (!url) return res.status(400).json({ error: "URL manquante." });
 
-      const result = await getRecentCoupDeCoeurByUrl(url);
+      const result = await getRecentCoupDeCoeurByUrl(url, userId); // 👈 passe userId
       return res.status(200).json(result);
     } catch (err) {
       console.error("Erreur getRecentCoupDeCoeur:", err);
