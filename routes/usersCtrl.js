@@ -200,6 +200,66 @@ export const user = {
       const user = await User.findOne({ where: { email } });
 
       if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      if (!user.confirmedAt || user.confirmationToken !== null) {
+        return res.status(403).json({
+          success: false,
+          message: "Veuillez confirmer votre compte avant de vous connecter.",
+        });
+      }
+
+      const accessToken = generateAccessToken(user);
+      const isSecure = process.env.COOKIE_SECURE === "true";
+
+      const responsePayload = {
+        success: true,
+        message: "Connexion réussie.",
+        accessToken,
+        user: {
+          avatar: user.avatar,
+          type: "user",
+        },
+      };
+
+      if (isRememberMe) {
+        const refreshToken = generateRefreshToken(user);
+
+        // 1. Pour le front web : set-cookie httpOnly sécurisé
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: isSecure ? "None" : "Lax",
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
+
+        // 2. Pour l'extension : retour explicite dans le body JSON
+        responsePayload.refreshToken = refreshToken;
+      } else {
+        res.clearCookie("refreshToken");
+      }
+
+      return res.status(200).json(responsePayload);
+    } catch (error) {
+      console.error("Erreur lors de la connexion :", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Erreur interne." });
+    }
+  },
+
+  /*   login: async (req, res) => {
+    const { email, password, rememberMe } = req.body;
+    const isRememberMe = rememberMe === true || rememberMe === "true";
+
+    try {
+      const user = await User.findOne({ where: { email } });
+
+      if (!user || !(await bcrypt.compare(password, user.password))) {
         return res
           .status(401)
           .json({ success: false, message: "Invalid credentials" });
@@ -243,7 +303,7 @@ export const user = {
         .status(500)
         .json({ success: false, message: "Erreur interne." });
     }
-  },
+  }, */
   refreshToken: async (req, res) => {
     try {
       console.log("📌 Requête reçue pour refresh token");
@@ -267,6 +327,7 @@ export const user = {
 
       // 🔁 Récupération du refresh token (via cookie ou body en dev)
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      console.log("📥 refreshToken reçu :", refreshToken);
 
       if (!refreshToken) {
         console.error("⚠ Aucun refreshToken reçu !");
