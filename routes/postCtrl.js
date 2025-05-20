@@ -69,25 +69,20 @@ export const posts = {
 
   toggleLike: async (req, res) => {
     try {
-      const { postId } = req.params;
+      const { targetId, targetType } = req.body;
       const headerAuth = req.headers["authorization"];
       const userId = getUserId(headerAuth);
 
-      if (!userId) {
-        return res.status(401).json({ error: "Utilisateur non authentifié" });
+      if (userId <= 0) {
+        return res.status(400).json({ error: "Missing parameters.", userId });
       }
 
-      const post = await Post.findByPk(postId, {
-        include: [{ model: Like, as: "postLikes" }],
-      });
-
-      if (!post) {
-        return res.status(404).json({ error: "Post non trouvé" });
+      if (!["report", "suggestion", "coupDeCoeur"].includes(targetType)) {
+        return res.status(400).json({ error: "Type de contenu invalide" });
       }
 
-      // Vérifie si l'utilisateur a déjà liké
       const existingLike = await Like.findOne({
-        where: { userId, postId },
+        where: { userId, targetId, targetType },
       });
 
       let userLiked;
@@ -95,20 +90,21 @@ export const posts = {
         await existingLike.destroy();
         userLiked = false;
       } else {
-        await Like.create({ userId, postId });
+        await Like.create({ userId, targetId, targetType });
         userLiked = true;
       }
 
-      // Compte les likes mis à jour
-      const likeCount = await Like.count({ where: { postId } });
+      const likeCount = await Like.count({
+        where: { targetId, targetType },
+      });
 
       return res.status(200).json({
         success: true,
-        likeCount, // 🔥 Le vrai nombre de likes
-        userLiked, // 🔥 L'état exact du like de l'utilisateur
+        likeCount,
+        userLiked,
       });
     } catch (err) {
-      console.error("Erreur lors du toggle like :", err);
+      console.error("Erreur toggleLike :", err);
       return res.status(500).json({ error: "Erreur serveur" });
     }
   },
@@ -138,11 +134,11 @@ export const posts = {
             as: "brand",
             attributes: ["id", "name", "avatar"],
           },
-          {
+          /*           {
             model: Like,
             as: "postLikes",
             attributes: ["userId"],
-          },
+          }, */
         ],
         order: [["createdAt", "DESC"]],
       });

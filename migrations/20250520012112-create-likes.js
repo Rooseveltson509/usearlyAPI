@@ -17,14 +17,13 @@ export async function up(queryInterface, Sequelize) {
       },
       onDelete: "CASCADE",
     },
-    postId: {
+    targetId: {
       type: Sequelize.UUID,
       allowNull: false,
-      references: {
-        model: "Posts",
-        key: "id",
-      },
-      onDelete: "CASCADE",
+    },
+    targetType: {
+      type: Sequelize.ENUM("report", "coupDeCoeur", "suggestion"),
+      allowNull: false,
     },
     createdAt: {
       allowNull: false,
@@ -38,11 +37,11 @@ export async function up(queryInterface, Sequelize) {
     },
   });
 
-  // Empêcher un utilisateur de liker plusieurs fois le même post
+  // 🔐 Empêcher un utilisateur de liker 2x le même contenu (post/suggestion/coupDeCoeur)
   await queryInterface.addConstraint("Likes", {
-    fields: ["userId", "postId"],
+    fields: ["userId", "targetId", "targetType"],
     type: "unique",
-    name: "unique_user_post_like",
+    name: "unique_user_target_like",
   });
 }
 

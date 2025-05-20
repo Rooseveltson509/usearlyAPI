@@ -445,14 +445,18 @@ export const suggestion = {
       return res.status(500).json({ error: "Erreur serveur" });
     }
   },
+
   getRecentSuggestion: async (req, res) => {
     try {
       const { url } = req.query;
+      const headerAuth = req.headers["authorization"];
+      const userId = getUserId(headerAuth); // Peut être undefined ou -1
+
       if (!url) {
         return res.status(400).json({ error: "URL manquante." });
       }
 
-      const result = await getRecentSuggestionsByUrl(url);
+      const result = await getRecentSuggestionsByUrl(url, userId); // 👈 on passe quand même userId (peut être null ou -1)
       return res.status(200).json(result);
     } catch (err) {
       console.error("❌ Erreur getRecentSuggestion:", err);
