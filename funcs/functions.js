@@ -133,25 +133,32 @@ export const func = {
 
   // Middleware CORS dynamique
   corsOptionsDelegate: function (req, callback) {
-    const origin = req.header("Origin") || "";
-    console.log(`Requête reçue avec origine : ${origin}`);
+    const origin = req.header("Origin");
+    const isExtensionRequest =
+      req.headers["sec-fetch-mode"] === "cors" &&
+      req.headers["sec-fetch-site"] === "cross-site";
+
+    console.log("🌐 Requête CORS reçue de :", origin || "[Aucune origine]");
+    console.log("🔎 isExtensionRequest:", isExtensionRequest);
 
     let corsOptions;
-    if (allowlist.includes(origin)) {
-      console.log(`Origine autorisée : ${origin}`);
+
+    if (!origin || allowlist.includes(origin) || isExtensionRequest) {
+      console.log("✅ CORS autorisé pour :", origin || "extension / injection");
       corsOptions = {
-        origin, // ✅ renvoyer l'origine exacte ici
+        origin: origin || true, // Autorise même sans origin explicite
         credentials: true,
         methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
         allowedHeaders: "Authorization, Content-Type, X-CSRF-Token",
       };
     } else {
-      console.log(`Origine refusée : ${origin}`);
+      console.warn("⛔️ CORS refusé pour :", origin);
       corsOptions = { origin: false };
     }
 
     callback(null, corsOptions);
   },
+
   sendConfirmationEmail: function (
     toUser,
     toUserName,
