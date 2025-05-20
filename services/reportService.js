@@ -4,7 +4,7 @@ import { service as siteService } from "../services/siteService.js";
 //import stringSimilarity from "string-similarity";
 import { sendNotificationToUser } from "./notificationService.js";
 import { updateSubCategories } from "../services/subCategoryService.js";
-import { Op } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 
 const {
   Reporting,
@@ -506,7 +506,7 @@ export const reportService = {
       results,
     };
   },
-  getSubcategoryStructureForPage: async function (url) {
+  /*   getSubcategoryStructureForPage: async function (url) {
     const normalizedUrl = siteService.normalizeFullUrl(url);
     if (!normalizedUrl) return null;
 
@@ -626,6 +626,141 @@ export const reportService = {
         },
       }),
       reportingSubCategoryCount: subCategoryCount, // ✅ Pour front : nbre de sous-catégories distinctes
+      results,
+    };
+  }, */
+  getSubcategoryStructureForPage: async function (url) {
+    const normalizedUrl = siteService.normalizeFullUrl(url);
+    if (!normalizedUrl) return null;
+
+    const parsed = new URL(normalizedUrl);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const { bugLocation, categories } =
+      await siteService.extractBugLocationAndCategories(normalizedUrl);
+    const brandName = await siteService.extractBrandName(normalizedUrl);
+
+    // 1️⃣ Récupère tous les reports en une seule requête
+    const existingReports = await Reporting.findAll({
+      where: { domain, bugLocation },
+      include: [
+        {
+          model: ReportingSubCategory,
+          as: "subCategories",
+        },
+      ],
+    });
+
+    const reportIds = existingReports.map((r) => r.id);
+    if (reportIds.length === 0) {
+      return {
+        domain: parsed.hostname,
+        bugLocation,
+        brandName,
+        reportingCount: 0,
+        reportingTotalCount: 0,
+        reportingSubCategoryCount: 0,
+        results: [],
+      };
+    }
+
+    // 2️⃣ Compte total des descriptions par reportingId + subCategory
+    const descriptionCounts = await ReportingDescription.findAll({
+      where: {
+        reportingId: reportIds,
+        subCategory: { [Op.ne]: null },
+      },
+      attributes: [
+        "reportingId",
+        "subCategory",
+        [Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
+      ],
+      group: ["reportingId", "subCategory"],
+      raw: true,
+    });
+
+    // 3️⃣ Récupère UNE description récente par reportingId + subCategory
+    const recentDescriptions = await ReportingDescription.findAll({
+      where: {
+        reportingId: reportIds,
+        subCategory: { [Op.ne]: null },
+      },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "pseudo", "avatar"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      raw: false,
+    });
+
+    const subCategoryMap = {};
+    const captureByReport = new Map(
+      existingReports.map((r) => [r.id, r.capture || null])
+    );
+
+    for (const report of existingReports) {
+      for (const sub of report.subCategories) {
+        if (!sub.subCategory) continue;
+
+        //const key = `${report.id}_${sub.subCategory}`;
+
+        const countObj = descriptionCounts.find(
+          (d) =>
+            d.reportingId === report.id && d.subCategory === sub.subCategory
+        );
+        const count = countObj ? parseInt(countObj.count) : 0;
+
+        const latestDesc = recentDescriptions.find(
+          (d) =>
+            d.reportingId === report.id && d.subCategory === sub.subCategory
+        );
+
+        if (!subCategoryMap[sub.subCategory]) {
+          subCategoryMap[sub.subCategory] = {
+            subCategory: sub.subCategory,
+            count,
+            descriptions: [],
+          };
+        }
+
+        if (latestDesc) {
+          subCategoryMap[sub.subCategory].descriptions.push({
+            reportingId: latestDesc.reportingId,
+            description: latestDesc.description,
+            emoji: latestDesc.emoji,
+            createdAt: latestDesc.createdAt,
+            user: latestDesc.user,
+            capture:
+              subCategoryMap[sub.subCategory].descriptions.length === 0
+                ? captureByReport.get(report.id)
+                : null,
+          });
+        }
+      }
+    }
+
+    const results = [
+      {
+        category: categories[0] || "Autre",
+        subCategories: Object.values(subCategoryMap),
+      },
+    ];
+
+    const subCategoryCount = results[0].subCategories.length;
+    const totalDescriptions = descriptionCounts.reduce(
+      (sum, item) => sum + parseInt(item.count),
+      0
+    );
+
+    return {
+      domain: parsed.hostname,
+      bugLocation,
+      brandName,
+      reportingCount: existingReports.length,
+      reportingTotalCount: totalDescriptions,
+      reportingSubCategoryCount: subCategoryCount,
       results,
     };
   },
