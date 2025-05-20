@@ -754,6 +754,11 @@ export const reportService = {
       0
     );
 
+    // ✂️ On limite à 5 sous-catégories max (UX)
+    for (const result of results) {
+      result.subCategories = result.subCategories.slice(0, 5);
+    }
+
     return {
       domain: parsed.hostname,
       bugLocation,
