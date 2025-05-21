@@ -8,7 +8,7 @@ export const reportingDesc = {
       const authHeader = req.headers["authorization"];
       const userId = getUserId(authHeader);
 
-      if (!userId) {
+      if (!userId || userId <= 0) {
         return res.status(401).json({ error: "Utilisateur non authentifié." });
       }
 
