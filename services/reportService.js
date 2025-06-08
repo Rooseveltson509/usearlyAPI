@@ -200,7 +200,7 @@ export const reportService = {
       });
 
       return {
-        isDuplicate: null,
+        isDuplicate: false,
         isNewDescription: true,
         status: 200,
         success: true,

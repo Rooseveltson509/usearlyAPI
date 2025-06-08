@@ -261,7 +261,7 @@ apiRouter
 
 // signalement
 apiRouter
-  .route("/user/alert/new")
+  .route("/user/reporting/create")
   .options(cors(permissiveCors)) // Gérer les pré-requêtes OPTIONS
   .post(
     cors(permissiveCors),
